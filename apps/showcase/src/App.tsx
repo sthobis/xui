@@ -1,13 +1,12 @@
-import MuiButton from "@mui/material/Button"
-import { Button } from "@/components/ui/button"
+import { sections } from "./gallery/sections"
+import { renderSections } from "./gallery/PairGrid"
 import { ModeToggle } from "./ModeToggle"
 
 export default function App() {
   return (
-    <div className="flex min-h-svh items-center justify-center gap-4">
+    <>
       <ModeToggle />
-      <Button>shadcn</Button>
-      <MuiButton variant="contained">MUI</MuiButton>
-    </div>
+      {renderSections(sections, ["shadcn", "mui"])}
+    </>
   )
 }
