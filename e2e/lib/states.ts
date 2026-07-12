@@ -7,15 +7,18 @@ export type PairState = "default" | "hover" | "focus"
  * focus the helper, then Tab so focus arrives via keyboard.
  */
 export async function focusVisible(target: Locator): Promise<void> {
-  await target.evaluate((el) => {
-    const helper = document.createElement("button")
-    helper.id = "__focus_helper__"
-    helper.style.cssText = "position:absolute;width:1px;height:1px;opacity:0;"
-    el.parentElement!.insertBefore(helper, el)
-    helper.focus()
-  })
-  await target.page().keyboard.press("Tab")
-  await target.page().evaluate(() => document.getElementById("__focus_helper__")?.remove())
+  try {
+    await target.evaluate((el) => {
+      const helper = document.createElement("button")
+      helper.id = "__focus_helper__"
+      helper.style.cssText = "position:absolute;width:1px;height:1px;opacity:0;"
+      el.parentElement!.insertBefore(helper, el)
+      helper.focus()
+    })
+    await target.page().keyboard.press("Tab")
+  } finally {
+    await target.page().evaluate(() => document.getElementById("__focus_helper__")?.remove())
+  }
 }
 
 export async function applyState(page: Page, cell: Locator, state: PairState): Promise<void> {

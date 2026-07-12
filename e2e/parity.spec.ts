@@ -25,7 +25,7 @@ test("all pairs match within threshold", async ({ page }, testInfo) => {
   const pairIds: Array<{ id: string; states: PairState[] }> = await page.evaluate(() =>
     Array.from(document.querySelectorAll("[data-pair-id]")).map((el) => ({
       id: el.getAttribute("data-pair-id")!,
-      states: (el.getAttribute("data-states") ?? "default").split(",") as never,
+      states: (el.getAttribute("data-states") ?? "default").split(",") as PairState[],
     })),
   )
   expect(pairIds.length).toBeGreaterThan(0)
