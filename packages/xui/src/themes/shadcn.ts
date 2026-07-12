@@ -11,23 +11,36 @@ import { createTheme } from "@mui/material/styles"
 // fills these same slots).
 // ---------------------------------------------------------------------------
 declare module "@mui/material/styles" {
+  // Native background/text slots don't ship *Channel fields (MUI only types
+  // them on the vars-internal shape, not the public Palette/PaletteOptions),
+  // so we add them here to match what setColorChannel() actually populates.
+  interface TypeBackground {
+    defaultChannel: string
+    paperChannel: string
+  }
+  interface TypeText {
+    primaryChannel: string
+    secondaryChannel: string
+  }
   interface Palette {
-    muted: { main: string; contrastText: string }
-    accent: { main: string; contrastText: string }
-    popover: { main: string; contrastText: string }
-    card: { main: string; contrastText: string }
+    muted: { main: string; mainChannel: string; contrastText: string }
+    accent: { main: string; mainChannel: string; contrastText: string }
+    popover: { main: string; mainChannel: string; contrastText: string }
+    card: { main: string; mainChannel: string; contrastText: string }
     border: string
     input: string
     ring: string
+    dividerChannel: string
   }
   interface PaletteOptions {
-    muted?: { main: string; contrastText: string }
-    accent?: { main: string; contrastText: string }
-    popover?: { main: string; contrastText: string }
-    card?: { main: string; contrastText: string }
+    muted?: { main: string; mainChannel?: string; contrastText: string }
+    accent?: { main: string; mainChannel?: string; contrastText: string }
+    popover?: { main: string; mainChannel?: string; contrastText: string }
+    card?: { main: string; mainChannel?: string; contrastText: string }
     border?: string
     input?: string
     ring?: string
+    dividerChannel?: string
   }
 }
 
@@ -95,29 +108,76 @@ const RADIUS = "0.625rem"
 
 const FONT_SANS = '"Geist Variable", ui-sans-serif, system-ui, sans-serif'
 
-// shadcn: tailwind shadow-xs
-const SHADOW_XS = "0 1px 2px 0 rgb(0 0 0 / 0.05)"
+// shadcn: tailwind shadow-xs. Not yet consumed - reserved for the
+// per-component style overrides a later task appends (see the banner-comment
+// convention noted on the `components` block below). Exported (rather than a
+// bare unused local) so it doesn't trip noUnusedLocals in showcase's stricter
+// tsc -b build, which now type-checks this file directly through the "xui"
+// workspace import.
+export const SHADOW_XS = "0 1px 2px 0 rgb(0 0 0 / 0.05)"
 
-// DEFERRED (resolved in Task 4, where the first real browser render makes the
-// symptom observable): MUI's CSS-variables pipeline derives a companion
+// RESOLVED (Task 4): MUI's CSS-variables pipeline derives a companion
 // "<slot>Channel" CSS var for every main-shaped palette entry (e.g.
 // --mui-palette-primary-mainChannel), a bare "R G B" triplet used to
 // alpha-blend overlays via rgba(var(--...Channel) / <alpha>). Deriving it calls
 // decomposeColor(), which cannot parse oklch(), so MUI logs a dev warning and
 // falls back to the raw oklch string for background.default, background.paper,
-// divider, primary, and secondary (the other oklch slots fail silently). Our
-// theme never consumes these channel overlays - every interaction state is
-// overridden with shadcn's own color-mix(in oklab, ...) - so they are inert,
-// but the warnings violate our pristine-console bar. MUI exposes an escape
-// hatch: setColorChannel() skips derivation when a `<slot>Channel` field is
-// already present, so supplying precomputed sRGB "R G B" strings (main stays
-// oklch, via deterministic CSS Color 4 oklch->sRGB math) silences the warnings
-// without changing any rendered color. Task 4 wires this once the browser
-// console confirms which warnings actually fire.
+// and divider (and silently produces empty/invalid channel CSS for primary,
+// secondary, and the other main-shaped oklch slots). Our theme never consumes
+// these channel overlays - every interaction state is overridden with
+// shadcn's own color-mix(in oklab, ...) - so they are inert, but the warnings
+// violate our pristine-console bar and the invalid CSS is still wasteful. MUI
+// exposes an escape hatch: setColorChannel()/setColor() skip derivation
+// whenever a `<slot>Channel` field is already present next to the color, so
+// we precompute it ourselves with deterministic CSS Color 4 / Ottosson
+// oklch->sRGB math and hand it over. The `main`/color values themselves stay
+// their original oklch strings, so rendered colors are unchanged - only the
+// inert *Channel siblings become plain sRGB triplets.
+function oklchToRgbTriplet(css: string): string {
+  const match = css.match(/oklch\(\s*([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)/)
+  if (!match) {
+    throw new Error(`oklchToRgbTriplet: cannot parse "${css}"`)
+  }
+  const L = Number(match[1])
+  const C = Number(match[2])
+  const H = Number(match[3])
+
+  const h = (H * Math.PI) / 180
+  const a = C * Math.cos(h)
+  const b = C * Math.sin(h)
+
+  const l_ = L + 0.3963377774 * a + 0.2158037573 * b
+  const m_ = L - 0.1055613458 * a - 0.0638541728 * b
+  const s_ = L - 0.0894841775 * a - 1.2914855480 * b
+
+  const l = l_ ** 3
+  const m = m_ ** 3
+  const s = s_ ** 3
+
+  const rLin = 4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s
+  const gLin = -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s
+  const bLin = -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s
+
+  const gamma = (c: number) => (c <= 0.0031308 ? 12.92 * c : 1.055 * Math.pow(c, 1 / 2.4) - 0.055)
+  const toByte = (linear: number) => Math.round(Math.min(1, Math.max(0, gamma(linear))) * 255)
+
+  return `${toByte(rLin)} ${toByte(gLin)} ${toByte(bLin)}`
+}
+
 function schemePalette(t: typeof light) {
   return {
-    background: { default: t.background, paper: t.card },
-    text: { primary: t.foreground, secondary: t.mutedForeground },
+    background: {
+      default: t.background,
+      defaultChannel: oklchToRgbTriplet(t.background),
+      paper: t.card,
+      paperChannel: oklchToRgbTriplet(t.card),
+    },
+    text: {
+      primary: t.foreground,
+      primaryChannel: oklchToRgbTriplet(t.foreground),
+      secondary: t.mutedForeground,
+      secondaryChannel: oklchToRgbTriplet(t.mutedForeground),
+    },
     // shadcn has one flat color per role (no separate tonal shades), so
     // light/dark are pinned to main. Without this, MUI's createPalette
     // auto-derives light/dark via lighten()/darken(), which call
@@ -127,27 +187,47 @@ function schemePalette(t: typeof light) {
     // "MUI: Unsupported `oklch(...)` color."
     primary: {
       main: t.primary,
+      mainChannel: oklchToRgbTriplet(t.primary),
       light: t.primary,
       dark: t.primary,
       contrastText: t.primaryForeground,
     },
     secondary: {
       main: t.secondary,
+      mainChannel: oklchToRgbTriplet(t.secondary),
       light: t.secondary,
       dark: t.secondary,
       contrastText: t.secondaryForeground,
     },
     error: {
       main: t.destructive,
+      mainChannel: oklchToRgbTriplet(t.destructive),
       light: t.destructive,
       dark: t.destructive,
       contrastText: "#ffffff",
     },
     divider: t.border,
-    muted: { main: t.muted, contrastText: t.mutedForeground },
-    accent: { main: t.accent, contrastText: t.accentForeground },
-    popover: { main: t.popover, contrastText: t.popoverForeground },
-    card: { main: t.card, contrastText: t.cardForeground },
+    dividerChannel: oklchToRgbTriplet(t.border),
+    muted: {
+      main: t.muted,
+      mainChannel: oklchToRgbTriplet(t.muted),
+      contrastText: t.mutedForeground,
+    },
+    accent: {
+      main: t.accent,
+      mainChannel: oklchToRgbTriplet(t.accent),
+      contrastText: t.accentForeground,
+    },
+    popover: {
+      main: t.popover,
+      mainChannel: oklchToRgbTriplet(t.popover),
+      contrastText: t.popoverForeground,
+    },
+    card: {
+      main: t.card,
+      mainChannel: oklchToRgbTriplet(t.card),
+      contrastText: t.cardForeground,
+    },
     border: t.border,
     input: t.input,
     ring: t.ring,
