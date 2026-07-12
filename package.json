@@ -11,5 +11,12 @@
     "verify:parity": "playwright test e2e/parity.spec.ts",
     "verify:preflight": "playwright test e2e/preflight.spec.ts"
   },
-  "packageManager": "pnpm@10.30.1"
+  "packageManager": "pnpm@10.30.1",
+  "devDependencies": {
+    "@playwright/test": "^1.61.1",
+    "@types/pngjs": "^6.0.5",
+    "pixelmatch": "^7.2.0",
+    "pngjs": "^7.0.0",
+    "vitest": "^4.1.10"
+  }
 }
