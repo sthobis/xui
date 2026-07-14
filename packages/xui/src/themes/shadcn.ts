@@ -108,13 +108,15 @@ const RADIUS = "0.625rem"
 
 const FONT_SANS = '"Geist Variable", ui-sans-serif, system-ui, sans-serif'
 
-// shadcn: tailwind shadow-xs. Not yet consumed - reserved for the
-// per-component style overrides a later task appends (see the banner-comment
-// convention noted on the `components` block below). Exported (rather than a
-// bare unused local) so it doesn't trip noUnusedLocals in showcase's stricter
-// tsc -b build, which now type-checks this file directly through the "xui"
-// workspace import.
-export const SHADOW_XS = "0 1px 2px 0 rgb(0 0 0 / 0.05)"
+// shadcn: the installed Button (apps/showcase/src/components/ui/button.tsx,
+// style "radix-nova") applies no shadow-xs - or any box-shadow - on any
+// variant, state, or color scheme. Verified with getComputedStyle: boxShadow
+// resolves to "none" everywhere except the focus-visible ring, which is a
+// separate box-shadow layer (see MuiButton below), not this token. Kept as
+// a named constant rather than a bare "none" literal so MuiButton's root
+// reset stays self-documenting, and consumed there (not exported) since it
+// is no longer a bare unused local once a component uses it.
+const SHADOW_XS = "none"
 
 // RESOLVED (Task 4): MUI's CSS-variables pipeline derives a companion
 // "<slot>Channel" CSS var for every main-shaped palette entry (e.g.
@@ -260,6 +262,266 @@ export const shadcnTheme = createTheme({
       defaultProps: {
         disableRipple: true, // shadcn has no ripple
       },
+    },
+    // -----------------------------------------------------------------------
+    // Button
+    //
+    // Ground truth: apps/showcase/src/components/ui/button.tsx (cva, style
+    // "radix-nova"), read directly rather than assumed. Every value below was
+    // cross-checked with getComputedStyle() on the live shadcn button (light
+    // + dark, default/hover/focus-visible) - see task-7-report.md for the
+    // full before/after table. The installed source has drifted from an
+    // older/typical shadcn button in several load-bearing ways.
+    //
+    // base (all variants/sizes):
+    //   group/button inline-flex shrink-0 items-center justify-center
+    //   rounded-lg border border-transparent bg-clip-padding text-sm
+    //   font-medium whitespace-nowrap transition-all outline-none select-none
+    //   focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50
+    //   active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none
+    //   disabled:opacity-50 aria-invalid:* (no invalid/form-validated buttons
+    //   in the gallery - out of scope) [&_svg]:pointer-events-none
+    //   [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4
+    //
+    // variant (only what the gallery exercises: default/outline/secondary/
+    // ghost/destructive/link; the icon/icon-*/xs sizes have no MUI `size`
+    // equivalent and are unused - out of scope):
+    //   default:     bg-primary text-primary-foreground hover:bg-primary/80
+    //   outline:     border-border bg-background hover:bg-muted hover:text-foreground
+    //                dark:border-input dark:bg-input/30 dark:hover:bg-input/50
+    //   secondary:   bg-secondary text-secondary-foreground
+    //                hover:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_5%)]
+    //   ghost:       (no base bg/text class) hover:bg-muted hover:text-foreground
+    //                dark:hover:bg-muted/50
+    //   destructive: bg-destructive/10 text-destructive hover:bg-destructive/20
+    //                focus-visible:border-destructive/40 focus-visible:ring-destructive/20
+    //                dark:bg-destructive/20 dark:hover:bg-destructive/30
+    //                dark:focus-visible:ring-destructive/40
+    //   link:        text-primary underline-offset-4 hover:underline
+    //
+    // size (default/sm/lg only - mapped 1:1 to MUI medium/small/large):
+    //   default: h-8 gap-1.5 px-2.5                      -> 32px / 6px / 0 10px
+    //   sm:      h-7 gap-1 px-2.5 text-[0.8rem]
+    //            rounded-[min(var(--radius-md),12px)]     -> 28px / 4px / 0 10px / 12.8px, 8px radius
+    //            [&_svg:not([class*='size-'])]:size-3.5   -> 14px icons
+    //   lg:      h-9 gap-1.5 px-2.5                       -> 36px / 6px / 0 10px (font/radius/gap = default)
+    //
+    // Corrections vs. the Task 7 plan's first-draft code (written against an
+    // older shadcn registry; wrong on every point below):
+    //   - radius is rounded-lg == var(--radius) == 10px, not rounded-md
+    //     (8px); only the small size drops to radius-md (8px, via the
+    //     multiplicative --radius-md: calc(var(--radius) * 0.8) scale - the
+    //     "min(...,12px)" cap in the source is inert at this RADIUS value).
+    //   - padding-inline is px-2.5 (10px) for EVERY size, not px-3/4/6;
+    //     vertical padding is always 0 (height + flex centering only, no
+    //     py-* class exists).
+    //   - the default/primary hover tint is bg-primary/80, not /90.
+    //   - destructive is NOT a solid red button with white text. It is
+    //     bg-destructive/10 with text-destructive (a pale "soft" button),
+    //     hover bg-destructive/20, and its OWN focus ring
+    //     (border-destructive/40, ring-destructive/20, dark ring/40)
+    //     instead of the shared ring token - this was the 18%+ mismatch.
+    //   - outline/ghost hover use bg-muted + text-foreground, not bg-accent.
+    //   - no shadow-xs (or any shadow) appears anywhere on the installed
+    //     button; SHADOW_XS above has been corrected to "none" to match and
+    //     is consumed here as an explicit reset.
+    //   - cursor is the browser default (no cursor-pointer class), not
+    //     pointer; MUI's ButtonBase defaults to cursor:pointer, so it is
+    //     forced back to match.
+    //   - MUI's built-in "text" and "outlined" variants colour their label
+    //     with palette.primary.main (the `color` prop default) rather than
+    //     the ambient foreground text - invisible in THIS theme's default
+    //     light/dark grays because pixelmatch's anti-aliasing skip absorbs
+    //     the difference on thin glyph strokes, but it is a real, measured
+    //     mismatch (dark: 0.922 vs 0.985 OKLCH lightness) and is fixed
+    //     explicitly below rather than left to that leniency.
+    // -----------------------------------------------------------------------
+    MuiButton: {
+      defaultProps: {
+        disableElevation: true, // shadcn buttons carry no elevation shadow
+      },
+      styleOverrides: {
+        root: ({ theme }) => ({
+          minWidth: 0,
+          height: "2rem", // shadcn: h-8 (default/medium size)
+          padding: "0 0.625rem", // shadcn: px-2.5, uniform across sizes; no py-* (height + centering only)
+          gap: "0.375rem", // shadcn: gap-1.5
+          borderRadius: RADIUS, // shadcn: rounded-lg -> --radius-lg = var(--radius), 1x
+          border: "1px solid transparent", // shadcn: border border-transparent
+          backgroundClip: "padding-box", // shadcn: bg-clip-padding
+          boxSizing: "border-box",
+          whiteSpace: "nowrap",
+          boxShadow: SHADOW_XS, // shadcn: no shadow on any button state
+          transition: "all 150ms cubic-bezier(0.4, 0, 0.2, 1)", // shadcn: transition-all
+          outline: "none",
+          cursor: "default", // shadcn: no cursor-pointer class; browser default
+          userSelect: "none", // shadcn: select-none
+          "& svg": { width: "1rem", height: "1rem" }, // shadcn: [&_svg:not([class*='size-'])]:size-4
+          "& .MuiButton-startIcon, & .MuiButton-endIcon": { margin: 0 }, // root gap does the spacing instead
+          "&:focus-visible": {
+            borderColor: theme.vars.palette.ring, // shadcn: focus-visible:border-ring
+            boxShadow: `0 0 0 3px color-mix(in oklab, ${theme.vars.palette.ring} 50%, transparent)`, // shadcn: focus-visible:ring-ring/50 ring-3
+          },
+          "&.Mui-disabled": {
+            opacity: 0.5, // shadcn: disabled:opacity-50 (MUI's own graying is undone per-variant below)
+          },
+        }),
+      },
+      variants: [
+        {
+          props: { variant: "contained", color: "primary" },
+          style: ({ theme }) => ({
+            backgroundColor: theme.vars.palette.primary.main, // shadcn: bg-primary
+            color: theme.vars.palette.primary.contrastText, // shadcn: text-primary-foreground
+            "&:hover": {
+              backgroundColor: `color-mix(in oklab, ${theme.vars.palette.primary.main} 80%, transparent)`, // shadcn: hover:bg-primary/80
+            },
+            "&.Mui-disabled": {
+              backgroundColor: theme.vars.palette.primary.main,
+              color: theme.vars.palette.primary.contrastText,
+            },
+          }),
+        },
+        {
+          props: { variant: "contained", color: "secondary" },
+          style: ({ theme }) => ({
+            backgroundColor: theme.vars.palette.secondary.main, // shadcn: bg-secondary
+            color: theme.vars.palette.secondary.contrastText, // shadcn: text-secondary-foreground
+            "&:hover": {
+              // shadcn: hover:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_5%)]
+              backgroundColor: `color-mix(in oklch, ${theme.vars.palette.secondary.main}, ${theme.vars.palette.text.primary} 5%)`,
+            },
+            "&.Mui-disabled": {
+              backgroundColor: theme.vars.palette.secondary.main,
+              color: theme.vars.palette.secondary.contrastText,
+            },
+          }),
+        },
+        {
+          props: { variant: "contained", color: "error" },
+          style: ({ theme }) => ({
+            // shadcn destructive is a pale/soft button, not solid (see banner above)
+            backgroundColor: `color-mix(in oklab, ${theme.vars.palette.error.main} 10%, transparent)`, // shadcn: bg-destructive/10
+            color: theme.vars.palette.error.main, // shadcn: text-destructive
+            "&:hover": {
+              backgroundColor: `color-mix(in oklab, ${theme.vars.palette.error.main} 20%, transparent)`, // shadcn: hover:bg-destructive/20
+            },
+            "&:focus-visible": {
+              borderColor: `color-mix(in oklab, ${theme.vars.palette.error.main} 40%, transparent)`, // shadcn: focus-visible:border-destructive/40
+              boxShadow: `0 0 0 3px color-mix(in oklab, ${theme.vars.palette.error.main} 20%, transparent)`, // shadcn: focus-visible:ring-destructive/20
+            },
+            "&.Mui-disabled": {
+              backgroundColor: `color-mix(in oklab, ${theme.vars.palette.error.main} 10%, transparent)`,
+              color: theme.vars.palette.error.main,
+            },
+            ...theme.applyStyles("dark", {
+              backgroundColor: `color-mix(in oklab, ${theme.vars.palette.error.main} 20%, transparent)`, // shadcn: dark:bg-destructive/20
+              "&:hover": {
+                backgroundColor: `color-mix(in oklab, ${theme.vars.palette.error.main} 30%, transparent)`, // shadcn: dark:hover:bg-destructive/30
+              },
+              "&:focus-visible": {
+                boxShadow: `0 0 0 3px color-mix(in oklab, ${theme.vars.palette.error.main} 40%, transparent)`, // shadcn: dark:focus-visible:ring-destructive/40
+              },
+              "&.Mui-disabled": {
+                backgroundColor: `color-mix(in oklab, ${theme.vars.palette.error.main} 20%, transparent)`,
+              },
+            }),
+          }),
+        },
+        {
+          props: { variant: "outlined" },
+          style: ({ theme }) => ({
+            border: `1px solid ${theme.vars.palette.border}`, // shadcn: border-border
+            backgroundColor: theme.vars.palette.background.default, // shadcn: bg-background
+            color: theme.vars.palette.text.primary, // shadcn: ambient foreground (MUI defaults outlined text to primary.main)
+            "&:hover": {
+              backgroundColor: theme.vars.palette.muted.main, // shadcn: hover:bg-muted
+              color: theme.vars.palette.text.primary, // shadcn: hover:text-foreground
+            },
+            "&.Mui-disabled": {
+              border: `1px solid ${theme.vars.palette.border}`,
+              backgroundColor: theme.vars.palette.background.default,
+              color: theme.vars.palette.text.primary,
+            },
+            ...theme.applyStyles("dark", {
+              backgroundColor: `color-mix(in oklab, ${theme.vars.palette.input} 30%, transparent)`, // shadcn: dark:bg-input/30
+              borderColor: theme.vars.palette.input, // shadcn: dark:border-input
+              "&:hover": {
+                backgroundColor: `color-mix(in oklab, ${theme.vars.palette.input} 50%, transparent)`, // shadcn: dark:hover:bg-input/50
+              },
+              // shadcn: dark:border-input wins the cascade over the base
+              // focus-visible:border-ring in the installed app (Tailwind
+              // orders the "dark:" variant after "focus-visible:", so the
+              // dark border override is not itself overridden by focus) -
+              // verified with getComputedStyle: dark+focused still reads
+              // border-color from --input, not --ring. The ring box-shadow
+              // is unaffected (nothing else contests that property) so only
+              // border-color is restated here.
+              "&:focus-visible": {
+                borderColor: theme.vars.palette.input,
+              },
+              "&.Mui-disabled": {
+                backgroundColor: `color-mix(in oklab, ${theme.vars.palette.input} 30%, transparent)`,
+                borderColor: theme.vars.palette.input,
+              },
+            }),
+          }),
+        },
+        {
+          props: { variant: "text" },
+          style: ({ theme }) => ({
+            color: theme.vars.palette.text.primary, // shadcn ghost: ambient foreground (MUI defaults text variant to primary.main)
+            "&:hover": {
+              backgroundColor: theme.vars.palette.muted.main, // shadcn ghost: hover:bg-muted
+              color: theme.vars.palette.text.primary, // shadcn ghost: hover:text-foreground
+            },
+            "&.Mui-disabled": {
+              color: theme.vars.palette.text.primary,
+            },
+            ...theme.applyStyles("dark", {
+              "&:hover": {
+                backgroundColor: `color-mix(in oklab, ${theme.vars.palette.muted.main} 50%, transparent)`, // shadcn: dark:hover:bg-muted/50
+              },
+            }),
+          }),
+        },
+        {
+          props: { variant: "link" },
+          style: ({ theme }) => ({
+            color: theme.vars.palette.primary.main, // shadcn: text-primary
+            textUnderlineOffset: "4px", // shadcn: underline-offset-4
+            "&:hover": {
+              textDecoration: "underline", // shadcn: hover:underline
+              backgroundColor: "transparent",
+            },
+            "&.Mui-disabled": {
+              color: theme.vars.palette.primary.main,
+            },
+          }),
+        },
+        {
+          props: { size: "small" },
+          style: {
+            height: "1.75rem", // shadcn: h-7
+            gap: "0.25rem", // shadcn: gap-1
+            borderRadius: `calc(${RADIUS} * 0.8)`, // shadcn: rounded-[min(var(--radius-md),12px)] -> radius-md (12px cap inert here)
+            fontSize: "0.8rem", // shadcn: text-[0.8rem]
+            lineHeight: 1.5, // shadcn: arbitrary size has no paired line-height; inherits Tailwind preflight's html { line-height: 1.5 }
+            "& svg": { width: "0.875rem", height: "0.875rem" }, // shadcn: [&_svg:not([class*='size-'])]:size-3.5
+          },
+        },
+        {
+          props: { size: "large" },
+          style: {
+            height: "2.25rem", // shadcn: h-9 (padding/gap/radius unchanged from default)
+            // shadcn: text-sm (unchanged from default) - MUI's own sizeLarge default
+            // asserts fontSize 15px (theme.typography.pxToRem(15)) that plain
+            // inheritance from typography.button does not clear, so it is
+            // restated explicitly here to hold at 14px.
+            fontSize: "0.875rem",
+          },
+        },
+      ],
     },
     // Per-component overrides are appended by later tasks, one banner each.
   },
