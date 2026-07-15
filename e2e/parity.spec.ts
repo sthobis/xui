@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test"
-import { mkdirSync, writeFileSync } from "node:fs"
+import { mkdirSync, rmSync, writeFileSync } from "node:fs"
 import { PNG } from "pngjs"
 import { diffPngs } from "./lib/compare"
 import { applyState, resetState, type PairState } from "./lib/states"
@@ -20,6 +20,7 @@ test.beforeEach(async ({ page }, testInfo) => {
 
 test("all pairs match within threshold", async ({ page }, testInfo) => {
   testInfo.setTimeout(240_000)
+  rmSync(`${RESULTS_DIR}/diffs`, { recursive: true, force: true })
   mkdirSync(`${RESULTS_DIR}/diffs`, { recursive: true })
 
   const pairIds: Array<{ id: string; states: PairState[] }> = await page.evaluate(() =>
