@@ -1,6 +1,8 @@
 import type { ReactNode } from "react"
 
-export type PairState = "default" | "hover" | "focus"
+// Duplicated from e2e/lib/states.ts (the showcase app cannot import e2e/ source, and vice
+// versa - keep these two PairState unions in sync by hand).
+export type PairState = "default" | "hover" | "focus" | "open"
 
 export interface Pair {
   id: string

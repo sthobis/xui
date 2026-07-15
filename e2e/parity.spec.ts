@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test"
 import { mkdirSync, rmSync, writeFileSync } from "node:fs"
 import { PNG } from "pngjs"
 import { diffPngs } from "./lib/compare"
-import { applyState, resetState, type PairState } from "./lib/states"
+import { applyState, openContentLocator, resetState, type PairState } from "./lib/states"
 import { thresholdFor } from "./thresholds"
 
 const RESULTS_DIR = "e2e/results"
@@ -39,12 +39,16 @@ test("all pairs match within threshold", async ({ page }, testInfo) => {
       const shadcnCell = row.locator('[data-side="shadcn"]')
       const muiCell = row.locator('[data-side="mui"]')
 
-      await applyState(page, shadcnCell, state)
-      const shadcnShot = await shadcnCell.screenshot({ animations: "disabled" })
+      await applyState(page, shadcnCell, state, id)
+      // "open" content (Tooltip/Select, etc.) renders in a portal outside the cell - capture
+      // the overlay itself instead of the (visually empty) cell.
+      const shadcnTarget = state === "open" ? openContentLocator(page, shadcnCell, id) : shadcnCell
+      const shadcnShot = await shadcnTarget.screenshot({ animations: "disabled" })
       await resetState(page)
 
-      await applyState(page, muiCell, state)
-      const muiShot = await muiCell.screenshot({ animations: "disabled" })
+      await applyState(page, muiCell, state, id)
+      const muiTarget = state === "open" ? openContentLocator(page, muiCell, id) : muiCell
+      const muiShot = await muiTarget.screenshot({ animations: "disabled" })
       await resetState(page)
 
       const result = diffPngs(shadcnShot, muiShot)
