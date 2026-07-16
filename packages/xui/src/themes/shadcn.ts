@@ -560,11 +560,6 @@ export const shadcnTheme = createTheme({
     //          correction away from a naive bg-accent guess) to MuiButton's
     //          "text" variant above.
     //
-    // color="error" has no pair in the gallery (untested) - the installed
-    // cva has no separate "ghost + destructive" combo, so this reuses the
-    // discrete "destructive" variant's text color and hover tint
-    // (bg-destructive/10 -> dark /20) rather than inventing an unverified one.
-    //
     // MUI IconButton ships its own padding (8/5/12px by size), a circular
     // (borderRadius: 50%) shape, a `color: action.active` default text
     // color, and a ripple-gated hover halo (--IconButton-hoverBg, itself
@@ -628,25 +623,6 @@ export const shadcnTheme = createTheme({
             height: "2.25rem",
             // radius/svg unchanged from default - icon-lg has no rounded/svg override
           },
-        },
-        {
-          // Untested (no gallery pair) - see banner above.
-          props: { color: "error" },
-          style: ({ theme }) => ({
-            color: theme.vars.palette.error.main, // shadcn destructive: text-destructive
-            "&:hover": {
-              backgroundColor: `color-mix(in oklab, ${theme.vars.palette.error.main} 10%, transparent)`, // shadcn destructive: bg-destructive/10
-              color: theme.vars.palette.error.main,
-            },
-            "&.Mui-disabled": {
-              color: theme.vars.palette.error.main,
-            },
-            ...theme.applyStyles("dark", {
-              "&:hover": {
-                backgroundColor: `color-mix(in oklab, ${theme.vars.palette.error.main} 20%, transparent)`, // shadcn destructive: dark:bg-destructive/20
-              },
-            }),
-          }),
         },
       ],
     },
