@@ -626,6 +626,290 @@ export const shadcnTheme = createTheme({
         },
       ],
     },
+    // -----------------------------------------------------------------------
+    // TextField
+    //
+    // Ground truth: apps/showcase/src/components/ui/input.tsx, textarea.tsx,
+    // label.tsx, read directly (class strings quoted below, each consumed
+    // value tagged `// shadcn:`).
+    //
+    // Twin choice: field.tsx's Field/FieldLabel/FieldContent/FieldDescription
+    // primitives were evaluated as the "fuller stack" twin the task brief
+    // flagged as a possibility, but they are built for compound/grouped
+    // fields (checkbox-group, radio-group, horizontal label+control rows) -
+    // FieldContent's gap-0.5 tight stacking, FieldLabel's
+    // has-[>[data-slot=field]] box styling, and FieldDescription's
+    // nth-last-2/group-has-data-horizontal selectors all target that
+    // composite use case, not a bare label-above-input. Nothing else in this
+    // app composes Field/FieldLabel/FieldDescription together (no existing
+    // convention to anchor on). label.tsx + input.tsx + textarea.tsx are
+    // used directly instead. FieldError (also from field.tsx) IS reused
+    // as-is for the one pair that needs helper text (textfield-error) - its
+    // plain `text-sm font-normal text-destructive` is exactly a destructive
+    // caption with no compound-field baggage, and input.tsx/textarea.tsx/
+    // label.tsx define no helper-text look of their own.
+    //
+    // input.tsx: h-8 w-full min-w-0 rounded-lg border border-input
+    //   bg-transparent px-2.5 py-1 text-base transition-colors outline-none
+    //   placeholder:text-muted-foreground focus-visible:border-ring
+    //   focus-visible:ring-3 focus-visible:ring-ring/50
+    //   disabled:pointer-events-none disabled:cursor-not-allowed
+    //   disabled:bg-input/50 disabled:opacity-50 aria-invalid:border-destructive
+    //   aria-invalid:ring-3 aria-invalid:ring-destructive/20 md:text-sm
+    //   dark:bg-input/30 dark:disabled:bg-input/80 dark:aria-invalid:border-destructive/50
+    //   dark:aria-invalid:ring-destructive/40 (file:* omitted - no type="file"
+    //   pair in the gallery, out of scope)
+    // textarea.tsx: same recipe as input.tsx except min-h-16 (not h-8),
+    //   px-2.5 py-2 (not py-1), and disabled:cursor-not-allowed WITHOUT
+    //   disabled:pointer-events-none (input.tsx has both - textarea.tsx only
+    //   has the cursor one, a real and easy-to-miss difference).
+    // label.tsx: flex items-center gap-2 text-sm leading-none font-medium
+    //   select-none (group-data-disabled/peer-disabled clauses don't fire in
+    //   this composition - see GOTCHA below).
+    // Viewport is 1440px (e2e/playwright.config.ts) - well past Tailwind's md
+    // breakpoint, so md:text-sm (14px) is the effective input/textarea font
+    // size, not the base text-base (16px).
+    //
+    // Label-to-control and control-to-helper spacing (8px) is this task's
+    // own choice - none of the three files fix a container gap (that's
+    // caller-owned in every real shadcn composition; the gallery's own
+    // wrapper uses a plain flex column with an 8px gap). MuiFormControl (the
+    // layout parent) has no `gap` of its own and is out of this task's
+    // scope (shared with future components) - so the same 8px is
+    // reconstructed here via InputLabel marginBottom / FormHelperText
+    // marginTop instead.
+    //
+    // Flattening mechanism: MuiInputLabel.defaultProps sets shrink: true
+    // (see GOTCHA below) and styleOverrides.root unconditionally overrides
+    // position/transform. MuiFormControl is already `display:inline-flex;
+    // flex-direction:column`, so a `position:static` label (no longer
+    // absolutely positioned into the notch) naturally stacks above the
+    // input in normal flow - no wrapper component needed. This unconditional
+    // override is proven to beat the component's own internal conditional
+    // variants (e.g. InputLabel's own formControl/shrink-conditional
+    // position:absolute + transform) the same way MuiButton's root height
+    // already beats MUI's internal sizeMedium variant: reading
+    // @mui/system's createStyled.mjs, every styled() call resolves to
+    // `expressions = [...expressionsHead, ...expressionsBody, ...expressionsTail]`
+    // fed straight to emotion, where expressionsBody is the component's own
+    // base style + internal `variants` array, and expressionsTail is
+    // `[styleThemeOverrides, styleThemeVariants, styleFunctionSx]` - i.e.
+    // our styleOverrides.root is always serialized after (and so wins CSS's
+    // same-specificity source-order tiebreak over) the component's own
+    // internal variants, and top-level theme `variants` win over both.
+    //
+    // GOTCHA - shrink must be true, not false: InputBaseInput's own source
+    // hides the placeholder via the selector
+    // `label[data-shrink=false] + .MuiInputBase-formControl &::-webkit-input-placeholder`
+    // (opacity 0 unless focused - a leftover of "the placeholder only shows
+    // once the label has floated out of the way"). That selector's
+    // specificity (1 attribute + 2 classes + 1 pseudo-element) beats a plain
+    // `&::placeholder` rule in styleOverrides.input regardless of source
+    // order, so with shrink: false the placeholder would stay invisible at
+    // rest on every field. Forcing shrink: true sidesteps the selector
+    // entirely (it only matches data-shrink="false"); every other
+    // shrink-conditional style (the scale/translate float transform) is
+    // still fully overridden below regardless of which shrink value MUI
+    // computes, per the unconditional-override mechanism above.
+    //
+    // GOTCHA - the label does not react to error/disabled in real shadcn:
+    // shadcn's bare <Label> has no error-state styling, and its
+    // `peer-disabled:opacity-50` only fires when the label is a LATER
+    // sibling of the disabled peer (input-before-label, e.g. a checkbox
+    // row) - with Label-before-Input (this composition, and the ordinary
+    // form idiom) it never matches, so the label stays full-opacity/normal
+    // color next to a disabled or invalid input. FormLabel's own internal
+    // variants auto-color `&.Mui-error`/`&.Mui-disabled` (as a compound
+    // class selector, beating a plain base color regardless of source
+    // order) - both are explicitly neutralized below back to the ambient
+    // foreground so the label stays inert exactly like the real shadcn
+    // Label does.
+    //
+    // notchedOutline (the fieldset/legend "notch" the label used to float
+    // into) is display:none entirely - the box is drawn on the
+    // OutlinedInput root instead, which is only possible because the label
+    // float/notch that the outline exists to accommodate is gone.
+    //
+    // Box construction: height/min-height + border + radius + background
+    // live on the OutlinedInput root (the box shadcn draws on the single
+    // <input>/<textarea> element itself); the actual <input>/<textarea> is
+    // given width/height 100% with no border of its own so its native
+    // text-vertical-centering (a real text-type form control, same element
+    // type as shadcn's) resolves identically to shadcn's single-element box
+    // at the same content-box dimensions.
+    //
+    // Focus ring mapping: the harness's "focus" state is always synthesized
+    // via helper-button+keyboard-Tab (e2e/lib/states.ts:focusVisible), which
+    // matches real :focus-visible on the shadcn side. MUI's InputBase marks
+    // focus with a `.Mui-focused` class from a plain onFocus/onBlur handler
+    // (any focus, not gated to keyboard) rather than a `:focus-visible`
+    // pseudo-class - but since the harness never exercises "focus via mouse
+    // click" as a distinct state, `.Mui-focused` is present at exactly the
+    // moments `:focus-visible` would be on the shadcn side, so keying the
+    // ring off `.Mui-focused` reproduces the same before/after screenshots.
+    // `.Mui-error` is declared after `.Mui-focused` below (both are
+    // single-class same-specificity selectors on the root) so an
+    // errored+focused field keeps the destructive ring, matching Tailwind's
+    // class order in input.tsx/textarea.tsx (aria-invalid: is written after
+    // focus-visible:, so it wins the same tie in the real component too).
+    //
+    // Variant scope: only MuiOutlinedInput is themed (TextField's default
+    // variant and the only one any gallery pair exercises). MuiFilledInput
+    // and MuiInput (standard) are left at MUI's stock look - no gallery pair
+    // covers them, and per this project's critical constraint, only ship
+    // overrides a gallery pair actually covers.
+    //
+    // Size scope: shadcn's Input/Textarea each ship exactly one size (h-8 /
+    // min-h-16 - no small/default/large ladder the way button.tsx has one).
+    // The box below is intentionally unconditional on MUI's `size` prop
+    // (see textfield-small pair) - MUI's own internal size="small" paddings
+    // are overridden away the same way sizeMedium's height is in MuiButton.
+    // -----------------------------------------------------------------------
+    MuiInputLabel: {
+      defaultProps: {
+        shrink: true, // see GOTCHA above - sidesteps InputBaseInput's data-shrink=false placeholder-hiding selector
+      },
+      styleOverrides: {
+        root: ({ theme }) => ({
+          position: "static", // shadcn: Label sits in normal flow, not floating into the notch
+          transform: "none", // kills the float/shrink translate+scale animation
+          maxWidth: "100%",
+          display: "flex", // shadcn: flex
+          alignItems: "center", // shadcn: items-center
+          gap: "0.5rem", // shadcn: gap-2
+          marginBottom: "0.5rem", // label-to-control gap (this task's own choice, see banner)
+          fontSize: "0.875rem", // shadcn: text-sm
+          lineHeight: 1, // shadcn: leading-none
+          fontWeight: 500, // shadcn: font-medium
+          color: theme.vars.palette.text.primary, // shadcn: ambient foreground (Label sets no color class)
+          userSelect: "none", // shadcn: select-none
+          "&.Mui-focused": {
+            color: theme.vars.palette.text.primary, // shadcn Label: no focus-state color change (MUI defaults to primary.main)
+          },
+          "&.Mui-error": {
+            color: theme.vars.palette.text.primary, // shadcn Label: no error-state reaction (see GOTCHA above)
+          },
+          "&.Mui-disabled": {
+            color: theme.vars.palette.text.primary, // shadcn Label: peer-disabled doesn't fire when Label precedes the control (see GOTCHA above)
+          },
+        }),
+      },
+    },
+    MuiFormHelperText: {
+      styleOverrides: {
+        root: {
+          marginTop: "0.5rem", // control-to-helper gap (this task's own choice, see banner)
+          marginLeft: 0,
+          marginRight: 0,
+          fontSize: "0.875rem", // shadcn FieldError: text-sm
+          // FieldError sets no explicit leading-* class, but Tailwind v4's text-sm utility
+          // itself bundles a paired line-height (1.25rem), not the Preflight html{line-height:1.5}
+          // fallback - measured via getComputedStyle: 20px, not 21px (1.5 * 14px).
+          lineHeight: "1.25rem", // shadcn: text-sm's paired line-height
+          fontWeight: 400, // shadcn FieldError: font-normal
+          // .Mui-error intentionally untouched: MUI's own default already
+          // colors it theme.vars.palette.error.main === destructive,
+          // matching shadcn's FieldError text-destructive for free. The
+          // non-error color is likewise left at MUI's own text.secondary
+          // default - no gallery pair exercises a non-error helper text.
+        },
+      },
+    },
+    MuiOutlinedInput: {
+      styleOverrides: {
+        notchedOutline: {
+          display: "none", // shadcn has no notch/legend - the box border is drawn on root instead
+        },
+        root: ({ theme, ownerState }) => ({
+          position: "relative",
+          boxSizing: "border-box",
+          borderRadius: RADIUS, // shadcn: rounded-lg
+          border: `1px solid ${theme.vars.palette.input}`, // shadcn: border border-input
+          backgroundColor: "transparent", // shadcn: bg-transparent
+          backgroundClip: "padding-box",
+          padding: 0, // box's own padding lives on the input/textarea slot below (matches shadcn's single-element box)
+          ...(ownerState.multiline
+            ? {
+                height: "auto",
+                minHeight: "4rem", // shadcn textarea: min-h-16
+                alignItems: "stretch",
+              }
+            : {
+                height: "2rem", // shadcn input: h-8 (unconditional on MUI's size prop - see Size scope above)
+              }),
+          "&.Mui-focused": {
+            borderColor: theme.vars.palette.ring, // shadcn: focus-visible:border-ring
+            boxShadow: `0 0 0 3px color-mix(in oklab, ${theme.vars.palette.ring} 50%, transparent)`, // shadcn: focus-visible:ring-3 ring-ring/50
+          },
+          "&.Mui-error": {
+            borderColor: theme.vars.palette.error.main, // shadcn: aria-invalid:border-destructive
+            boxShadow: `0 0 0 3px color-mix(in oklab, ${theme.vars.palette.error.main} 20%, transparent)`, // shadcn: aria-invalid:ring-3 ring-destructive/20
+          },
+          "&.Mui-disabled": {
+            opacity: 0.5, // shadcn: disabled:opacity-50
+            cursor: "not-allowed", // shadcn: disabled:cursor-not-allowed (both input and textarea)
+            pointerEvents: ownerState.multiline ? undefined : "none", // shadcn input: disabled:pointer-events-none; textarea has no such class
+            backgroundColor: `color-mix(in oklab, ${theme.vars.palette.input} 50%, transparent)`, // shadcn: disabled:bg-input/50
+            // InputBaseRoot's own internal `&.Mui-disabled` rule sets color to MUI's
+            // hardcoded palette.text.disabled (rgba(0,0,0,.38), unrelated to this theme's
+            // tokens) and nothing here previously restated color, so that internal rule was
+            // the only declaration in play - measured via getComputedStyle: rgba(0,0,0,.38)
+            // instead of the ambient foreground. shadcn has no disabled:text-* class (dimming
+            // is opacity-50 alone, compounding over the normal foreground), so this restates
+            // the normal color and lets opacity do the dimming.
+            color: theme.vars.palette.text.primary,
+          },
+          ...theme.applyStyles("dark", {
+            backgroundColor: `color-mix(in oklab, ${theme.vars.palette.input} 30%, transparent)`, // shadcn: dark:bg-input/30
+            "&.Mui-error": {
+              borderColor: `color-mix(in oklab, ${theme.vars.palette.error.main} 50%, transparent)`, // shadcn: dark:aria-invalid:border-destructive/50
+              boxShadow: `0 0 0 3px color-mix(in oklab, ${theme.vars.palette.error.main} 40%, transparent)`, // shadcn: dark:aria-invalid:ring-destructive/40
+            },
+            "&.Mui-disabled": {
+              backgroundColor: `color-mix(in oklab, ${theme.vars.palette.input} 80%, transparent)`, // shadcn: dark:disabled:bg-input/80
+            },
+          }),
+        }),
+        input: ({ theme, ownerState }) => ({
+          boxSizing: "border-box",
+          height: "100%",
+          fontFamily: "inherit",
+          fontSize: "0.875rem", // shadcn: md:text-sm (harness viewport is 1440px, past the md breakpoint)
+          // Tailwind's text-sm carries its own paired line-height (1.25rem). Without this,
+          // the input inherits OutlinedInputRoot's own 1.4375em line-height computed at
+          // typography.body1's 16px font-size (23px) rather than recomputing at this
+          // element's own 14px font-size - measured via getComputedStyle: 23px vs shadcn's
+          // 20px until this was added explicitly.
+          lineHeight: "1.25rem", // shadcn: text-sm's paired line-height
+          color: "inherit",
+          "&::placeholder": {
+            color: theme.vars.palette.text.secondary, // shadcn: placeholder:text-muted-foreground
+            opacity: 1,
+          },
+          "&::-webkit-input-placeholder": {
+            color: theme.vars.palette.text.secondary,
+            opacity: 1,
+          },
+          "&.Mui-disabled": {
+            // InputBaseInput's own internal `&.Mui-disabled` rule sets -webkit-text-fill-color
+            // (a WebKit/Blink property that wins over `color` for the rendered glyph fill,
+            // used upstream to fix an iOS opacity bug) to MUI's hardcoded text.disabled grey -
+            // measured via getComputedStyle: rgba(0,0,0,.38) regardless of the `color: inherit`
+            // above. shadcn dims disabled text via opacity-50 alone, so this is reset to
+            // inherit the (now-corrected) ambient color from the root instead.
+            WebkitTextFillColor: "inherit",
+          },
+          ...(ownerState.multiline
+            ? {
+                padding: "0.5rem 0.625rem", // shadcn textarea: px-2.5 py-2
+                resize: "none", // matches MUI's own TextareaAutosize behavior (no native drag-resize handle)
+              }
+            : {
+                padding: "0.25rem 0.625rem", // shadcn input: px-2.5 py-1
+              }),
+        }),
+      },
+    },
     // Per-component overrides are appended by later tasks, one banner each.
   },
 })
