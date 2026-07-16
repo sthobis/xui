@@ -523,6 +523,133 @@ export const shadcnTheme = createTheme({
         },
       ],
     },
+    // -----------------------------------------------------------------------
+    // IconButton
+    //
+    // Ground truth: apps/showcase/src/components/ui/button.tsx (same cva as
+    // Button above - shadcn ships no separate IconButton component; icon-only
+    // buttons are just <Button size="icon"> or one of its icon-* size
+    // variants). Mapped to MUI IconButton's small/medium/large sizes using
+    // the shadcn "ghost" treatment (the conventional bare icon-button look -
+    // no resting background, bg-muted on hover), since IconButton has no MUI
+    // `variant` prop of its own to key off.
+    //
+    // shadcn icon size variants consumed (verbatim from the cva above,
+    // mapped small/medium/large -> icon-sm/icon/icon-lg, mirroring how
+    // MuiButton's size="small"/default/"large" already map to Button's
+    // sm/default/lg 28/32/36px height ladder):
+    //   icon:    size-8   -> 32px square; no radius override, so it falls
+    //            through to the base rounded-lg == --radius-lg == RADIUS (10px)
+    //   icon-sm: size-7 rounded-[min(var(--radius-md),12px)] -> 28px square,
+    //            --radius-md = RADIUS * 0.8 = 8px (the 12px cap is inert at
+    //            this RADIUS value - identical formula to MuiButton's
+    //            size="small" radius above)
+    //   icon-lg: size-9   -> 36px square; no radius override, same RADIUS as icon
+    //   (icon-xs, size-6 with its own [&_svg:...]:size-3 override, has no MUI
+    //   size equivalent - unused, out of scope, same as Button's xs size)
+    // Unlike Button's text sizes, none of icon/icon-sm/icon-lg carries its
+    // own svg-size override (only icon-xs does), so they all fall through to
+    // the shared base [&_svg:not([class*='size-'])]:size-4 - svg sizing
+    // (16px) is identical across all three mapped IconButton sizes.
+    //
+    // variant mapped (ghost only - the shadcn convention for bare icon
+    // buttons; the gallery's four pairs only exercise default/hover/disabled
+    // on this treatment):
+    //   ghost: (no base bg/text class) hover:bg-muted hover:text-foreground
+    //          dark:hover:bg-muted/50 - identical treatment (and identical
+    //          correction away from a naive bg-accent guess) to MuiButton's
+    //          "text" variant above.
+    //
+    // color="error" has no pair in the gallery (untested) - the installed
+    // cva has no separate "ghost + destructive" combo, so this reuses the
+    // discrete "destructive" variant's text color and hover tint
+    // (bg-destructive/10 -> dark /20) rather than inventing an unverified one.
+    //
+    // MUI IconButton ships its own padding (8/5/12px by size), a circular
+    // (borderRadius: 50%) shape, a `color: action.active` default text
+    // color, and a ripple-gated hover halo (--IconButton-hoverBg, itself
+    // already inert here because MuiButtonBase.defaultProps sets
+    // disableRipple: true globally above - see the `props =>
+    // !props.disableRipple` gate in MUI's IconButton source). Padding,
+    // radius, size, and color are reset explicitly below; the hover halo
+    // needed no extra kill switch.
+    // -----------------------------------------------------------------------
+    MuiIconButton: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          width: "2rem", // shadcn: size-8 (icon, default/medium)
+          height: "2rem",
+          padding: 0,
+          borderRadius: RADIUS, // shadcn: rounded-lg -> --radius-lg = var(--radius), 1x
+          border: "1px solid transparent", // shadcn: border border-transparent
+          backgroundColor: "transparent", // shadcn ghost: no base bg class
+          backgroundClip: "padding-box", // shadcn: bg-clip-padding
+          boxSizing: "border-box",
+          color: theme.vars.palette.text.primary, // shadcn ghost: ambient foreground (MUI defaults to action.active)
+          fontSize: "0.875rem", // shadcn: text-sm (base class; icon sizes carry no font-size override) - MUI IconButton otherwise sets 24/18/28px by size
+          boxShadow: SHADOW_XS, // shadcn: no shadow on any button state
+          transition: "all 150ms cubic-bezier(0.4, 0, 0.2, 1)", // shadcn: transition-all
+          outline: "none",
+          cursor: "default", // shadcn: no cursor-pointer class; browser default
+          userSelect: "none", // shadcn: select-none
+          "& svg": { width: "1rem", height: "1rem" }, // shadcn: [&_svg:not([class*='size-'])]:size-4
+          "&:hover": {
+            backgroundColor: theme.vars.palette.muted.main, // shadcn ghost: hover:bg-muted
+            color: theme.vars.palette.text.primary, // shadcn ghost: hover:text-foreground
+          },
+          "&:focus-visible": {
+            borderColor: theme.vars.palette.ring, // shadcn: focus-visible:border-ring
+            boxShadow: `0 0 0 3px color-mix(in oklab, ${theme.vars.palette.ring} 50%, transparent)`, // shadcn: focus-visible:ring-ring/50 ring-3
+          },
+          "&.Mui-disabled": {
+            opacity: 0.5, // shadcn: disabled:opacity-50 (MUI's own graying is undone below)
+            color: theme.vars.palette.text.primary,
+          },
+          ...theme.applyStyles("dark", {
+            "&:hover": {
+              backgroundColor: `color-mix(in oklab, ${theme.vars.palette.muted.main} 50%, transparent)`, // shadcn: dark:hover:bg-muted/50
+            },
+          }),
+        }),
+      },
+      variants: [
+        {
+          props: { size: "small" },
+          style: {
+            width: "1.75rem", // shadcn: icon-sm size-7
+            height: "1.75rem",
+            borderRadius: `calc(${RADIUS} * 0.8)`, // shadcn: rounded-[min(var(--radius-md),12px)] -> radius-md (12px cap inert here)
+          },
+        },
+        {
+          props: { size: "large" },
+          style: {
+            width: "2.25rem", // shadcn: icon-lg size-9
+            height: "2.25rem",
+            // radius/svg unchanged from default - icon-lg has no rounded/svg override
+          },
+        },
+        {
+          // Untested (no gallery pair) - see banner above.
+          props: { color: "error" },
+          style: ({ theme }) => ({
+            color: theme.vars.palette.error.main, // shadcn destructive: text-destructive
+            "&:hover": {
+              backgroundColor: `color-mix(in oklab, ${theme.vars.palette.error.main} 10%, transparent)`, // shadcn destructive: bg-destructive/10
+              color: theme.vars.palette.error.main,
+            },
+            "&.Mui-disabled": {
+              color: theme.vars.palette.error.main,
+            },
+            ...theme.applyStyles("dark", {
+              "&:hover": {
+                backgroundColor: `color-mix(in oklab, ${theme.vars.palette.error.main} 20%, transparent)`, // shadcn destructive: dark:bg-destructive/20
+              },
+            }),
+          }),
+        },
+      ],
+    },
     // Per-component overrides are appended by later tasks, one banner each.
   },
 })
