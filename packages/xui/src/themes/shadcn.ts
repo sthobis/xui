@@ -257,16 +257,26 @@ function textFieldBoxBase(theme: ThemeWithVars, ownerState: { multiline?: boolea
     borderRadius: RADIUS, // shadcn: rounded-lg
     border: `1px solid ${theme.vars.palette.input}`, // shadcn: border border-input
     backgroundColor: "transparent", // shadcn: bg-transparent
-    backgroundClip: "padding-box" as const,
+    // No backgroundClip override here, unlike MuiButton/MuiIconButton's "padding-box" (bg-clip-padding
+    // IS a real class on button.tsx). input.tsx/textarea.tsx carry no bg-clip-padding class - this was
+    // previously set to "padding-box" here too, invented by analogy to Button rather than read from
+    // this component's own ground truth. Left at the CSS initial value (border-box), that mismatch was
+    // invisible everywhere the border is opaque, but dark mode's border-input is translucent
+    // (oklch(1 0 0 / 15%)): "padding-box" clips the box's own dark:bg-input/30 fill out from under the
+    // border ring, so the ring composites against the page background instead of the box's own fill -
+    // measured via pixel sampling of the parity harness's own screenshots (e2e/results/diffs): shadcn's
+    // real border pixel painted rgb(56,56,56) (border-input/15% over the box's OWN fill, rgb 21),
+    // while "padding-box" made the MUI twin's border paint rgb(47,47,47) (the same alpha over the page
+    // background, rgb 10, with no box fill beneath it) - a ~1.6% pixel mismatch across every dark-mode
+    // TextField pair, previously hidden by the pixelmatch threshold bug fixed above.
     padding: 0, // box's own padding lives on the input/textarea slot below (matches shadcn's single-element box)
     ...(ownerState.multiline
       ? {
           height: "auto",
           minHeight: "4rem", // shadcn textarea: min-h-16
-          // Does NOT stretch the textarea's height to fill this box (see banner below in
-          // MuiOutlinedInput for why) - its real effect is to top-anchor the textarea
-          // instead of MUI's own InputBaseRoot default (alignItems: 'center'), matching
-          // shadcn's plain top-anchored textarea.
+          // Does NOT stretch the textarea's height to fill this box - its real effect is to
+          // top-anchor the textarea instead of MUI's own InputBaseRoot default
+          // (alignItems: 'center'), matching shadcn's plain top-anchored textarea.
           alignItems: "stretch" as const,
         }
       : {
@@ -280,6 +290,15 @@ function textFieldBoxStates(theme: ThemeWithVars, ownerState: { multiline?: bool
     "&.Mui-focused": {
       borderColor: theme.vars.palette.ring, // shadcn: focus-visible:border-ring
       boxShadow: `0 0 0 3px color-mix(in oklab, ${theme.vars.palette.ring} 50%, transparent)`, // shadcn: focus-visible:ring-3 ring-ring/50
+      // MuiFilledInput's own base style sets `&.Mui-focused { backgroundColor: <FilledInput.bg> }`
+      // at 2-class specificity (`.MuiFilledInput-root.Mui-focused`), which beats the plain
+      // (1-class, unconditional) backgroundColor: "transparent" that textFieldBoxBase sets on
+      // the root regardless of source order - the same specificity trap already solved for
+      // MuiInput's formControl margin-top below. Measured with getComputedStyle: focused MUI
+      // filled root rendered rgba(0, 0, 0, 0.06) against the shadcn twin's rgba(0, 0, 0, 0).
+      // Restated here (shared by all three variants) at matching specificity; harmless for
+      // Outlined/Standard, which own no internal `.Mui-focused` background rule of their own.
+      backgroundColor: "transparent",
     },
     "&.Mui-error": {
       borderColor: theme.vars.palette.error.main, // shadcn: aria-invalid:border-destructive
@@ -297,6 +316,12 @@ function textFieldBoxStates(theme: ThemeWithVars, ownerState: { multiline?: bool
     },
     ...theme.applyStyles("dark", {
       backgroundColor: `color-mix(in oklab, ${theme.vars.palette.input} 30%, transparent)`, // shadcn: dark:bg-input/30
+      "&.Mui-focused": {
+        // Same trap as the light `.Mui-focused` override above, restated at dark-scheme
+        // specificity: without this, MUI's own focused background (opaque in dark mode too)
+        // would beat this block's own unconditional dark:bg-input/30 ambient tint.
+        backgroundColor: `color-mix(in oklab, ${theme.vars.palette.input} 30%, transparent)`, // shadcn: dark:bg-input/30 (unchanged by focus)
+      },
       "&.Mui-error": {
         borderColor: `color-mix(in oklab, ${theme.vars.palette.error.main} 50%, transparent)`, // shadcn: dark:aria-invalid:border-destructive/50
         boxShadow: `0 0 0 3px color-mix(in oklab, ${theme.vars.palette.error.main} 40%, transparent)`, // shadcn: dark:aria-invalid:ring-destructive/40
@@ -338,9 +363,11 @@ function textFieldInputStyle(theme: ThemeWithVars, ownerState: { multiline?: boo
       ? {
           padding: "0.5rem 0.625rem", // shadcn textarea: px-2.5 py-2
           // Ground truth (apps/showcase/src/components/ui/textarea.tsx) carries no
-          // resize-none class, so the real shadcn textarea keeps the browser's native
-          // vertical-only resize grip - "none" here was invented by analogy to MUI's own
-          // TextareaAutosize behavior, not read from the ground truth.
+          // resize-none class, so the real shadcn textarea keeps its vertical-only resize
+          // grip. That grip is NOT the browser's native default - a bare <textarea> resizes
+          // both axes (`resize: both`) absent any CSS. It comes from Tailwind's own preflight
+          // base styles (`textarea { resize: vertical }`), which the installed shadcn
+          // textarea inherits as an unstyled base element.
           resize: "vertical" as const,
         }
       : {
