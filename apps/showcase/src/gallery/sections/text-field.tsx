@@ -114,6 +114,51 @@ export const textFieldSection: Section = {
       ),
     },
     {
+      id: "textfield-filled",
+      // shadcn flattens all three MUI TextField variants to the same Input box (see
+      // packages/xui/src/themes/shadcn.ts MuiFilledInput banner) - the shadcn side is the
+      // identical Label+Input twin used by textfield-basic; the mui side is a plain
+      // variant="filled" field with no compensating props, so the theme does all the work.
+      states: withFocus,
+      shadcn: (
+        <div style={stackStyle}>
+          <Label htmlFor="tf-filled-shadcn">Email</Label>
+          <Input data-target id="tf-filled-shadcn" />
+        </div>
+      ),
+      mui: (
+        <div style={stackStyle}>
+          <MuiTextField
+            fullWidth
+            variant="filled"
+            label="Email"
+            slotProps={{ htmlInput: { "data-target": true } }}
+          />
+        </div>
+      ),
+    },
+    {
+      id: "textfield-standard",
+      // Same flattening as textfield-filled above, for variant="standard".
+      states: withFocus,
+      shadcn: (
+        <div style={stackStyle}>
+          <Label htmlFor="tf-standard-shadcn">Email</Label>
+          <Input data-target id="tf-standard-shadcn" />
+        </div>
+      ),
+      mui: (
+        <div style={stackStyle}>
+          <MuiTextField
+            fullWidth
+            variant="standard"
+            label="Email"
+            slotProps={{ htmlInput: { "data-target": true } }}
+          />
+        </div>
+      ),
+    },
+    {
       id: "textfield-small",
       // shadcn ships one Input size (h-8, no small/default/large ladder like Button) - the
       // shadcn side is identical to textfield-basic; this pair proves MUI's size="small"
