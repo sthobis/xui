@@ -54,6 +54,48 @@ export async function applyState(page: Page, cell: Locator, state: PairState, pa
   await page.waitForTimeout(300)
 }
 
+/**
+ * Snaps a portalled overlay's rendered top-left to integer CSS pixels via a measurement-only
+ * `transform: translate(...)` nudge, so Playwright's `element.screenshot()` clip (which rounds
+ * outward to the nearest device pixel when the element's box starts at a fractional position)
+ * lands on the exact same sub-pixel phase for both sides of a pair.
+ *
+ * Why this is needed: shadcn's Select overlay (Radix/Floating UI) positions its content with a
+ * fractional `left`/`top` (e.g. 275.125px), while MUI's Popover always resolves to an integer
+ * (e.g. 490px) - so two DOM-identical overlays get clipped to PNGs of different pixel widths and
+ * different glyph sub-pixel phases, a pure capture artifact rather than a real style difference
+ * (see e2e/parity.spec.ts's "open" branch and the select-open task brief for the full diagnosis).
+ *
+ * Only ever called on the element about to be screenshotted (never the cell, never inline
+ * default/hover/focus states), and only shifts by the fractional remainder (< 1px), so it cannot
+ * mask a genuine multi-pixel style difference - a real difference in size/position/color still
+ * changes every pixel beyond that sub-pixel remainder and still fails the diff.
+ */
+export async function normalizeOverlayPosition(target: Locator): Promise<void> {
+  await target.evaluate((el) => {
+    const node = el as HTMLElement
+    const rect = node.getBoundingClientRect()
+    const dx = Math.round(rect.left) - rect.left
+    const dy = Math.round(rect.top) - rect.top
+    if (dx === 0 && dy === 0) return
+    // Radix's tailwindcss-animate enter/exit classes leave a *finished* CSS Transition on
+    // `transform` sitting on the node; a CSS Transition outranks a plain (non-!important) inline
+    // style in the cascade, and - worse - setting `transform` while one is still wired up makes
+    // the browser animate FROM the old value TOWARD ours over the transition's duration, so a
+    // synchronous re-measure right after setting it would still observe the pre-nudge position.
+    // Kill the transition first (with a forced reflow so it actually commits before the transform
+    // write) and set the transform with `!important` so both the animation-cascade priority and
+    // the timing race are neutralized - the nudge then takes effect instantly and synchronously.
+    node.style.setProperty("transition", "none", "important")
+    void node.offsetWidth // force reflow: commit transition:none before writing the transform
+    // `transform: none` cannot be combined with a translate() in the same value list (`none` must
+    // be the sole value), so treat "none"/unset the same as "no existing transform to preserve".
+    const existing = node.style.transform
+    const base = existing && existing !== "none" ? `${existing} ` : ""
+    node.style.setProperty("transform", `${base}translate(${dx}px, ${dy}px)`, "important")
+  })
+}
+
 export async function resetState(page: Page): Promise<void> {
   await page.mouse.move(0, 0)
   await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur())

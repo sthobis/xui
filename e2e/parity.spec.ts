@@ -2,7 +2,13 @@ import { expect, test } from "@playwright/test"
 import { mkdirSync, rmSync, writeFileSync } from "node:fs"
 import { PNG } from "pngjs"
 import { diffPngs } from "./lib/compare"
-import { applyState, openContentLocator, resetState, type PairState } from "./lib/states"
+import {
+  applyState,
+  normalizeOverlayPosition,
+  openContentLocator,
+  resetState,
+  type PairState,
+} from "./lib/states"
 import { thresholdFor } from "./thresholds"
 
 const RESULTS_DIR = "e2e/results"
@@ -43,11 +49,16 @@ test("all pairs match within threshold", async ({ page }, testInfo) => {
       // "open" content (Tooltip/Select, etc.) renders in a portal outside the cell - capture
       // the overlay itself instead of the (visually empty) cell.
       const shadcnTarget = state === "open" ? openContentLocator(page, shadcnCell, id) : shadcnCell
+      // Portalled overlays can land at a fractional sub-pixel position (Radix/Floating UI vs
+      // MUI's integer rounding) - normalize both sides to the same phase before screenshotting so
+      // the diff isn't dominated by capture-clip/glyph-AA artifacts. No-op for inline states.
+      if (state === "open") await normalizeOverlayPosition(shadcnTarget)
       const shadcnShot = await shadcnTarget.screenshot({ animations: "disabled" })
       await resetState(page)
 
       await applyState(page, muiCell, state, id)
       const muiTarget = state === "open" ? openContentLocator(page, muiCell, id) : muiCell
+      if (state === "open") await normalizeOverlayPosition(muiTarget)
       const muiShot = await muiTarget.screenshot({ animations: "disabled" })
       await resetState(page)
 
