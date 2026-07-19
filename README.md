@@ -54,8 +54,66 @@ pnpm typecheck
 
 Contributor and agent guidance lives in [AGENTS.md](AGENTS.md).
 
-## Status
+## Migration progress
 
-Foundations, the parity harness, and the first components are complete at verified pixel parity in light and dark.
-More components are being added tier by tier.
-The showcase is the source of truth for what is covered today.
+Components are migrated tier by tier.
+A checked box means the MUI component reaches verified 0.00% pixel parity with its shadcn twin in both light and dark.
+The scope is `@mui/material` core; MUI X (DataGrid, Date Pickers, Tree View) is out of scope for now.
+
+### Tier 1 - primitives
+
+- [x] Button
+- [x] IconButton
+- [x] TextField (Input + Textarea)
+- [x] Checkbox
+- [x] Radio / RadioGroup
+- [x] Switch
+- [ ] Select (in progress)
+- [ ] Slider
+- [ ] Chip (shadcn Badge)
+- [ ] Avatar
+- [ ] Divider (shadcn Separator)
+- [ ] Skeleton
+- [ ] LinearProgress / CircularProgress
+- [ ] Alert
+- [ ] Card / Paper
+- [ ] Typography
+- [ ] Link
+- [ ] Tooltip
+
+### Tier 2 - overlays and navigation
+
+- [ ] Menu
+- [ ] Dialog
+- [ ] Drawer (shadcn Sheet)
+- [ ] Popover
+- [ ] Snackbar
+- [ ] Accordion
+- [ ] Tabs
+- [ ] Breadcrumbs
+- [ ] Pagination
+- [ ] Table
+- [ ] List
+- [ ] AppBar / Toolbar
+- [ ] ButtonGroup
+- [ ] ToggleButton / ToggleButtonGroup
+- [ ] Autocomplete (shadcn Combobox)
+
+### Tier 3 - long tail and components with no direct shadcn equivalent
+
+Styled in shadcn's design language so they blend in.
+
+- [ ] Rating
+- [ ] Stepper
+- [ ] Fab
+- [ ] SpeedDial
+- [ ] BottomNavigation
+- [ ] Backdrop
+- [ ] Modal
+- [ ] Badge (dot / count overlay)
+- [ ] ImageList
+- [ ] TablePagination
+- [ ] FormControl / FormLabel / FormHelperText / InputAdornment
+
+Anything not yet checked still renders, just with MUI's default look rather than the shadcn look.
+The showcase is the source of truth for exactly what is covered today.
