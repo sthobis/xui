@@ -26,16 +26,32 @@ test.beforeEach(async ({ page }, testInfo) => {
 
 test("all pairs match within threshold", async ({ page }, testInfo) => {
   testInfo.setTimeout(240_000)
-  rmSync(`${RESULTS_DIR}/diffs`, { recursive: true, force: true })
+
+  // Iteration speedup: `PARITY_PAIR=slider` (comma-separated id prefixes) restricts the run to
+  // matching pairs, so a single-component check takes ~seconds instead of the whole suite. A
+  // filtered run writes a separate `.filtered.md` report and leaves prior diffs in place, so it
+  // never clobbers the canonical report/diffs that only a full (unfiltered) run produces.
+  const only = (process.env.PARITY_PAIR ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean)
+  const filtered = only.length > 0
+
+  if (!filtered) rmSync(`${RESULTS_DIR}/diffs`, { recursive: true, force: true })
   mkdirSync(`${RESULTS_DIR}/diffs`, { recursive: true })
 
-  const pairIds: Array<{ id: string; states: PairState[] }> = await page.evaluate(() =>
+  const allPairs: Array<{ id: string; states: PairState[] }> = await page.evaluate(() =>
     Array.from(document.querySelectorAll("[data-pair-id]")).map((el) => ({
       id: el.getAttribute("data-pair-id")!,
       states: (el.getAttribute("data-states") ?? "default").split(",") as PairState[],
     })),
   )
-  expect(pairIds.length).toBeGreaterThan(0)
+  expect(allPairs.length).toBeGreaterThan(0)
+
+  const pairIds = filtered
+    ? allPairs.filter((p) => only.some((f) => p.id === f || p.id.startsWith(f)))
+    : allPairs
+  expect(pairIds.length, `no pairs matched PARITY_PAIR=${only.join(",")}`).toBeGreaterThan(0)
 
   const failures: string[] = []
   for (const { id, states } of pairIds) {
@@ -85,7 +101,10 @@ test("all pairs match within threshold", async ({ page }, testInfo) => {
       .sort((a, b) => b.pct - a.pct)
       .map((r) => `| ${r.pair} | ${r.state} | ${r.pct.toFixed(2)} | ${r.threshold} |`),
   ].join("\n")
-  writeFileSync(`${RESULTS_DIR}/report-${testInfo.project.name}.md`, report)
+  const reportName = filtered
+    ? `report-${testInfo.project.name}.filtered.md`
+    : `report-${testInfo.project.name}.md`
+  writeFileSync(`${RESULTS_DIR}/${reportName}`, report)
   console.log(report)
 
   expect(failures, failures.join("\n")).toEqual([])

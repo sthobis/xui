@@ -68,7 +68,8 @@ The harness handles them via an `open` state: both the MUI overlay and the shadc
 ## Commands
 
 - `pnpm dev` runs the showcase.
-- `pnpm verify:parity` runs the pixel-parity suite (light and dark).
+- `pnpm verify:parity` runs the full pixel-parity suite (light and dark, all pairs, ~90s).
+- While iterating on ONE component, filter to it for a ~5s loop instead of the full suite: `PARITY_PAIR=slider pnpm exec playwright test e2e/parity.spec.ts --project=light` (comma-separated id prefixes; add `--project=dark` or drop it for both). Run the full `pnpm verify:parity` once at the end to confirm no regressions.
 - `pnpm verify` runs parity plus the preflight suite (proves the theme does not depend on Tailwind's reset).
 - `pnpm typecheck` typechecks every package and the e2e harness.
 - `pnpm test:unit` runs the compare-utility unit tests.
