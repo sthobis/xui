@@ -1365,6 +1365,263 @@ export const shadcnTheme = createTheme({
         }),
       },
     },
+    // -----------------------------------------------------------------------
+    // Radio (RadioGroup item)
+    //
+    // Ground truth: apps/showcase/src/components/ui/radio-group.tsx
+    // (radix-ui RadioGroup.Root/Item/Indicator, style "radix-nova"), read
+    // directly and cross-checked with getComputedStyle() on the live shadcn
+    // radio (light + dark; unchecked/checked/disabled;
+    // hover/focus-visible on unchecked+checked) via the Playwright MCP -
+    // same verification method as MuiCheckbox above.
+    //
+    // radio-group.tsx Item classes (RadioGroupPrimitive.Item, verbatim):
+    //   group/radio-group-item peer relative flex aspect-square size-4
+    //   shrink-0 rounded-full border border-input outline-none
+    //   after:absolute after:-inset-x-3 after:-inset-y-2
+    //   focus-visible:border-ring focus-visible:ring-3
+    //   focus-visible:ring-ring/50 disabled:cursor-not-allowed
+    //   disabled:opacity-50 aria-invalid:border-destructive
+    //   aria-invalid:ring-3 aria-invalid:ring-destructive/20
+    //   aria-invalid:aria-checked:border-primary dark:bg-input/30
+    //   dark:aria-invalid:border-destructive/50
+    //   dark:aria-invalid:ring-destructive/40 data-checked:border-primary
+    //   data-checked:bg-primary data-checked:text-primary-foreground
+    //   dark:data-checked:bg-primary
+    // radio-group.tsx Indicator classes (RadioGroupPrimitive.Indicator,
+    // verbatim): flex size-4 items-center justify-center
+    // radio-group.tsx inner dot (a plain <span>, NOT a lucide icon - read
+    // directly from the file rather than assumed per the task's own
+    // warning; this file imports no icon library at all, unlike
+    // checkbox.tsx's lucide CheckIcon):
+    //   absolute top-1/2 left-1/2 size-2 -translate-x-1/2 -translate-y-1/2
+    //   rounded-full bg-primary-foreground
+    // No aria-invalid pair exists in this gallery (same out-of-scope
+    // convention as MuiButton/MuiCheckbox above).
+    //
+    // Extracted class -> CSS:
+    //   size-4                    -> width/height: 1rem (16px)
+    //   aspect-square shrink-0    -> fixed 1rem square. The root itself
+    //                                carries no items-center/justify-center
+    //                                (unlike Checkbox's root) - centering the
+    //                                dot is the separate Indicator element's
+    //                                job (its own "flex items-center
+    //                                justify-center" class). SwitchBase has
+    //                                no extra indicator wrapper, so this is
+    //                                reproduced on MUI's root instead - same
+    //                                end-state pixels (an 8px dot centered in
+    //                                a 16px circle), different owning
+    //                                element.
+    //   rounded-full              -> borderRadius: 50% (a true circle - NOT
+    //                                the --radius scale, and NOT Checkbox's
+    //                                flat 4px literal either; read fresh from
+    //                                THIS file's own class, not copied from
+    //                                Checkbox's rounded-[4px] by analogy)
+    //   border border-input      -> border: 1px solid var(--input)
+    //   outline-none              -> outline: none
+    //   dark:bg-input/30          -> dark-only fill; light has NO background
+    //                                class (same pattern as Checkbox -
+    //                                confirmed via getComputedStyle: light
+    //                                rest state backgroundColor is fully
+    //                                transparent, "rgba(0, 0, 0, 0)")
+    //   focus-visible:border-ring focus-visible:ring-3
+    //   focus-visible:ring-ring/50
+    //                             -> borderColor: ring, boxShadow: 0 0 0 3px
+    //                                ring/50
+    //   disabled:cursor-not-allowed disabled:opacity-50
+    //                             -> opacity: 0.5, cursor: not-allowed (no
+    //                                disabled:bg-* class, same as Checkbox)
+    //   data-checked:border-primary data-checked:bg-primary
+    //   data-checked:text-primary-foreground
+    //                             -> checked-only: borderColor: primary,
+    //                                backgroundColor: primary, color:
+    //                                primary.contrastText. This text-color
+    //                                class lives on the ROOT per this class
+    //                                list (not the dot) - the dot's own
+    //                                class is the separate, explicit
+    //                                bg-primary-foreground below. The dot is
+    //                                implemented here with backgroundColor:
+    //                                "currentColor" so it resolves to the
+    //                                identical contrastText value through the
+    //                                root's own color inheritance, instead of
+    //                                a second hardcoded token reference.
+    //   dark:data-checked:bg-primary
+    //                             -> re-asserts checked's primary background
+    //                                over dark:bg-input/30's unconditional
+    //                                fill - same trap/mechanism as
+    //                                MuiCheckbox's own
+    //                                dark:data-checked:bg-primary above
+    //   size-2 (dot)              -> width/height: 0.5rem (8px)
+    //   rounded-full (dot)        -> borderRadius: 50%
+    //   bg-primary-foreground (dot) -> backgroundColor: currentColor (see
+    //                                note directly above)
+    //
+    // GOTCHA - NO transition-colors class anywhere on Item (unlike
+    // checkbox.tsx, which DOES carry transition-colors): confirmed by
+    // reading this file's own class string, not copied from Checkbox's
+    // block. State changes on the real shadcn radio are instant, not
+    // animated - no `transition` is set below (left at the CSS initial
+    // value). Restating Checkbox's 150ms transition here would be an
+    // invented-by-analogy value the task's own rule explicitly forbids.
+    //
+    // GOTCHA - same disableRipple trap as MuiCheckbox above: MUI's
+    // Radio.js destructures its OWN `disableRipple = false` default (via
+    // `useDefaultProps({..., name: 'MuiRadio'})`) and forwards that
+    // resolved (always-defined) value as an explicit prop down through
+    // SwitchBase to ButtonBase, so the global
+    // `MuiButtonBase.defaultProps.disableRipple: true` set above never
+    // reaches it. Restated per-component below; verified with a REAL
+    // Playwright mouse hover (not a synthetic dispatchEvent) that no grey
+    // hover halo paints on hover or focus.
+    //
+    // GOTCHA - focus ring keys off `.Mui-focusVisible`, not `.Mui-focused`:
+    // identical mechanism to MuiCheckbox above (Radio is SwitchBase/
+    // ButtonBase family - the real focusable/hoverable element is the
+    // absolutely-positioned, opacity:0 native `<input type="radio">`, and
+    // ButtonBase's `handleFocus` reads `isFocusVisible(event.target)` off
+    // that nested input via the bubbling focusin event, adding
+    // `Mui-focusVisible` to the outer span even though the span itself is
+    // never the literal focused DOM node).
+    //
+    // GOTCHA - MUI's own internal RadioRoot base style (Radio.js) sets
+    // `color: text.secondary` unconditionally and, via its own `variants`
+    // array (gated on `color: 'primary', disabled: false` - MUI Radio's own
+    // default color, never overridden by this gallery),
+    // `&.Mui-checked { color: primary.main }` and
+    // `&.Mui-disabled { color: action.disabled }` - both at a specificity
+    // this override's styleOverrides.root still beats by source order
+    // (styleOverrides is always serialized after the component's own base
+    // style + internal variants, same mechanism proven for
+    // MuiButton/MuiCheckbox above). Not load-bearing for what actually
+    // paints (the dot's color comes from this override's own
+    // `&.Mui-checked` color, not MUI's default), but restated/neutralized
+    // below anyway for hygiene, mirroring MuiCheckbox's equivalent note.
+    //
+    // `data-target` is placed on the internal `<input>` via
+    // `slotProps={{ input: { "data-target": true } }}` for the standalone
+    // pairs (mirrors MuiCheckbox exactly - see its own banner above for the
+    // full z-index/hover-bubbling justification), and on the shadcn
+    // RadioGroupItem root directly - radix RadioGroupItem renders a real
+    // `<button type="button" role="radio">`, not a native input (confirmed
+    // by reading @radix-ui/react-radio-group's compiled source), so the
+    // rendered root IS the focusable/hoverable element on that side.
+    // -----------------------------------------------------------------------
+    MuiRadio: {
+      defaultProps: {
+        disableRipple: true, // see GOTCHA above - restated per-component, mirrors MuiCheckbox
+        // shadcn: radio-group.tsx's Indicator renders a plain filled <span>
+        // dot (size-2 rounded-full bg-primary-foreground), NOT a lucide
+        // icon - read directly from the file rather than assumed (it
+        // imports no icon library at all). `icon` (rendered while
+        // unchecked) is the same dot made invisible via
+        // `visibility: hidden` rather than omitted, for the same reason as
+        // MuiCheckbox's `icon` above (SwitchBase always renders one of
+        // `icon`/`checkedIcon`, and an invisible element paints zero pixels
+        // - visually identical to shadcn's real DOM, which mounts no
+        // Indicator at all when unchecked).
+        icon: createElement("span", {
+          "aria-hidden": true,
+          style: {
+            width: "0.5rem",
+            height: "0.5rem",
+            borderRadius: "50%",
+            backgroundColor: "currentColor",
+            visibility: "hidden" as const,
+          },
+        }),
+        checkedIcon: createElement("span", {
+          "aria-hidden": true,
+          style: {
+            width: "0.5rem",
+            height: "0.5rem",
+            borderRadius: "50%",
+            backgroundColor: "currentColor",
+          },
+        }),
+      },
+      styleOverrides: {
+        root: ({ theme }) => ({
+          width: "1rem", // shadcn: size-4
+          height: "1rem",
+          padding: 0, // shadcn: no padding class (kills SwitchBaseRoot's own 9px base padding)
+          boxSizing: "border-box",
+          display: "flex", // centers the dot - see "aspect-square shrink-0" note above
+          alignItems: "center",
+          justifyContent: "center",
+          flexShrink: 0, // shadcn: shrink-0
+          borderRadius: "50%", // shadcn: rounded-full
+          border: `1px solid ${theme.vars.palette.input}`, // shadcn: border border-input
+          backgroundColor: "transparent", // shadcn: no base bg class (light)
+          backgroundClip: "border-box", // shadcn: no bg-clip-padding class (left at CSS initial, same as Checkbox)
+          color: theme.vars.palette.text.primary, // shadcn: ambient foreground (neutralizes MUI's own text.secondary - see GOTCHA above)
+          outline: "none", // shadcn: outline-none
+          cursor: "default", // shadcn: no cursor-pointer class; browser default (ButtonBase defaults to pointer)
+          "&.Mui-checked": {
+            borderColor: theme.vars.palette.primary.main, // shadcn: data-checked:border-primary
+            backgroundColor: theme.vars.palette.primary.main, // shadcn: data-checked:bg-primary
+            color: theme.vars.palette.primary.contrastText, // shadcn: data-checked:text-primary-foreground (dot inherits via currentColor)
+          },
+          "&.Mui-disabled": {
+            opacity: 0.5, // shadcn: disabled:opacity-50
+            cursor: "not-allowed", // shadcn: disabled:cursor-not-allowed
+            color: theme.vars.palette.text.primary, // shadcn: no disabled color change - neutralizes MUI's own action.disabled tint
+          },
+          "&.Mui-focusVisible": {
+            borderColor: theme.vars.palette.ring, // shadcn: focus-visible:border-ring
+            boxShadow: `0 0 0 3px color-mix(in oklab, ${theme.vars.palette.ring} 50%, transparent)`, // shadcn: focus-visible:ring-3 ring-ring/50
+          },
+          ...theme.applyStyles("dark", {
+            backgroundColor: `color-mix(in oklab, ${theme.vars.palette.input} 30%, transparent)`, // shadcn: dark:bg-input/30
+            "&.Mui-checked": {
+              backgroundColor: theme.vars.palette.primary.main, // shadcn: dark:data-checked:bg-primary (re-assert over dark:bg-input/30)
+            },
+          }),
+        }),
+      },
+    },
+    // -----------------------------------------------------------------------
+    // RadioGroup (container)
+    //
+    // Ground truth: apps/showcase/src/components/ui/radio-group.tsx's Root
+    // classes (RadioGroupPrimitive.Root, verbatim): "grid w-full gap-2".
+    // MUI's <RadioGroup> renders @mui/material/FormGroup under the hood
+    // (confirmed by reading RadioGroup.js: it wraps children in a plain
+    // `<FormGroup role="radiogroup">`) - themed here via MuiFormGroup rather
+    // than a RadioGroup-specific slot, since RadioGroup ships no
+    // styleOverrides entry of its own to hang this on. No other component in
+    // this app's gallery renders FormGroup yet, so this addition is scoped
+    // cleanly to this task.
+    //
+    // Extracted class -> CSS:
+    //   grid                      -> single-column auto-flow grid == a
+    //                                vertical stack (no explicit
+    //                                grid-template-columns is set, so every
+    //                                child occupies its own row) - reproduced
+    //                                as FormGroup's own existing
+    //                                flexDirection: column (left unchanged)
+    //                                rather than actually switching display
+    //                                to grid: the rendered layout is
+    //                                pixel-identical for a single column of
+    //                                block-level rows, and changing `display`
+    //                                risks fighting FormGroup's own `row`
+    //                                variant machinery for no visual gain.
+    //   w-full                    -> width: 100% (needed so both sides
+    //                                resolve to the identical box width
+    //                                inside the gallery's centered cell -
+    //                                without this, MUI's FormGroup would stay
+    //                                content-sized while shadcn's RadioGroup
+    //                                stretches to the cell, so the two would
+    //                                center at different horizontal offsets)
+    //   gap-2                     -> gap: 0.5rem (8px) between rows
+    // -----------------------------------------------------------------------
+    MuiFormGroup: {
+      styleOverrides: {
+        root: {
+          width: "100%", // shadcn: w-full
+          gap: "0.5rem", // shadcn: gap-2
+        },
+      },
+    },
     // Per-component overrides are appended by later tasks, one banner each.
   },
 })
