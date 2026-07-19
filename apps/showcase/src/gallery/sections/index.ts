@@ -5,6 +5,7 @@ import { textFieldSection } from "./text-field"
 import { checkboxSection } from "./checkbox"
 import { radioSection } from "./radio"
 import { switchSection } from "./switch"
+import { selectSection } from "./select"
 
 export const sections: Section[] = [
   buttonSection,
@@ -13,4 +14,5 @@ export const sections: Section[] = [
   checkboxSection,
   radioSection,
   switchSection,
+  selectSection,
 ]

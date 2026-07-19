@@ -1,0 +1,187 @@
+import { useEffect, useState, type HTMLAttributes } from "react"
+import { Check } from "lucide-react"
+import MuiSelect from "@mui/material/Select"
+import MuiMenuItem from "@mui/material/MenuItem"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import type { Section } from "../types"
+
+// Same option list + same selected value on both sides for every pair, so select-open's
+// dropdown renders identical text (letting the browser's own layout engine size both content
+// boxes identically - see the MuiSelect banner in packages/xui/src/themes/shadcn.ts for why no
+// pair forces an explicit trigger/content width) and the same one item paints the selected
+// check icon.
+const FRUITS = [
+  { value: "apple", label: "Apple" },
+  { value: "banana", label: "Banana" },
+  { value: "blueberry", label: "Blueberry" },
+  { value: "grapes", label: "Grapes" },
+  { value: "pineapple", label: "Pineapple" },
+]
+const SELECTED = "blueberry"
+
+// MUI's Select sets its own Menu paper `style.minWidth` to the trigger's measured
+// `clientWidth` by default (SelectInput.js), an inline style that would otherwise always beat
+// the theme's own `min-width: 9rem` (shadcn: min-w-36) rule regardless of specificity - so
+// every pair explicitly restates the ground-truth intrinsic value here to defeat that
+// auto-tie and let the menu size to its own content instead, exactly like the real
+// (position="item-aligned") shadcn twin's own intrinsic min-w-36.
+const menuPaperStyle = { minWidth: "9rem" }
+
+// Select's `SelectDisplayProps` type is a plain `React.HTMLAttributes<HTMLDivElement>` (unlike
+// Checkbox/Radio/Switch's own `slotProps.input`, which opts into an augmentable data-*-friendly
+// type - see checkbox.tsx's own `dataTargetInput` banner) - a bare `{ "data-target"?: boolean }`
+// variable shares NO property with it, so TypeScript's "weak type" check rejects the assignment
+// even though it isn't a fresh object literal. Declaring it as an actual (structural) extension
+// of HTMLAttributes, rather than an unrelated shape, sidesteps that without widening to `any`.
+// `data-target` is the parity harness's own click marker (e2e/lib/states.ts); `data-portal-target`
+// (below) is the harness's portal-capture marker (see e2e/parity.spec.ts + the Select task brief)
+// placed on the one DOM node - the Menu's Paper - that both this and the real shadcn
+// SelectContent render as their outermost portalled box.
+interface DataTargetProps extends HTMLAttributes<HTMLDivElement> {
+  "data-target"?: boolean
+}
+const dataTarget: DataTargetProps = { "data-target": true }
+const portalTargetPaper = { style: menuPaperStyle, "data-portal-target": "select-open" }
+
+// MUI's own Select has no built-in "selected item gets a check glyph" behavior (unlike
+// Radix's SelectItem, whose ItemIndicator only mounts a Check child when the item's own value
+// matches - see select.tsx ground truth). shadcn's real DOM reserves the pr-8 gap on every
+// item unconditionally (styled once in the theme's MuiMenuItem.root) but only the matching
+// item actually renders a Check glyph - reproduced here the same idiomatic way any MUI
+// consumer would (hand-rendering a child per item), with the theme owning the icon's
+// size/position/color via a `data-slot="select-item-check"` selector (see MuiMenuItem banner).
+function muiOptions(selected: string) {
+  return FRUITS.map(({ value, label }) => (
+    <MuiMenuItem key={value} value={value}>
+      {value === selected && <Check aria-hidden data-slot="select-item-check" />}
+      {label}
+    </MuiMenuItem>
+  ))
+}
+
+// GOTCHA - MUI's Select, by default, reuses the SELECTED MenuItem's own `children` verbatim as
+// the closed trigger's displayed content (confirmed live: with no `renderValue`, the trigger
+// showed the Check glyph ABOVE the "Blueberry" text, since that glyph is a child of the
+// matching MenuItem above). shadcn's SelectValue never does this - the check only ever lives
+// inside the dropdown's ItemIndicator, never the trigger - so `renderValue` pins the trigger to
+// plain text regardless of what a matching MenuItem's own children look like.
+function renderSelectValue(value: string) {
+  return FRUITS.find((fruit) => fruit.value === value)?.label ?? ""
+}
+
+function shadcnOptions() {
+  return FRUITS.map(({ value, label }) => (
+    <SelectItem key={value} value={value}>
+      {label}
+    </SelectItem>
+  ))
+}
+
+// GOTCHA - MUI's own Escape-to-close (Modal/MenuList's onKeyDown) relies on the native
+// keydown event bubbling up through the React tree from whatever element currently has focus.
+// The parity harness's own resetState (e2e/lib/states.ts, not modifiable) runs
+// `document.activeElement?.blur()` BEFORE pressing Escape - since Menu autofocuses an item on
+// open, that blur moves focus to <body>, and a keydown targeting <body> never reaches any
+// React-attached listener (body is not a descendant of React's root container, so nothing
+// bubbles into it) - confirmed live: real Radix (shadcn's side) closes fine regardless, because
+// its Escape handling is a plain top-level `document` listener, not focus-dependent, but the
+// unthemed MUI twin was observed left open (a stray `[role="listbox"]` at the page root)
+// after the exact same resetState sequence. Fixed the same way Radix already does it: a
+// controlled `open` + a plain native `document` keydown listener (not a React synthetic one),
+// which fires regardless of what currently has focus.
+function useControlledOpen() {
+  const [open, setOpen] = useState(false)
+  useEffect(() => {
+    if (!open) return
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") setOpen(false)
+    }
+    document.addEventListener("keydown", handleKeyDown)
+    return () => document.removeEventListener("keydown", handleKeyDown)
+  }, [open])
+  return { open, onOpen: () => setOpen(true), onClose: () => setOpen(false) }
+}
+
+function MuiSelectOpenDemo() {
+  const controlledOpen = useControlledOpen()
+  return (
+    <MuiSelect
+      defaultValue={SELECTED}
+      SelectDisplayProps={dataTarget}
+      renderValue={renderSelectValue}
+      MenuProps={{ slotProps: { paper: portalTargetPaper } }}
+      {...controlledOpen}
+    >
+      {muiOptions(SELECTED)}
+    </MuiSelect>
+  )
+}
+
+export const selectSection: Section = {
+  title: "Select",
+  pairs: [
+    {
+      id: "select-closed",
+      states: ["default", "hover", "focus"],
+      shadcn: (
+        <Select defaultValue={SELECTED}>
+          <SelectTrigger data-target>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>{shadcnOptions()}</SelectContent>
+        </Select>
+      ),
+      mui: (
+        <MuiSelect
+          defaultValue={SELECTED}
+          SelectDisplayProps={dataTarget}
+          renderValue={renderSelectValue}
+          MenuProps={{ slotProps: { paper: { style: menuPaperStyle } } }}
+        >
+          {muiOptions(SELECTED)}
+        </MuiSelect>
+      ),
+    },
+    {
+      id: "select-disabled",
+      shadcn: (
+        <Select defaultValue={SELECTED} disabled>
+          <SelectTrigger data-target>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>{shadcnOptions()}</SelectContent>
+        </Select>
+      ),
+      mui: (
+        <MuiSelect
+          defaultValue={SELECTED}
+          disabled
+          SelectDisplayProps={dataTarget}
+          renderValue={renderSelectValue}
+          MenuProps={{ slotProps: { paper: { style: menuPaperStyle } } }}
+        >
+          {muiOptions(SELECTED)}
+        </MuiSelect>
+      ),
+    },
+    {
+      id: "select-open",
+      states: ["open"],
+      shadcn: (
+        <Select defaultValue={SELECTED}>
+          <SelectTrigger data-target>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent data-portal-target="select-open">{shadcnOptions()}</SelectContent>
+        </Select>
+      ),
+      mui: <MuiSelectOpenDemo />,
+    },
+  ],
+}

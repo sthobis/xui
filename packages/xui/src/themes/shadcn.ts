@@ -5,7 +5,7 @@
  * (style radix-nova, base color neutral, css variables).
  */
 import { createTheme, type CssVarsTheme, type Theme } from "@mui/material/styles"
-import { Check } from "lucide-react"
+import { Check, ChevronDown } from "lucide-react"
 // createElement (not JSX) because this file is a plain .ts module - JSX syntax is only
 // valid in .tsx files, and this file's name/extension is fixed by the constraint that only
 // packages/xui/src/themes/shadcn.ts may change. "react" itself is not a new external
@@ -2107,6 +2107,318 @@ export const shadcnTheme = createTheme({
         input: {
           outline: "none",
         },
+      },
+    },
+    // -----------------------------------------------------------------------
+    // Select - the first PORTALLED component (validates Task 1's open-state/portal-capture
+    // harness end to end - see e2e/lib/states.ts + e2e/parity.spec.ts). Ground truth read
+    // directly from apps/showcase/src/components/ui/select.tsx (radix-ui Select), cross-checked
+    // live via getComputedStyle on the real shadcn twin (light + dark, closed + open) - not
+    // assumed by analogy to Button/TextField/Checkbox above.
+    //
+    // Anatomy mapping:
+    //   SelectTrigger (real <button>, shadcn) <-> MUI Select's combobox <div role="combobox">
+    //     (SelectDisplayProps carries `data-target` - the visible clickable element; unlike
+    //     Checkbox/Radio/Switch's native-input target, Select's `...other` unknown props spread
+    //     onto the HIDDEN native <input> instead, per SelectInput.js's own source, so a plain
+    //     top-level `data-target` prop on <Select> would land on the wrong, non-interactive
+    //     element - confirmed by reading SelectInput.js's render function).
+    //   SelectContent (Radix Portal + real ground-truth classes directly on the Content root)
+    //     <-> MUI's Menu Paper (`MenuProps.slotProps.paper`, the idiomatic per-instance escape
+    //     hatch for the one DOM node that needs the `data-portal-target` marker - see gallery).
+    //   SelectItem <-> MuiMenuItem. shadcn's ItemIndicator only mounts a Check child for the
+    //     one item whose value matches (every item still reserves the pr-8 gap via its own
+    //     always-present, positioned span) - MUI MenuItem has no built-in equivalent slot, so
+    //     the gallery hand-renders a Check per matching item (exactly how any real MUI consumer
+    //     would build this, same as shadcn's own "any consumer decides what indicator to render"
+    //     shape) and this theme owns ONLY the icon's size/position/color via a stable
+    //     `data-slot="select-item-check"` selector - kept out of sx, all in this file.
+    //
+    // GOTCHA - Radix autofocuses the CURRENTLY SELECTED item the instant the menu opens (real
+    // <select> keyboard-resume behavior) - confirmed live: the selected item's `focus:bg-accent
+    // focus:text-accent-foreground` classes are ALREADY painted in the very first open
+    // screenshot, not just on a later hover/arrow-key. MUI's own Menu ships the equivalent
+    // behavior for free (Menu's default `variant="selectedMenu"` autofocuses/scrolls to the
+    // selected MenuItem on open) - confirmed live via `document.activeElement`: it really is the
+    // selected <li>, both after a synthetic click and after a REAL Playwright mouse click (the
+    // exact path the harness uses).
+    //
+    // GOTCHA - `.Mui-focusVisible` is the WRONG class to key this off, even though it looks like
+    // the obvious match: MUI's `useIsFocusVisible` heuristic (its own JS approximation of
+    // `:focus-visible`) does NOT flag this focus as "visible" when it immediately follows a real
+    // mouse click (confirmed live - a genuine Playwright `browser_click` opens the menu, but the
+    // resulting `document.activeElement` carries no `Mui-focusVisible` class at all). shadcn's
+    // real item.tsx does not have this problem because it keys off plain `focus:` (a real CSS
+    // `:focus` pseudo-class, NOT `focus-visible:`) - grep the ground truth: there is no
+    // `hover:` class anywhere in item.tsx, only `focus:`. Radix's own "highlight the item under
+    // the pointer" behavior is not a CSS `:hover` effect at all - it works by literally calling
+    // the DOM `.focus()` API on whatever item the mouse moves over (confirmed by reading
+    // @radix-ui/react-select's compiled source), which is also why a STATIONARY post-click
+    // cursor (the harness never moves the mouse again once the menu is open) does NOT shift the
+    // highlight to whatever item now happens to sit under it - no new pointermove event ever
+    // fires there. A first draft added a plain CSS `&:hover` rule here to "match" Radix's
+    // pointer-highlight behavior, reasoning by analogy instead of reading item.tsx - live pixels
+    // caught it immediately: Chromium's OWN native `:hover` DOES recompute purely from cursor
+    // geometry on every relayout (unlike JS pointerenter/mouseenter, which only fire on actual
+    // pointer movement), so once the menu opened below the trigger the still-stationary real
+    // mouse cursor ended up geometrically inside a DIFFERENT item's box than the focused,
+    // selected one - painting TWO highlighted rows on the MUI twin against shadcn's single one.
+    // Fixed by neutralizing `&:hover` back to transparent (item.tsx truly has no hover-reactive
+    // class at all) and keying the highlight off plain `&:focus` alone (matching item.tsx's
+    // real, sole `focus:` variant) - keyboard arrow-key navigation still works identically
+    // either way (MUI's own listbox nav also just calls native `.focus()`). MUI's MenuItem/
+    // ButtonBase also ships its OWN unthemed `&:hover { backgroundColor: action.hover }` rule
+    // regardless of `disableRipple` - confirmed live via document.styleSheets - so the
+    // neutralizing `&:hover` rule below is restating an ACTUAL override, not defensive
+    // boilerplate.
+    //
+    // GOTCHA - shadcn's real SelectContent does NOT get a plain bg-accent tile under the
+    // selected item at rest (item.tsx has no `data-[state=checked]:` class at all) - only the
+    // above focus/hover states paint one. MUI's own unthemed `.Mui-selected` default IS a
+    // persistent tint (`action.selected`), which would paint a highlight on the selected item
+    // even when nothing focuses/hovers it (impossible to observe in THIS gallery, since the
+    // selected item is always auto-focused on open, but themed correctly below regardless, not
+    // left to coincidence).
+    //
+    // GOTCHA - real shadcn's ChevronDownIcon never rotates (select.tsx has no `data-[state=open]:
+    // rotate-*` class - it is the same static glyph closed or open). MUI's own default
+    // SelectIcon flips 180deg on `.MuiSelect-iconOpen` - neutralized below.
+    //
+    // GOTCHA - paddingRight is the one property this override cannot win with a plain
+    // 2-class `&.MuiSelect-select` rule (the shape the library's own overridesResolver wraps
+    // styleOverrides.select in): NativeSelectInput.js ships its OWN
+    // `variants: [{props: {variant: 'outlined'}, style: {'&&&': {paddingRight: 32}}}]` at
+    // 3-class specificity, which beats a plain 2-class override regardless of source order
+    // (confirmed by reading the compiled selector list on document.styleSheets, the same
+    // investigative method already used for MuiSwitch's track `.Mui-checked + &&` above) -
+    // restated here with the same "&&" doubling idiom (2-class -> 4-class) to win outright.
+    // -----------------------------------------------------------------------
+    MuiSelect: {
+      defaultProps: {
+        IconComponent: ChevronDown,
+      },
+      styleOverrides: {
+        // Root stays governed by the shared MuiOutlinedInput recipe above (border/radius/
+        // bg-transparent/h-8/dark:bg-input-30/focus-ring/disabled - all identical between
+        // shadcn's real Input box and SelectTrigger's own box classes) - this slot only adds
+        // the ONE trait unique to Select and absent from Input/TextField entirely: a dark-mode
+        // hover tint (shadcn: dark:hover:bg-input/50 - Input/TextField carry no hover class at
+        // all, so this must NOT live in the shared textFieldBoxStates helper). Targets
+        // `.MuiSelect-root`, a DISTINCT class from `.MuiOutlinedInput-root` on the very same
+        // DOM node (Select.js wraps OutlinedInput via `styled(OutlinedInput, {name: 'MuiSelect',
+        // slot: 'Root'})`), so this is scoped to Select only and can never leak onto TextField.
+        root: ({ theme }) => ({
+          ...theme.applyStyles("dark", {
+            "&:hover": {
+              backgroundColor: `color-mix(in oklab, ${theme.vars.palette.input} 50%, transparent)`, // shadcn: dark:hover:bg-input/50
+            },
+          }),
+          // GOTCHA - the shared textFieldBoxStates() helper's `&.Mui-disabled` rule (applied to
+          // this same root via the MuiOutlinedInput override above) sets `disabled:bg-input/50` -
+          // correct for the real shadcn Input/Textarea box, but SelectTrigger's own real classes
+          // have NO such class (only `disabled:cursor-not-allowed disabled:opacity-50` - grep
+          // select.tsx's SelectTrigger directly). Left un-neutralized, the disabled MUI trigger
+          // rendered as a solid light-grey filled pill instead of shadcn's faint, still-mostly-
+          // transparent one - caught live via a side-by-side screenshot diff, not a computed-
+          // style read alone (the color difference was large enough to see directly). `&&`
+          // doubles this rule's own selector to out-specificity that shared 2-unit rule
+          // regardless of source order, the same idiom already used for MuiSelect's own
+          // `select`.paddingRight fix below.
+          //
+          // GOTCHA - dark mode's `dark:bg-input/30` ambient tint is UNCONDITIONAL in the real
+          // component (no `not-disabled:` gate anywhere in SelectTrigger's classes), so a first
+          // draft that neutralized straight to `transparent` in every color scheme overcorrected:
+          // it also erased that ambient tint on the disabled dark trigger, which real shadcn
+          // still shows - caught live via getComputedStyle in dark mode specifically (shadcn's
+          // disabled trigger still measured `oklab(1 0 0 / 0.045)`, i.e. input/30, not fully
+          // transparent). Restated per color scheme instead of a single blanket reset.
+          "&&.Mui-disabled": {
+            backgroundColor: "transparent",
+            ...theme.applyStyles("dark", {
+              backgroundColor: `color-mix(in oklab, ${theme.vars.palette.input} 30%, transparent)`, // shadcn: dark:bg-input/30 (unconditional, unaffected by disabled)
+            }),
+          },
+        }),
+        select: {
+          // shadcn: py-2 pl-2.5 (root keeps padding:0 like the shared Input/TextField box -
+          // see banner above - so ALL of the trigger's real padding lives here on the select
+          // div, mirroring the established "box vs input slot" split already proven for
+          // MuiOutlinedInput/MuiFilledInput/MuiInput). A plain (2-class) declaration already
+          // beats textFieldInputStyle's shared 1-class `.MuiOutlinedInput-input` py-1/px-2.5
+          // for every property except paddingRight - see GOTCHA above for why that one needs
+          // the extra boost below.
+          paddingTop: "0.5rem",
+          paddingBottom: "0.5rem",
+          paddingLeft: "0.625rem",
+          "&&": {
+            // shadcn: pr-2 (8px) + gap-1.5 (6px) + chevron size-4 (16px) = 30px total
+            // clearance between the value text and the trigger's own right edge, reserved
+            // here since the chevron itself is absolutely positioned (out of flow, below) and
+            // contributes no natural layout width of its own.
+            paddingRight: "1.875rem",
+          },
+          "&.Mui-disabled": {
+            // GOTCHA - InputBaseInput's own compiled `.MuiInputBase-input.Mui-disabled` rule
+            // (a real, separate styled component, but its CLASS NAME still matches this select
+            // div - see banner above) sets a hardcoded `color: text.disabled` grey. shadcn dims
+            // the WHOLE trigger once via disabled:opacity-50 on the outer box (already applied
+            // to root by the shared textFieldBoxStates above) - the same "dim as one group, not
+            // twice" principle already proven for MuiSwitch's `:has(.Mui-disabled)` root rule -
+            // so the ambient (non-grey) text color is restated here at matching (3-class)
+            // specificity so opacity alone does the dimming.
+            color: "inherit",
+          },
+        },
+        icon: ({ theme }) => ({
+          position: "absolute",
+          right: "0.5rem", // shadcn: pr-2 (root's own padding is 0 - see banner above - so this offset is measured from the box's true inner edge, same edge pr-2 measures from in the real component)
+          top: "50%",
+          transform: "translateY(-50%)",
+          width: "1rem", // shadcn: chevron size-4
+          height: "1rem",
+          color: theme.vars.palette.text.secondary, // shadcn: text-muted-foreground
+          pointerEvents: "none", // shadcn: pointer-events-none
+          "&.Mui-disabled": {
+            color: theme.vars.palette.text.secondary, // no separate disabled tint on the icon - dims with the group via root opacity, same as the select text override above
+          },
+          "&.MuiSelect-iconOpen": {
+            transform: "translateY(-50%)", // shadcn chevron never rotates open - see GOTCHA above (neutralizes MUI's own rotate(180deg))
+          },
+        }),
+      },
+    },
+    // -----------------------------------------------------------------------
+    // Select's dropdown - MUI's Menu (Popover + Paper + MenuList), themed only on the `Menu`-
+    // scoped `paper`/`list` slots (NOT the global MuiPaper/MuiList, which this project keeps
+    // untouched for future components that reuse Paper/List outside a menu context - see the
+    // brief's own "(menu)" scoping note). Ground truth: SelectContent's real classes (bg-popover
+    // text-popover-foreground rounded-lg shadow-md ring-1 ring-foreground/10 min-w-36) and
+    // SelectItem's (rounded-md py-1 pr-8 pl-1.5 text-sm focus:bg-accent focus:text-accent-
+    // foreground), both live-measured (getComputedStyle) rather than assumed:
+    //   content box-shadow (light, measured verbatim): the ring-1 ring-foreground/10 layer
+    //   computes to `oklab(<foreground-L> 0 0 / 0.1) 0 0 0 1px` (foreground is achromatic here,
+    //   so oklch(L 0 0) canonicalizes to that exact oklab form) FOLLOWED BY shadow-md's own two
+    //   literal (non-oklch) layers `rgba(0,0,0,.1) 0 4px 6px -1px, rgba(0,0,0,.1) 0 2px 4px -2px`
+    //   - confirmed identical in dark mode except the ring color swaps to dark foreground.
+    //   content padding: 0 in both dimensions (no SelectGroup wrapper in this gallery, so no
+    //   p-1 reserve - content height measured at exactly items.length * 28px, no slack).
+    // -----------------------------------------------------------------------
+    MuiMenu: {
+      styleOverrides: {
+        paper: ({ theme }) => ({
+          borderRadius: RADIUS, // shadcn: rounded-lg
+          backgroundColor: theme.vars.palette.popover.main, // shadcn: bg-popover
+          // GOTCHA - MUI's Paper ships its OWN unthemed dark-mode "elevation overlay": a
+          // semi-transparent white linear-gradient laid on top of the flat backgroundColor,
+          // whose alpha scales with the `elevation` prop (Menu's Paper defaults to elevation=8,
+          // confirmed live via getComputedStyle: `background-image: linear-gradient(rgba(255,
+          // 255, 255, 0.118), rgba(255, 255, 255, 0.118))` on top of the correct flat
+          // oklch(0.205 0 0) backgroundColor) - shadcn's real popover has no such overlay at
+          // all (bg-popover is one flat color). Invisible in light mode (no overlay applied
+          // there at all), which is exactly why this was missed until the dark-mode
+          // select-open pair measured a massive 75% pixelmatch mismatch despite the two
+          // screenshots looking nearly identical to the eye (the lightened fill washes out
+          // nearly every interior pixel by a small but nonzero, maximally-strict-threshold-
+          // tripping amount). Killed here, scoped to Menu's own paper slot only (not the
+          // global MuiPaper, per this project's own scoping convention).
+          backgroundImage: "none",
+          color: theme.vars.palette.popover.contrastText, // shadcn: text-popover-foreground
+          minWidth: "9rem", // shadcn: min-w-36 (the gallery's MenuProps overrides MUI's own trigger-width-tied inline `style.minWidth` so this intrinsic value actually takes effect - see gallery banner)
+          padding: 0,
+          boxShadow: [
+            `0 0 0 1px color-mix(in oklab, ${theme.vars.palette.text.primary} 10%, transparent)`, // shadcn: ring-1 ring-foreground/10
+            "0 4px 6px -1px rgba(0, 0, 0, 0.1)", // shadcn: shadow-md (literal, not oklch-derived - measured verbatim)
+            "0 2px 4px -2px rgba(0, 0, 0, 0.1)", // shadcn: shadow-md
+          ].join(", "),
+        }),
+        list: {
+          padding: 0, // shadcn: no p-1 reserve at rest - see banner above
+        },
+      },
+    },
+    // -----------------------------------------------------------------------
+    // Select's dropdown items - see the MuiMenu banner above for the shared ground-truth
+    // citations (bg-popover box) this sits inside.
+    // -----------------------------------------------------------------------
+    MuiMenuItem: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          position: "relative", // shadcn: relative (anchors the absolutely-positioned check indicator)
+          display: "flex",
+          width: "100%",
+          boxSizing: "border-box",
+          alignItems: "center",
+          gap: "0.375rem", // shadcn: gap-1.5
+          cursor: "default", // shadcn: cursor-default
+          userSelect: "none", // shadcn: select-none
+          outline: "none", // shadcn: outline-hidden
+          borderRadius: `calc(${RADIUS} * 0.8)`, // shadcn: rounded-md
+          minHeight: 0, // kills MUI's own ~48px default gutters-driven min-height
+          padding: "0.25rem 2rem 0.25rem 0.375rem", // shadcn: py-1 pr-8 pl-1.5
+          fontSize: "0.875rem", // shadcn: text-sm
+          lineHeight: "1.25rem", // shadcn: text-sm's paired line-height
+          color: "inherit", // shadcn: no unconditional text color class - inherits text-popover-foreground from the Menu paper above
+          // GOTCHA - MuiMenuItem/ButtonBase ships its OWN unthemed `&:hover { backgroundColor:
+          // action.hover }` rule regardless of disableRipple (confirmed live via
+          // document.styleSheets: a real Playwright hover painted a translucent grey overlay on
+          // whatever item the mouse geometrically sat over post-click, even with no `&:hover`
+          // rule of our own) - item.tsx has no `hover:` class at all, so this is neutralized
+          // back to transparent below, same "restate to kill MUI's own default" idiom already
+          // used throughout this file (e.g. MuiFilledInput's hover reset above).
+          "&:hover": {
+            backgroundColor: "transparent",
+          },
+          // shadcn: focus:bg-accent focus:text-accent-foreground - a real CSS `:focus`
+          // pseudo-class (NOT `focus-visible:`) - see the GOTCHA above for why this must be
+          // plain `&:focus`, not `.Mui-focusVisible`.
+          "&:focus": {
+            backgroundColor: theme.vars.palette.accent.main, // shadcn: focus:bg-accent
+            color: theme.vars.palette.accent.contrastText, // shadcn: focus:text-accent-foreground
+          },
+          // shadcn: item.tsx has no data-[state=checked] styling at all - the selected item
+          // gets no persistent tint of its own, only the `:focus` above (see GOTCHA on the
+          // MuiSelect banner above for why every screenshot still shows it highlighted anyway).
+          //
+          // GOTCHA - a plain `&.Mui-selected { backgroundColor: 'transparent' }` alongside the
+          // plain `&:focus` above are the SAME (single-unit) specificity, so on the one item
+          // that is BOTH selected AND focused (always true for the autofocused item in this
+          // gallery - see banner above) the two rules tie and source order decides, silently
+          // erasing the focus highlight - caught live via getComputedStyle: the selected item's
+          // background computed to fully transparent, not accent, even with the `&:focus` rule
+          // correctly present in the compiled stylesheet. Nesting `&:hover`/`&:focus` UNDER
+          // `&.Mui-selected` compiles to a 2-unit compound selector (matching MUI's own internal
+          // `.Mui-selected:hover` compound, also 2-unit), resolving the tie deterministically
+          // instead of depending on emission order.
+          "&.Mui-selected": {
+            backgroundColor: "transparent",
+            "&:hover": {
+              backgroundColor: "transparent",
+            },
+            "&:focus": {
+              backgroundColor: theme.vars.palette.accent.main,
+              color: theme.vars.palette.accent.contrastText,
+            },
+          },
+          "&.Mui-disabled": {
+            opacity: 0.5, // shadcn: data-disabled:opacity-50
+          },
+          // The gallery hand-renders a lucide Check (tagged `data-slot="select-item-check"`)
+          // as a plain child of the one MenuItem whose value matches the current selection -
+          // see the anatomy banner above for why MUI has no built-in slot for this. Its
+          // color is deliberately left unset here: lucide icons stroke with `currentColor`, so
+          // it already follows this root's own `color` (ambient, or accent-foreground while
+          // focused/hovered) for free, exactly like shadcn's real Check (no explicit text-*
+          // class of its own in item.tsx either).
+          "& [data-slot='select-item-check']": {
+            position: "absolute",
+            right: "0.5rem", // shadcn: indicator span's absolute right-2
+            top: "50%",
+            transform: "translateY(-50%)", // shadcn centers via the flex parent's items-center instead (an out-of-flow flex child's static cross-axis position) - same visual result, live-measured identical
+            width: "1rem", // shadcn: indicator span/icon size-4
+            height: "1rem",
+            pointerEvents: "none", // shadcn: pointer-events-none
+          },
+        }),
       },
     },
     // Per-component overrides are appended by later tasks, one banner each.
