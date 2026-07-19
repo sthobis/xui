@@ -10,3 +10,6 @@ docs/superpowers/
 e2e/results/
 playwright-report/
 test-results/
+
+# browser MCP tool artifacts
+.playwright-mcp/
