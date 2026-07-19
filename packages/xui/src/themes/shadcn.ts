@@ -1622,6 +1622,493 @@ export const shadcnTheme = createTheme({
         },
       },
     },
+    // -----------------------------------------------------------------------
+    // Switch
+    //
+    // Ground truth: apps/showcase/src/components/ui/switch.tsx (radix-ui
+    // Switch.Root/Thumb, style "radix-nova"), cross-checked with
+    // getComputedStyle() on the live shadcn switch (light + dark; off/on/
+    // disabled; hover/focus-visible) via the Playwright MCP - same method as
+    // Checkbox/Radio above.
+    //
+    // switch.tsx Root classes (SwitchPrimitive.Root, verbatim, default size
+    // only - "sm" is unused by this gallery and out of scope per the task's
+    // own "ship only what a gallery pair covers" rule):
+    //   peer group/switch relative inline-flex shrink-0 items-center
+    //   rounded-full border border-transparent transition-all outline-none
+    //   after:absolute after:-inset-x-3 after:-inset-y-2
+    //   focus-visible:border-ring focus-visible:ring-3
+    //   focus-visible:ring-ring/50 aria-invalid:border-destructive
+    //   aria-invalid:ring-3 aria-invalid:ring-destructive/20
+    //   data-[size=default]:h-[18.4px] data-[size=default]:w-[32px]
+    //   dark:aria-invalid:border-destructive/50
+    //   dark:aria-invalid:ring-destructive/40 data-checked:bg-primary
+    //   data-unchecked:bg-input dark:data-unchecked:bg-input/80
+    //   data-disabled:cursor-not-allowed data-disabled:opacity-50
+    // switch.tsx Thumb classes (SwitchPrimitive.Thumb, verbatim, default size
+    // only): pointer-events-none block rounded-full bg-background ring-0
+    //   transition-transform group-data-[size=default]/switch:size-4
+    //   group-data-[size=default]/switch:data-checked:translate-x-[calc(100%-2px)]
+    //   dark:data-checked:bg-primary-foreground
+    //   group-data-[size=default]/switch:data-unchecked:translate-x-0
+    //   dark:data-unchecked:bg-foreground
+    // No aria-invalid pair exists in this gallery (same out-of-scope
+    // convention as MuiButton/MuiCheckbox/MuiRadio above).
+    //
+    // Extracted class -> CSS:
+    //   h-[18.4px] w-[32px]      -> the outer pill's own box: 18.4px tall,
+    //                                32px wide (literal arbitrary values,
+    //                                confirmed by getBoundingClientRect on
+    //                                the live root: {width:32, height:
+    //                                18.3984375} - NOT reused/invented from
+    //                                Checkbox's 16px square, per the task's
+    //                                own warning)
+    //   rounded-full              -> border-radius: a very large px value
+    //                                (Tailwind v4's rounded-full; any value
+    //                                >= half the box's own short side, e.g.
+    //                                9999px, renders the identical fully
+    //                                round pill)
+    //   border border-transparent -> border: 1px solid transparent (invisible
+    //                                - the box's background is what actually
+    //                                paints, all the way to the outer edge,
+    //                                since no bg-clip-padding class exists
+    //                                here either, same as Checkbox/Radio)
+    //   data-unchecked:bg-input   -> unchecked (light): solid var(--input)
+    //   dark:data-unchecked:bg-input/80
+    //                             -> unchecked (dark only): color-mix(in
+    //                                oklab, var(--input) 80%, transparent) -
+    //                                dark's own --input token is ALREADY a
+    //                                translucent white (oklch(1 0 0/15%) per
+    //                                index.css), so this is a further 80%
+    //                                mix of that already-translucent color,
+    //                                not a second independent opacity layer
+    //                                - confirmed via getComputedStyle+canvas
+    //                                readback: real dark unchecked track
+    //                                resolves to oklab(1 0 0 / 0.12) (~12%
+    //                                white), matching 80% of 15%
+    //   data-checked:bg-primary   -> checked (either mode): solid
+    //                                var(--primary) - this token itself
+    //                                already flips per scheme (dark's
+    //                                --primary is a light near-white,
+    //                                confirmed live: dark checked track
+    //                                resolves to oklch(0.922 0 0), the SAME
+    //                                literal value as dark:MuiCheckbox's own
+    //                                dark --primary), so no separate
+    //                                dark:data-checked override exists in
+    //                                switch.tsx and none is needed here
+    //   data-disabled:opacity-50  -> disabled: the WHOLE pill (border +
+    //                                background + thumb, as one painted
+    //                                unit, since real opacity is set once on
+    //                                the single outer button) dims to 50%
+    //   data-disabled:cursor-not-allowed -> cursor: not-allowed
+    //   focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50
+    //                             -> borderColor: ring, boxShadow: 0 0 0 3px
+    //                                ring/50 (identical mechanism/values to
+    //                                Checkbox/Radio's own focus ring)
+    //   transition-all (root)    -> color/background-color/border-color
+    //                                150ms cubic-bezier(0.4,0,0.2,1)
+    //   size-4 (thumb)            -> width/height: 1rem (16px) - a real
+    //                                Tailwind scale utility (unlike the
+    //                                root's arbitrary 18.4/32px), so this one
+    //                                genuinely is the same 16px as
+    //                                Checkbox/Radio's own size-4 - confirmed
+    //                                independently via the live thumb's own
+    //                                getBoundingClientRect ({width:16,
+    //                                height:16}), not assumed by analogy
+    //   rounded-full (thumb)      -> border-radius: large px value (circle)
+    //   ring-0 (thumb)            -> box-shadow: none (kills MUI's default
+    //                                Switch thumb elevation shadow)
+    //   bg-background (thumb, light always; dark's base before its own
+    //   dark: overrides below)   -> var(--background)
+    //   dark:data-unchecked:bg-foreground (thumb) -> dark-only, unchecked:
+    //                                var(--foreground)
+    //   dark:data-checked:bg-primary-foreground (thumb) -> dark-only,
+    //                                checked: var(--primary-foreground)
+    //   translate-x-0 (unchecked) / translate-x-[calc(100%-2px)] (checked)
+    //                             -> unchecked: no offset from the thumb's
+    //                                static (flex-start) position; checked:
+    //                                += (own width - 2px) = 16 - 2 = 14px.
+    //                                Confirmed live via getComputedStyle:
+    //                                the thumb's own CSS `translate` property
+    //                                (Tailwind v4 emits `translate`, not
+    //                                `transform`, for translate-* utilities)
+    //                                reads literally "calc(100% - 2px)" when
+    //                                checked, and the live checked thumb's
+    //                                getBoundingClientRect().left is exactly
+    //                                14px further right than the unchecked
+    //                                one's (137px -> 151px at a fixed root
+    //                                x=136) - the classic
+    //                                thumb-translate-distance mismatch this
+    //                                task warns about, so this 14px number
+    //                                traces to a live measurement, not the
+    //                                calc() arithmetic alone
+    //   transition-transform (thumb) -> transform/translate 150ms
+    //                                cubic-bezier(0.4,0,0.2,1) - NOTE: no
+    //                                transition-colors class exists on the
+    //                                thumb (confirmed by reading this exact
+    //                                class string), so the thumb's own
+    //                                light/dark recolor (checked vs
+    //                                unchecked, in dark mode only) is
+    //                                instant, not animated - only its
+    //                                position animates. Restating a color
+    //                                transition here would be an
+    //                                invented-by-analogy value the task's own
+    //                                rule forbids (mirrors Radio's identical
+    //                                "no transition-colors" finding above).
+    //
+    // ANATOMY COLLAPSE (root/switchBase/thumb/track reconciliation):
+    //
+    // MUI's default Switch renders FOUR boxes shadcn's real DOM does not
+    // have: `.MuiSwitch-root` (a 58x38 box with 12px padding - the oversized
+    // touch target), `.MuiSwitch-switchBase` (a 38x38 absolutely-positioned
+    // ButtonBase wrapping the real input, with the brief's own documented
+    // 9px padding baked in), `.MuiSwitch-thumb` (the visible 20x20 circle,
+    // nested INSIDE switchBase), and `.MuiSwitch-track` (a sibling of
+    // switchBase, sized/positioned by root's own padding to exactly fill
+    // root's content box - confirmed live: root padding 12px on a 58x38 box
+    // leaves a 34x14 content box, and the track's own rect is exactly
+    // 34x14). shadcn's real DOM is just TWO boxes: the outer <button> (which
+    // owns the border AND the background AND the focus ring) and one inner
+    // <span> thumb that translates - no separate "track" box at all.
+    //
+    // The trap: if this override painted the pill's border/background onto
+    // `root` (the most surface-level 1:1 mapping - root IS the single
+    // outer box shadcn's <button> is), there would be no way to key that
+    // color off checked/disabled/focus state, because `.Mui-checked`/
+    // `.Mui-disabled`/`.Mui-focusVisible` are added to `switchBase` (root's
+    // CHILD), never to `root` itself (confirmed live: toggling every state
+    // and reading root's own className - it never changes; only
+    // switchBase's does, exactly like the `.Mui-focusVisible`-on-input
+    // GOTCHA already proven for Checkbox/Radio above, one level further
+    // out). Plain CSS has no "style an ancestor from a descendant's class"
+    // combinator (short of `:has()`), but MUI already ships the exact tool
+    // for this: `track` is switchBase's own next ADJACENT SIBLING in the
+    // DOM (confirmed live: querying both elements' order), which is why
+    // MUI's own internal (undesired) styles already use a bare
+    // `.Mui-checked + .MuiSwitch-track` sibling selector - see the task
+    // brief's own callout. This override reuses that exact mechanism
+    // instead of fighting it: `root` becomes a plain, invisible 32x18.4
+    // positioning box (no border, no background, no state-keyed style at
+    // all - it never needs one); the REAL border+background move onto
+    // `track`, absolutely inset:0 to fill root's full box exactly (root
+    // carries no border of its own, so track's padding-box == root's own
+    // border-box - no 1px gap/ring artifact from nesting inside a bordered
+    // parent); and the checked/disabled/focus recolors on `track` are
+    // expressed as `.Mui-checked + &` / `.Mui-disabled + &` /
+    // `.Mui-focusVisible + &` (switchBase's state class, adjacent-sibling
+    // combinator, then track) - not `:has()`. MUI's own default z-index
+    // split (switchBase: 1, track: -1 - confirmed live, left untouched by
+    // this override) already keeps the thumb correctly painted above this
+    // now-larger track.
+    //
+    // switchBase itself collapses from a 38x38 box with 9px padding down to
+    // a plain 16x16-content absolute box (inset:0 of root's now-borderless
+    // 32x18.4, i.e. exactly root's own content box), flex/center-aligned so
+    // its child thumb (16x16, an exact fit) needs no further offset math -
+    // `justifyContent: 'flex-start'` reproduces the thumb's real static
+    // (untranslated) position flush to the LEFT edge of that content box,
+    // matching shadcn's own `translate-x-0` unchecked resting position
+    // exactly (both put the untransformed thumb at the box's own start).
+    // MUI's own `&.Mui-checked` transform selector on switchBase already
+    // exists (default: `translateX(20px)`, a fixed constant sized for MUI's
+    // OWN default geometry, not derived from this switch's actual size) -
+    // this override reuses that same selector, just replacing MUI's 20px
+    // with this component's own live-measured 14px (see the translate
+    // bullet above). Translating switchBase as a whole (rather than the
+    // thumb span nested inside it) is visually identical, since switchBase
+    // itself paints nothing (no border/background of its own) - only its
+    // thumb child is visible.
+    //
+    // GOTCHA - disabled dims TWO separate elements, not one: shadcn's real
+    // `data-disabled:opacity-50` sits on the single outer button, so it
+    // dims the border+background AND the thumb as one visual unit (CSS
+    // `opacity` applies to an element's entire subtree). Since this
+    // override's border+background live on `track` (a sibling of
+    // switchBase, not a descendant), and the thumb lives INSIDE switchBase,
+    // reproducing "one dim" requires two rules: `&.Mui-disabled` on
+    // switchBase itself (opacity: 0.5 - this also dims the nested thumb for
+    // free, since thumb is switchBase's own child) AND `.Mui-disabled + &`
+    // on track (opacity: 0.5, overriding this override's own base
+    // `opacity: 1` reset). Missing either half would leave half the pill at
+    // full strength while the other half dims - confirmed by design
+    // reasoning from the live DOM query showing `Mui-disabled` lands only
+    // on switchBase (never on root or thumb directly), mirroring the
+    // already-proven Checkbox/Radio "state class only reaches the
+    // SwitchBase-family control, never bare siblings" pattern one level
+    // further out.
+    //
+    // GOTCHA - same disableRipple trap as MuiCheckbox/MuiRadio above: MUI's
+    // Switch.js destructures its OWN `disableRipple = false` default (via
+    // `useDefaultProps({..., name: 'MuiSwitch'})`) and forwards that
+    // resolved (always-defined) value as an explicit prop down through
+    // SwitchBase to ButtonBase, so the global
+    // `MuiButtonBase.defaultProps.disableRipple: true` set above never
+    // reaches it. Restated per-component below; verified with a REAL
+    // Playwright mouse hover (not a synthetic dispatchEvent) that no ripple
+    // or hover halo paints on the themed MUI twin.
+    //
+    // `data-target` placement differs from Checkbox/Radio's own input-based
+    // convention: switch.tsx's SwitchPrimitive.Root renders a real
+    // `<button role="switch">` as ITS OWN root node (confirmed by reading
+    // @radix-ui/react-switch's compiled source - Switch.jsx renders a plain
+    // Primitive.button, no nested native input at all, unlike
+    // checkbox.tsx/radio-group.tsx's radix primitives). So on the shadcn
+    // side `data-target` sits directly on the Switch root (mirrors
+    // RadioGroupItem's own root-is-the-control situation). MuiSwitch is
+    // still SwitchBase-family under the hood, though - same nested
+    // opacity:0 native `<input type="checkbox">`, confirmed live via Tab
+    // navigation (the input, not switchBase or root, is what actually
+    // receives document focus, while `.Mui-focusVisible` bubbles up onto
+    // switchBase exactly like Checkbox/Radio's own input->root bubbling) -
+    // so `data-target` goes on that internal input via slotProps, same as
+    // MuiCheckbox/MuiRadio.
+    // -----------------------------------------------------------------------
+    MuiSwitch: {
+      defaultProps: {
+        disableRipple: true, // see GOTCHA above - restated per-component, mirrors MuiCheckbox/MuiRadio
+      },
+      styleOverrides: {
+        root: {
+          position: "relative",
+          display: "inline-flex", // shadcn: inline-flex
+          alignItems: "center",
+          flexShrink: 0, // shadcn: shrink-0
+          boxSizing: "border-box",
+          width: "32px", // shadcn: data-[size=default]:w-[32px] (live rect: 32)
+          height: "18.4px", // shadcn: data-[size=default]:h-[18.4px] (live rect: 18.3984375)
+          padding: 0, // kills MUI's own 12px root padding - see ANATOMY COLLAPSE banner above
+          // GOTCHA - MUI's own default MuiSwitch-root style sets `overflow: hidden`
+          // (presumably to clip its own oversized 58x38 switchBase/ripple within the
+          // visible 58x38 root before this override shrinks everything down) - left alone,
+          // this silently clipped `track`'s own focus-visible box-shadow ring, which needs
+          // to paint 3px OUTSIDE root's now-tight 32x18.4 box. The ring's inner 1px solid
+          // border (part of track's own border-box, never extending past it) still painted
+          // fine, but the outer 3px translucent glow was cut off completely at root's own
+          // edge - confirmed by walking the ancestor chain with getComputedStyle and finding
+          // `overflow: hidden` on root, then confirming an ISOLATED test `<div>` with the
+          // exact same box-shadow (no MUI, no root ancestor) rendered the glow correctly,
+          // and a raw PNG pixel scan of the real themed switch showing the glow band
+          // completely absent (pure white) right up to the solid border, in BOTH color
+          // schemes and both checked states - this was the actual cause of a ~0.9% focus
+          // screenshot mismatch, not antialiasing.
+          overflow: "visible",
+          // No border/background/checked/focus style here at all: root never receives
+          // .Mui-checked/.Mui-focusVisible (see ANATOMY COLLAPSE banner above) - that paint
+          // moves to `track` below. Disabled is the one exception, and it must dim HERE
+          // (the group), not split across switchBase+track independently:
+          //
+          // GOTCHA - double-dimming produces visibly wrong colors, not just "slightly off":
+          // shadcn's real `data-disabled:opacity-50` sits on the single outer button, so
+          // track+thumb dim together as ONE flat, already-composited image (thumb, opaque
+          // white, sits at full contrast against track's opaque grey; THEN that whole
+          // picture dims 50% against the page as a unit). A first draft instead put
+          // opacity:0.5 separately on `switchBase` (dimming the thumb) AND on `track` (dimming
+          // itself) as two INDEPENDENT compositing layers - `track` (opacity 0.5) composites
+          // against the page first, THEN the semi-transparent white thumb (also opacity 0.5,
+          // from switchBase) composites OVER that already-dimmed track pixel, blending
+          // through it a second time. Caught live via raw PNG pixel sampling (not just
+          // eyeballing): the disabled thumb's own pixels read rgb(248,248,248) on the themed
+          // MUI twin vs a genuine rgb(255,255,255) on shadcn's real one - solving the
+          // over/under compositing math backward (248 = 0.5*255 + 0.5*(0.5*229 + 0.5*255))
+          // confirms exactly this double-blend, not a wrong color value. Fixing it means
+          // dimming the whole group exactly once: `track`/`switchBase` stay at full opacity
+          // internally (so thumb-over-track keeps full contrast, matching the non-disabled
+          // pixels exactly), and only this single `root`-level rule applies the 50% dim -
+          // `:has()` is required (not a plain `&.Mui-disabled`) because, like `.Mui-checked`/
+          // `.Mui-focusVisible` above, `Mui-disabled` is added to switchBase, never to root
+          // itself (confirmed live).
+          "&:has(.Mui-disabled)": {
+            opacity: 0.5, // shadcn: data-disabled:opacity-50 (the whole pill dims once, as a group)
+          },
+        },
+        switchBase: ({ theme }) => ({
+          position: "absolute",
+          // 1px inset on every side, NOT 0: reproduces the space shadcn's real 1px
+          // border-box border reserves inside the single outer button (root itself
+          // carries no border here - see ANATOMY COLLAPSE banner - so switchBase must
+          // reserve that same 1px by hand, or the thumb sits 1px too far left/top).
+          // Caught live: an inset:0 first draft put the unchecked thumb flush at
+          // root's own outer edge (offset 0), while the live shadcn thumb sits at
+          // offset 1 from its button's outer edge (thumbRect.left 137 vs btnRect.left
+          // 136) - confirmed by comparing getBoundingClientRect on both sides.
+          top: "1px",
+          right: "1px",
+          bottom: "1px",
+          left: "1px",
+          width: "auto",
+          height: "auto",
+          margin: 0,
+          padding: 0, // kills MUI's own 9px switchBase padding - the brief's documented trap
+          boxSizing: "border-box",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "flex-start", // shadcn: thumb's static (untranslated) position sits flush at the content box's own start - see banner above
+          cursor: "default", // shadcn: no cursor-pointer class; browser default
+          transform: "translateX(0px)", // shadcn: data-unchecked:translate-x-0
+          transition: "transform 150ms cubic-bezier(0.4, 0, 0.2, 1)", // shadcn thumb: transition-transform
+          "&.Mui-checked": {
+            transform: "translateX(14px)", // shadcn: translate-x-[calc(100%-2px)] = 16 - 2 = 14 (live-measured, not MUI's own default 20px)
+          },
+          "&.Mui-disabled": {
+            // No opacity here - dimming lives once, at the root level, as a GROUP (see the
+            // double-dimming GOTCHA on `root` above). switchBase/thumb stay at full internal
+            // contrast; only cursor changes locally.
+            cursor: "not-allowed", // shadcn: data-disabled:cursor-not-allowed
+          },
+          // GOTCHA - unlike Checkbox/Radio (where the translucent hover halo IS gated
+          // behind `ownerState.disableRipple === false`, so restating disableRipple:true
+          // above already kills it), MUI's own Switch.js applies its `&:hover { backgroundColor:
+          // action.active @ hoverOpacity }` / `&.Mui-checked:hover { backgroundColor: primary.main
+          // @ hoverOpacity }` unconditionally on switchBase - NOT gated by disableRipple at all.
+          // Left alone, this painted a translucent grey lens over switchBase's own (now much
+          // smaller, post-collapse) box on hover - confirmed live via a REAL Playwright mouse
+          // hover + e2e/results/diffs: a crescent bleeding past the thumb's own circle that
+          // shadcn's real twin (switch.tsx carries no hover: class at all) never shows. Both
+          // states neutralized explicitly below.
+          "&:hover": {
+            backgroundColor: "transparent",
+          },
+          "&.Mui-checked:hover": {
+            backgroundColor: "transparent",
+          },
+          // GOTCHA - this dark+checked thumb recolor is authored HERE (switchBase's own
+          // slot), reaching down into its child `.MuiSwitch-thumb`, rather than on the
+          // `thumb` slot itself reaching UP to an ancestor: `.Mui-checked` lives on
+          // switchBase, so from switchBase's own vantage point it is a plain compound
+          // condition on `&` itself (order-independent, exactly like Checkbox's own proven
+          // `...theme.applyStyles('dark', {'&.Mui-checked': {...}})` pattern above) followed
+          // by an ordinary descendant selector down to the thumb - no ancestor-direction
+          // ambiguity at all. A first draft instead authored this from the `thumb` slot,
+          // nesting a `.Mui-checked &` (ANCESTOR, space-combinator) selector inside
+          // `theme.applyStyles('dark', {...})` - which silently compiled backward (confirmed
+          // by reading the actual generated selector text off document.styleSheets) into
+          // something requiring `:where(.dark)` to be a DESCENDANT of `.Mui-checked`, the
+          // reverse of the real DOM, so the rule could never match. Authoring it from the
+          // ancestor's own slot instead sidesteps the ordering hazard entirely.
+          ...theme.applyStyles("dark", {
+            "&.Mui-checked .MuiSwitch-thumb": {
+              backgroundColor: theme.vars.palette.primary.contrastText, // shadcn: dark:data-checked:bg-primary-foreground
+            },
+          }),
+        }),
+        thumb: ({ theme }) => ({
+          width: "1rem", // shadcn: size-4 (16px, confirmed live, a real Tailwind scale utility unlike root's arbitrary size)
+          height: "1rem",
+          borderRadius: "calc(infinity * 1px)", // shadcn: rounded-full - Tailwind v4's actual literal value (not the round number "9999px"), see the track's own note below for why this exact string matters
+          boxShadow: "none", // shadcn: ring-0 (kills MUI's own thumb elevation shadow)
+          backgroundColor: theme.vars.palette.background.default, // shadcn: bg-background (light, and dark's own base before the dark-only overrides below)
+          ...theme.applyStyles("dark", {
+            backgroundColor: theme.vars.palette.text.primary, // shadcn: dark:data-unchecked:bg-foreground
+          }),
+          // shadcn: dark:data-checked:bg-primary-foreground is authored on the `switchBase`
+          // slot above instead of here - `.Mui-checked` is switchBase's OWN class (an
+          // ancestor of this thumb), not the thumb's, and reaching an ancestor's class from a
+          // descendant's own selector via `theme.applyStyles` turned out to be a genuine
+          // ordering trap (see the GOTCHA banner on `switchBase` above for the full story and
+          // the live evidence that caught it).
+        }),
+        track: ({ theme }) => ({
+          position: "absolute",
+          inset: 0, // fills root's full 32x18.4 box exactly (root carries no border of its own) - see ANATOMY COLLAPSE banner
+          margin: 0,
+          boxSizing: "border-box",
+          border: "1px solid transparent", // shadcn: border border-transparent (moved here from root - see banner above)
+          // shadcn: rounded-full. NOT the round number "9999px" - a first draft used that,
+          // and while it clamps to the SAME effective corner radius as shadcn's real button
+          // (border-radius always clamps to at most half the box's own shorter side, so both
+          // "9999px" and shadcn's actual value round down to the identical ~9.2px quarter-
+          // circle here), the focus ring's box-shadow traces that clamped curve, and Chromium
+          // rasterizes a differently-precise curve depending on the LITERAL input magnitude,
+          // not just its clamped result - confirmed live: with "9999px" here, the
+          // focus-visible ring diffed at ~0.9% in BOTH color schemes (a consistent, non-color,
+          // one-sided sliver right where the curve meets the flat side - checked via raw PNG
+          // pixel sampling, not just eyeballing), even though getComputedStyle showed
+          // byte-identical box-shadow/border-color/rect on both sides. Reading the real
+          // shadcn button's own resolved borderRadius directly (getComputedStyle again, not
+          // assumed) gives the literal string "1.67772e+07px" (2^24px) - Tailwind v4's actual
+          // `rounded-full` implementation is `border-radius: calc(infinity * 1px)`, which
+          // Chromium resolves to that specific float32-precision-limited constant, not an
+          // arbitrary round number. Using that exact expression here (not the decimal
+          // approximation) reproduces the identical rasterization path.
+          borderRadius: "calc(infinity * 1px)",
+          backgroundColor: theme.vars.palette.input, // shadcn: data-unchecked:bg-input (light)
+          opacity: 1, // kills MUI's own 0.3/0.5 default track opacity
+          pointerEvents: "none", // purely structural paint layer; switchBase's own input (z-index 1 over track's -1, both left untouched) handles all interaction
+          transition:
+            "background-color 150ms cubic-bezier(0.4, 0, 0.2, 1), border-color 150ms cubic-bezier(0.4, 0, 0.2, 1)", // shadcn root: transition-all (the color/background/border slice of it)
+          // GOTCHA - MUI ships its OWN internal `.Mui-checked +
+          // .MuiSwitch-track` / `.Mui-disabled + .MuiSwitch-track` rules
+          // (Switch.js's own track style function, keyed off
+          // ownerState.checked/disabled) at a HIGHER specificity than a
+          // naive `.Mui-checked + &` override here: MUI's compound selector
+          // also carries switchBase's own generated per-instance emotion
+          // class (e.g. `.css-pcwzmi-MuiSwitch-switchBase.Mui-checked +
+          // .MuiSwitch-track`, three classes deep) on the left side, not
+          // just the bare `.Mui-checked` global class - confirmed by
+          // iterating `document.styleSheets` for `MuiSwitch-track` rules
+          // and reading each selector's actual text. A plain `.Mui-checked
+          // + &` here only reaches two classes' worth of specificity, so it
+          // LOSES to MUI's three-class rule regardless of source order -
+          // caught live: the checked (non-disabled) track's opacity
+          // computed to MUI's own 0.5, not this override's `opacity: 1`,
+          // even though the two rules' colors happened to already agree
+          // (both reference the identical `primary.main` CSS var by
+          // coincidence, since this theme's own primary already matches
+          // shadcn's, masking the bug until opacity was checked
+          // specifically). Doubling the `&` (a standard emotion/MUI
+          // specificity-boost idiom - "&&" repeats the SAME generated class
+          // in the compiled selector, matching the identical elements but
+          // counting as two class selectors) lifts these two rules to the
+          // same three-class specificity as MUI's own, and since
+          // styleOverrides always serializes after the component's own
+          // base + internal variants (the mechanism already proven for
+          // Button/Checkbox/Radio above), the tie resolves in this
+          // override's favor. `.Mui-focusVisible + &` needs no such boost -
+          // MUI ships no internal focus-visible/track rule at all to
+          // compete with (confirmed by the same stylesheet scan).
+          ".Mui-checked + &&": {
+            backgroundColor: theme.vars.palette.primary.main, // shadcn: data-checked:bg-primary (adjacent-sibling combinator - see ANATOMY COLLAPSE banner)
+            opacity: 1, // MUI's own same-specificity checked rule also sets opacity: 0.5 - re-asserted here for the same reason as the GOTCHA banner above (checked track must stay fully solid, not dimmed)
+          },
+          ".Mui-focusVisible + &": {
+            borderColor: theme.vars.palette.ring, // shadcn: focus-visible:border-ring
+            boxShadow: `0 0 0 3px color-mix(in oklab, ${theme.vars.palette.ring} 50%, transparent)`, // shadcn: focus-visible:ring-3 ring-ring/50
+          },
+          ".Mui-disabled + &&": {
+            // NOT opacity 0.5 here: dimming happens exactly once, at the root level, as a
+            // GROUP (see the double-dimming GOTCHA on `root` above) - this only neutralizes
+            // MUI's own internal disabled-track opacity variant (a separate
+            // `var(--mui-opacity-switchTrackDisabled)`, ~0.2) back to 1 so track stays at
+            // full internal contrast and root's own 0.5 is the only dim applied.
+            opacity: 1,
+          },
+          ...theme.applyStyles("dark", {
+            backgroundColor: `color-mix(in oklab, ${theme.vars.palette.input} 80%, transparent)`, // shadcn: dark:data-unchecked:bg-input/80
+          }),
+        }),
+        // GOTCHA - the real focusable/hoverable element (the absolutely-positioned,
+        // opacity:0 native `<input type="checkbox">`, per the `data-target` placement note
+        // above) is sized WAY beyond the visible pill: MUI's own default input box is a
+        // ~90x16 rectangle straddling the track (confirmed live via getBoundingClientRect -
+        // Switch's native input keeps MUI's default oversized touch/drag-range geometry,
+        // unlike Checkbox/Radio's own input, which MUI already sizes to nearly the exact
+        // root box, ~1px inset - so this exact trap never showed up for them). Chromium's
+        // own UA stylesheet draws a default `outline: auto` ring around :focus-visible
+        // elements whenever no author style overrides it - confirmed live: at rest the
+        // input's outline-style computed "none" (no rule was needed - the UA default simply
+        // never triggers outside a real focus-visible match), but while genuinely
+        // focus-visible (via a real Playwright Tab press, not a synthetic dispatchEvent) it
+        // flipped to "auto" and painted a large stray rectangle far outside the intended 3px
+        // ring on `track` above - the exact source of a real (non-color, non-checked-state)
+        // ~0.9% focus screenshot mismatch in BOTH color schemes, caught only by comparing raw
+        // PNG pixel rows since every other computed value (box-shadow, border-color, rect)
+        // already read byte-identical between the two sides. shadcn's real button carries
+        // `outline-none` itself, so this input needs the same explicit suppression.
+        input: {
+          outline: "none",
+        },
+      },
+    },
     // Per-component overrides are appended by later tasks, one banner each.
   },
 })
