@@ -5,6 +5,13 @@
  * (style radix-nova, base color neutral, css variables).
  */
 import { createTheme, type CssVarsTheme, type Theme } from "@mui/material/styles"
+import { Check } from "lucide-react"
+// createElement (not JSX) because this file is a plain .ts module - JSX syntax is only
+// valid in .tsx files, and this file's name/extension is fixed by the constraint that only
+// packages/xui/src/themes/shadcn.ts may change. "react" itself is not a new external
+// dependency - it is already xui's peerDependency/devDependency, required transitively by
+// every MUI component this theme already configures.
+import { createElement } from "react"
 
 // ---------------------------------------------------------------------------
 // Module augmentation: shared semantic vocabulary (spec: every future theme
@@ -1053,6 +1060,309 @@ export const shadcnTheme = createTheme({
           ...textFieldBoxStates(theme, ownerState),
         }),
         input: ({ theme, ownerState }) => textFieldInputStyle(theme, ownerState),
+      },
+    },
+    // -----------------------------------------------------------------------
+    // Checkbox
+    //
+    // Ground truth: apps/showcase/src/components/ui/checkbox.tsx (radix-ui
+    // Checkbox.Root/Indicator, style "radix-nova"), read directly and
+    // cross-checked with getComputedStyle() on the live shadcn checkbox
+    // (light + dark; unchecked/checked/indeterminate/disabled;
+    // hover/focus-visible on unchecked+checked) via the Playwright MCP.
+    //
+    // checkbox.tsx root classes (CheckboxPrimitive.Root, verbatim):
+    //   peer relative flex size-4 shrink-0 items-center justify-center
+    //   rounded-[4px] border border-input transition-colors outline-none
+    //   group-has-disabled/field:opacity-50 after:absolute after:-inset-x-3
+    //   after:-inset-y-2 focus-visible:border-ring focus-visible:ring-3
+    //   focus-visible:ring-ring/50 disabled:cursor-not-allowed
+    //   disabled:opacity-50 aria-invalid:border-destructive
+    //   aria-invalid:ring-3 aria-invalid:ring-destructive/20
+    //   aria-invalid:aria-checked:border-primary dark:bg-input/30
+    //   dark:aria-invalid:border-destructive/50
+    //   dark:aria-invalid:ring-destructive/40 data-checked:border-primary
+    //   data-checked:bg-primary data-checked:text-primary-foreground
+    //   dark:data-checked:bg-primary
+    // checkbox.tsx indicator classes (CheckboxPrimitive.Indicator, verbatim):
+    //   grid place-content-center text-current transition-none
+    //   [&>svg]:size-3.5, wrapping a lucide CheckIcon with no size/props of
+    //   its own (no separate Minus/indeterminate glyph - see GOTCHA below).
+    // No aria-invalid pair exists in this gallery (no invalid/error checkbox
+    // state exercised) - the aria-invalid:* classes above are out of scope,
+    // same convention as MuiButton's aria-invalid omission above.
+    //
+    // Extracted class -> CSS:
+    //   size-4                    -> width/height: 1rem (16px)
+    //   shrink-0 flex items-center justify-center -> display:flex, centered
+    //   rounded-[4px]             -> borderRadius: 4px (a flat literal, NOT
+    //                                derived from the --radius multiplicative
+    //                                scale used elsewhere in this theme -
+    //                                confirmed by the literal arbitrary-value
+    //                                class, not a rounded-sm/md/lg token)
+    //   border border-input       -> border: 1px solid var(--input)
+    //   transition-colors         -> color/background-color/border-color
+    //                                transition (150ms, Tailwind's default
+    //                                easing - matches SHADOW_XS/MuiButton's
+    //                                own transition timing already used
+    //                                above)
+    //   outline-none              -> outline: none
+    //   dark:bg-input/30          -> dark-only fill; light has NO background
+    //                                class at all (confirmed via
+    //                                getComputedStyle: light rest state
+    //                                backgroundColor is fully transparent,
+    //                                "rgba(0, 0, 0, 0)", not a themed token)
+    //   focus-visible:border-ring focus-visible:ring-3
+    //   focus-visible:ring-ring/50
+    //                             -> borderColor: ring, boxShadow: 0 0 0 3px
+    //                                ring/50 (measured post-transition:
+    //                                border reads exactly oklch(0.708 0 0)
+    //                                (light ring) with no intermediate
+    //                                blend - see focus GOTCHA below for why
+    //                                an early read looked wrong)
+    //   disabled:cursor-not-allowed disabled:opacity-50
+    //                             -> opacity: 0.5, cursor: not-allowed
+    //                                (checkbox.tsx has NO disabled:bg-*
+    //                                class, unlike input.tsx/textarea.tsx -
+    //                                disabled dims the ambient box via
+    //                                opacity alone; confirmed no separate
+    //                                disabled background color)
+    //   data-checked:border-primary data-checked:bg-primary
+    //   data-checked:text-primary-foreground
+    //                             -> checked-only: borderColor: primary,
+    //                                backgroundColor: primary, color:
+    //                                primary.contrastText. "data-checked" is
+    //                                a project-defined custom Tailwind
+    //                                variant (confirmed by reading the
+    //                                compiled stylesheet directly:
+    //                                `&:where([data-state="checked"]),
+    //                                &:where([data-checked]:not([data-checked
+    //                                ="false"]))`) - it matches ONLY
+    //                                data-state="checked", not "indeterminate"
+    //                                or "unchecked". See indeterminate GOTCHA
+    //                                below - this is the reason indeterminate
+    //                                does NOT get the primary treatment.
+    //   dark:data-checked:bg-primary
+    //                             -> re-asserts checked's primary background
+    //                                over dark:bg-input/30's unconditional
+    //                                fill - the same "later/nested variant
+    //                                must re-win over an unconditional dark
+    //                                utility" trap already solved for
+    //                                MuiFilledInput/MuiOutlinedInput above,
+    //                                except this one IS present verbatim in
+    //                                checkbox.tsx's own class list (not
+    //                                invented by analogy).
+    //   [&>svg]:size-3.5          -> checked/indeterminate icon: 0.875rem
+    //                                (14px), centered in the 16px box
+    //                                (measured: computed svg width/height
+    //                                both exactly 14px)
+    //
+    // GOTCHA - indeterminate renders the SAME CheckIcon, un-tinted: radix's
+    // CheckboxIndicator mounts (Presence) whenever forceMount || indeterminate
+    // || checked === true - checkbox.tsx's Indicator has exactly one child,
+    // <CheckIcon />, with NO conditional swap to a Minus/dash glyph for the
+    // indeterminate data-state. The task brief's "swap for lucide Check/Minus"
+    // guess was WRONG for this installed version - ground truth wins: only
+    // Check is ever rendered, confirmed by inspecting the live indeterminate
+    // pair's outerHTML (`<svg class="lucide lucide-check">`). Furthermore,
+    // because "data-checked" (see above) matches data-state="checked" only,
+    // an indeterminate checkbox gets ZERO of the primary/bg/border/text
+    // treatment - it renders as a plain ambient (unchecked-looking) box that
+    // merely happens to show a checkmark glyph in the ambient foreground
+    // color instead of no glyph at all. Measured directly: indeterminate's
+    // border/background/color are pixel-identical to the unchecked pair's,
+    // both light and dark. This looks like an upstream quirk, not the
+    // idealized "indeterminate = filled with a dash" pattern, but the task's
+    // own rule is ground truth over invented-by-analogy assumptions, so it
+    // is reproduced exactly: MuiCheckbox's `indeterminate` prop only swaps
+    // the icon (via indeterminateIcon default prop below); it does NOT gate
+    // any color/background style. This falls out for free from MUI's own
+    // Checkbox implementation - when `indeterminate` is true and the
+    // (uncontrolled) internal `checked` is false, MUI's SwitchBase renders
+    // the `indeterminateIcon` prop WITHOUT adding the `Mui-checked` class, so
+    // none of this override's `&.Mui-checked` rules fire - confirmed by
+    // reading @mui/material's Checkbox.js: both the icon and checkedIcon
+    // forwarded to SwitchBase resolve to `indeterminateIconProp` whenever
+    // `indeterminate` is true, so SwitchBase's `checked ? checkedIcon : icon`
+    // branch shows the same swapped icon regardless of the underlying
+    // (uncontrolled, false) checked boolean.
+    //
+    // GOTCHA - focus ring must key off `.Mui-focusVisible`, not
+    // `.Mui-focused` (unlike MuiOutlinedInput/MuiFilledInput/MuiInput above):
+    // Checkbox is a SwitchBase/ButtonBase-family component, not an
+    // InputBase-family one. SwitchBase renders an absolutely-positioned,
+    // opacity:0 native `<input type="checkbox">` (zIndex 1, covering the
+    // full root) as the ACTUAL focusable/hoverable element - the outer
+    // `span.MuiCheckbox-root` itself has `tabIndex: null` and is never
+    // directly focused. Reading @mui/material's ButtonBase.js: its
+    // `handleFocus` checks `isFocusVisible(event.target)` (not
+    // `event.currentTarget`) - since React's onFocus delegates via the
+    // bubbling `focusin` event, `event.target` is the real focused element
+    // (the nested input) even though the handler is attached to the outer
+    // span. This sets ButtonBase's internal `focusVisible` state to true and
+    // adds the global `Mui-focusVisible` class to the OUTER span - so the
+    // ring can be themed on the root via a plain class selector exactly like
+    // `:focus-visible` would look, without ever matching a literal
+    // `&:focus-visible` selector (which would never fire, since the span
+    // itself is never the focused DOM node). Confirmed empirically: focusing
+    // the internal input and reading `.Mui-focusVisible` presence + the
+    // ring's resolved border/box-shadow after the 150ms color transition
+    // settles (an early read at 50ms showed a mid-transition blended color,
+    // not a real mismatch - see harness's own 300ms settle wait in
+    // e2e/lib/states.ts, which is long enough).
+    //
+    // `data-target` is placed on the internal `<input>` via
+    // `slotProps={{ input: { "data-target": true } }}` (not the outer span) -
+    // the input is the topmost element at the box's screen position (it
+    // covers the full root, zIndex 1) so `.hover()` on it also satisfies the
+    // outer root's own `&:hover` CSS (a hovered descendant keeps its
+    // ancestors `:hover`-matched), and it is the only element that can
+    // receive real keyboard focus for the harness's Tab-based
+    // `focusVisible()` helper.
+    //
+    // No `&:hover` rule exists anywhere in this override: checkbox.tsx's
+    // class list carries no "hover:" variant at all (confirmed both by
+    // reading the class string and by getComputedStyle on a real
+    // mouseover - border/background/color are byte-identical to the resting
+    // state). MUI's own hover halo (SwitchBaseRoot/CheckboxRoot's internal
+    // `disableRipple: false`-gated `&:hover` variants) is already inert
+    // globally via `MuiButtonBase.defaultProps.disableRipple: true` set
+    // above (SwitchBase renders a real `<ButtonBase>` under the hood, so the
+    // same global default reaches it) - verified with getComputedStyle: no
+    // hover halo paints on the themed MUI twin.
+    //
+    // GOTCHA - MUI's own internal `variants` (Checkbox.js, `props: {color:
+    // 'primary'}` - the component's own default color) set
+    // `&.Mui-checked, &.MuiCheckbox-indeterminate { color: primary.main }`
+    // and `&.Mui-disabled { color: action.disabled }` UNCONDITIONALLY
+    // whenever `color="primary"` (MUI Checkbox's own default, never
+    // overridden by this gallery). Left alone, these would tint the
+    // indeterminate icon primary-blue-grey and the disabled icon
+    // MUI's own grey - both wrong per ground truth (indeterminate: ambient
+    // foreground; disabled: ambient foreground dimmed by opacity alone).
+    // Both are explicitly neutralized below (`&.MuiCheckbox-indeterminate`
+    // and `&.Mui-disabled` re-asserting `color: text.primary`) - the same
+    // "component's own internal variants lose to this styleOverrides.root
+    // by source order" mechanism already proven for MuiButton/MuiTextField
+    // above (styleOverrides is always serialized after the component's own
+    // base style + internal variants).
+    // -----------------------------------------------------------------------
+    MuiCheckbox: {
+      defaultProps: {
+        // GOTCHA (found via a REAL Playwright mouse hover, not a synthetic dispatchEvent -
+        // the latter doesn't engage actual :hover matching and silently hid this): the global
+        // `MuiButtonBase.defaultProps.disableRipple: true` set above does NOT reach Checkbox.
+        // @mui/material's Checkbox.js destructures its OWN `disableRipple = false` default
+        // (via `useDefaultProps({..., name: 'MuiCheckbox'})`, not 'MuiButtonBase') and then
+        // explicitly forwards that resolved (always-defined, never-undefined) value as a real
+        // prop down through SwitchBase to the underlying ButtonBase - an explicit prop always
+        // beats ButtonBase's own theme-default lookup (`useDefaultProps` only fills in
+        // `undefined`s), so ButtonBase never sees the global MuiButtonBase default at all.
+        // Concretely, without this: CheckboxRoot's own internal `variants` (gated on
+        // `ownerState.disableRipple === false`, which it always was) applied a translucent
+        // hover-halo `&:hover` background AND ButtonBase's focus-ripple pulse animation both
+        // fired - confirmed by comparing e2e/results/diffs screenshots (a solid grey fill
+        // inside the unchecked box on both hover and focus that shadcn's real twin, which has
+        // no hover state and only a border+ring on focus, never shows). Restated here
+        // per-component to actually reach Checkbox's own ownerState.
+        disableRipple: true,
+        // shadcn: checkbox.tsx's Indicator always renders the same lucide
+        // CheckIcon for both "checked" and "indeterminate" data-states (see
+        // GOTCHA above) - `icon` (rendered while neither checked nor
+        // indeterminate) is the same glyph made invisible via `visibility:
+        // hidden` rather than omitted, since MUI's SwitchBase always renders
+        // one of `icon`/`checkedIcon` and Checkbox.js's `React.cloneElement`
+        // call requires a valid element (a bare `null` throws). An invisible
+        // element paints zero pixels, so this is visually identical to
+        // shadcn's real DOM (which renders no indicator at all when
+        // unchecked).
+        icon: createElement(Check, { "aria-hidden": true, style: { visibility: "hidden" } }),
+        checkedIcon: createElement(Check, { "aria-hidden": true }),
+        indeterminateIcon: createElement(Check, { "aria-hidden": true }), // shadcn: same CheckIcon, not a Minus - see GOTCHA above
+      },
+      styleOverrides: {
+        root: ({ theme }) => ({
+          width: "1rem", // shadcn: size-4
+          height: "1rem",
+          padding: 0, // shadcn: no padding class (kills SwitchBaseRoot's own 9px base padding)
+          boxSizing: "border-box",
+          display: "flex", // shadcn: flex
+          alignItems: "center", // shadcn: items-center
+          justifyContent: "center", // shadcn: justify-center
+          flexShrink: 0, // shadcn: shrink-0
+          borderRadius: "4px", // shadcn: rounded-[4px] (flat literal, not the --radius scale)
+          border: `1px solid ${theme.vars.palette.input}`, // shadcn: border border-input
+          backgroundColor: "transparent", // shadcn: no base bg class (light)
+          backgroundClip: "border-box", // shadcn: no bg-clip-padding class (unlike Button/IconButton) - left at CSS initial
+          color: theme.vars.palette.text.primary, // shadcn: ambient foreground (CheckboxRoot's own base sets text.secondary - corrected here)
+          outline: "none", // shadcn: outline-none
+          cursor: "default", // shadcn: no cursor-pointer class; browser default (ButtonBase defaults to pointer)
+          transition:
+            "color 150ms cubic-bezier(0.4, 0, 0.2, 1), background-color 150ms cubic-bezier(0.4, 0, 0.2, 1), border-color 150ms cubic-bezier(0.4, 0, 0.2, 1)", // shadcn: transition-colors
+          "& svg": { width: "0.875rem", height: "0.875rem" }, // shadcn: [&>svg]:size-3.5 (14px)
+          "&.Mui-checked": {
+            borderColor: theme.vars.palette.primary.main, // shadcn: data-checked:border-primary
+            backgroundColor: theme.vars.palette.primary.main, // shadcn: data-checked:bg-primary
+            color: theme.vars.palette.primary.contrastText, // shadcn: data-checked:text-primary-foreground
+          },
+          "&.MuiCheckbox-indeterminate": {
+            color: theme.vars.palette.text.primary, // shadcn: indeterminate stays ambient (see GOTCHA above) - neutralizes MUI's own color:'primary' variant
+          },
+          "&.Mui-disabled": {
+            opacity: 0.5, // shadcn: disabled:opacity-50
+            cursor: "not-allowed", // shadcn: disabled:cursor-not-allowed
+            color: theme.vars.palette.text.primary, // shadcn: no disabled color change - neutralizes MUI's own action.disabled tint
+          },
+          "&.Mui-focusVisible": {
+            borderColor: theme.vars.palette.ring, // shadcn: focus-visible:border-ring
+            boxShadow: `0 0 0 3px color-mix(in oklab, ${theme.vars.palette.ring} 50%, transparent)`, // shadcn: focus-visible:ring-3 ring-ring/50
+          },
+          ...theme.applyStyles("dark", {
+            backgroundColor: `color-mix(in oklab, ${theme.vars.palette.input} 30%, transparent)`, // shadcn: dark:bg-input/30
+            "&.Mui-checked": {
+              backgroundColor: theme.vars.palette.primary.main, // shadcn: dark:data-checked:bg-primary (re-assert over dark:bg-input/30)
+            },
+          }),
+        }),
+      },
+    },
+    // -----------------------------------------------------------------------
+    // Checkbox - with-label pairing
+    //
+    // Ground truth for the control+label row spacing: neither checkbox.tsx
+    // nor label.tsx fixes a container gap (caller-owned, same situation as
+    // MuiInputLabel's label-to-control gap above). No shadcn demo file is
+    // installed in this app to anchor the exact spacing convention, so this
+    // reuses the one real number already extracted from an installed file
+    // for this exact "control + label, horizontal" composition:
+    // apps/showcase/src/components/ui/field.tsx's `fieldVariants` base class
+    // is `group/field flex w-full gap-2` (0.5rem, 8px) - Field's horizontal
+    // orientation variant changes flex-direction but not this base gap. This
+    // is this task's own choice for the *spacing value*, grounded in that
+    // real file rather than invented from scratch or copied from a different
+    // component's own hard-coded gap.
+    //
+    // FormControlLabelRoot's own base style (marginLeft: -11, marginRight:
+    // 16, no gap) is neutralized to margin 0 + gap 8px; MuiFormControlLabel's
+    // label Typography defaults to variant body1 (1rem/1.5/400) and is reset
+    // to match label.tsx's own classes (text-sm leading-none font-medium,
+    // ambient foreground - label.tsx carries no color class of its own).
+    // -----------------------------------------------------------------------
+    MuiFormControlLabel: {
+      styleOverrides: {
+        root: {
+          marginLeft: 0,
+          marginRight: 0,
+          gap: "0.5rem", // this task's own choice, grounded in field.tsx's own gap-2 - see banner above
+          cursor: "default", // shadcn: the control+label row carries no cursor-pointer class
+        },
+        label: ({ theme }) => ({
+          fontSize: "0.875rem", // shadcn label.tsx: text-sm
+          lineHeight: 1, // shadcn label.tsx: leading-none
+          fontWeight: 500, // shadcn label.tsx: font-medium
+          color: theme.vars.palette.text.primary, // shadcn label.tsx: ambient foreground (no color class)
+          userSelect: "none", // shadcn label.tsx: select-none
+        }),
       },
     },
     // Per-component overrides are appended by later tasks, one banner each.

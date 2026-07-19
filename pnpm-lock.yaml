@@ -140,6 +140,10 @@ importers:
         version: 8.1.4(@types/node@24.13.3)(jiti@2.7.0)
 
   packages/xui:
+    dependencies:
+      lucide-react:
+        specifier: ^1.24.0
+        version: 1.24.0(react@19.2.7)
     devDependencies:
       '@emotion/react':
         specifier: ^11.14.0
@@ -150,6 +154,9 @@ importers:
       '@mui/material':
         specifier: ^9.2.0
         version: 9.2.0(@emotion/react@11.14.0(@types/react@19.2.17)(react@19.2.7))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.17)(react@19.2.7))(@types/react@19.2.17)(react@19.2.7))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+      '@types/react':
+        specifier: ^19.2.17
+        version: 19.2.17
       react:
         specifier: ^19.0.0
         version: 19.2.7
