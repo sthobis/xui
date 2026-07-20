@@ -2911,6 +2911,117 @@ export const shadcnTheme = createTheme({
         },
       ],
     },
+    // -----------------------------------------------------------------------
+    // Alert
+    //
+    // Ground truth: apps/showcase/src/components/ui/alert.tsx (cva). The real
+    // component is a bordered card-style box with an icon column and a
+    // stacked title/description column, NOT MUI's colored banner - every
+    // severity color is overridden away to this same neutral/destructive
+    // pair, matching the two variants alert.tsx actually defines.
+    //
+    // root (both variants): group/alert relative grid w-full gap-0.5
+    //   rounded-lg border px-2.5 py-2 text-left text-sm
+    //   has-[>svg]:grid-cols-[auto_1fr] has-[>svg]:gap-x-2 (both gallery pairs
+    //   render an icon, so this is applied unconditionally rather than
+    //   data-driven - no pair covers the no-icon case)
+    //   *:[svg]:row-span-2 *:[svg]:translate-y-0.5 *:[svg]:text-current
+    //   *:[svg:not([class*='size-'])]:size-4
+    //   default:     bg-card text-card-foreground
+    //   destructive: bg-card text-destructive
+    //     *:data-[slot=alert-description]:text-destructive/90
+    //
+    // AlertTitle: font-medium (ambient color inherited from root - no color
+    //   of its own in either variant).
+    // AlertDescription: text-sm text-muted-foreground ALWAYS (its own class,
+    //   not variant-scoped) - only destructive's `*:data-[slot=...]` selector
+    //   overrides it to text-destructive/90.
+    //
+    // MUI's Alert always wraps every non-icon child in ONE internal `message`
+    // slot div (AlertMessage), unlike alert.tsx's flat grid of icon + title +
+    // description as three separate siblings - so this project's own
+    // `data-slot="alert-title"`/`data-slot="alert-description"` hooks (set on
+    // plain divs in the gallery, mirroring the real component's own
+    // `data-slot` attributes) are targeted from inside that message slot
+    // instead, reproducing the same title/description typography split.
+    // -----------------------------------------------------------------------
+    MuiAlert: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          display: "grid",
+          gridTemplateColumns: "auto 1fr", // shadcn: has-[>svg]:grid-cols-[auto_1fr]
+          columnGap: "0.5rem", // shadcn: has-[>svg]:gap-x-2
+          rowGap: "0.125rem", // shadcn: gap-0.5
+          width: "100%", // shadcn: w-full
+          textAlign: "left", // shadcn: text-left
+          borderRadius: RADIUS, // shadcn: rounded-lg
+          border: `1px solid ${theme.vars.palette.border}`, // shadcn: border
+          padding: "0.5rem 0.625rem", // shadcn: py-2 px-2.5
+          backgroundColor: theme.vars.palette.card.main, // shadcn: bg-card (both variants)
+          color: theme.vars.palette.card.contrastText, // shadcn: text-card-foreground (default variant)
+          fontSize: "0.875rem", // shadcn: text-sm
+          lineHeight: "1.25rem", // shadcn: text-sm's paired line-height
+          letterSpacing: "normal", // cancels MUI's injected typography.body2 letter-spacing
+          // MUI's OWN internal severity/color theming sets the icon's color via a nested
+          // `& .MuiAlert-icon { color }` selector INSIDE this same root style (see
+          // node_modules AlertRoot's `variants` array, keyed by colorSeverity/variant) -
+          // a plain `styleOverrides.icon.color` (a separate, lower-specificity rule scoped
+          // to the Icon slot's own styled() component) loses that fight regardless of
+          // declaration order, since `.MuiAlert-root .MuiAlert-icon` (2 classes) beats a
+          // bare `.MuiAlert-icon` (1 class). Restated here, at the SAME nested-selector
+          // shape and specificity, so this rule (appended after MUI's own) wins instead.
+          "& .MuiAlert-icon": {
+            color: "currentColor", // shadcn: *:[svg]:text-current
+          },
+        }),
+        icon: {
+          margin: 0, // shadcn icon carries no margin - grid column-gap does the spacing instead
+          padding: 0,
+          opacity: 1, // undo MUI's built-in 0.9 icon dimming
+          // shadcn: *:[svg]:row-span-2 - in the real component, AlertTitle and
+          // AlertDescription are two SEPARATE grid items each occupying their own row, so
+          // the icon spans both. MUI always wraps every non-icon child in ONE "message"
+          // slot div (a single grid item, occupying row 1 only) - a literal `gridRow: span
+          // 2` here would force a phantom, non-empty second row into existence (measured:
+          // Chromium's row-track-sizing algorithm allocates it ~7px even though nothing
+          // else occupies it), inflating the whole alert taller than the real component.
+          // With only one real content row, the icon needs no span at all to sit beside it.
+          alignSelf: "start", // pins the icon to the top instead of stretching to fill the row (see comment above)
+          transform: "translateY(0.125rem)", // shadcn: *:[svg]:translate-y-0.5
+          "& svg": {
+            width: "1rem", // shadcn: *:[svg:not([class*='size-'])]:size-4
+            height: "1rem",
+          },
+        },
+        message: ({ theme }) => ({
+          padding: 0,
+          minWidth: 0,
+          gridColumn: "2", // shadcn: AlertTitle's own group-has-[>svg]/alert:col-start-2
+          display: "flex",
+          flexDirection: "column",
+          gap: "0.125rem", // shadcn: root's gap-0.5, inherited by the stacked title/description
+          '& [data-slot="alert-title"]': {
+            fontWeight: 500, // shadcn: font-medium
+          },
+          '& [data-slot="alert-description"]': {
+            fontSize: "0.875rem", // shadcn: text-sm
+            lineHeight: "1.25rem",
+            color: theme.vars.palette.text.secondary, // shadcn: text-muted-foreground
+          },
+        }),
+      },
+      variants: [
+        {
+          props: { severity: "error" },
+          style: ({ theme }) => ({
+            color: theme.vars.palette.error.main, // shadcn destructive: text-destructive (root + title, via inheritance)
+            '& [data-slot="alert-description"]': {
+              color: `color-mix(in oklab, ${theme.vars.palette.error.main} 90%, transparent)`, // shadcn: text-destructive/90
+            },
+          }),
+        },
+      ],
+    },
     // Per-component overrides are appended by later tasks, one banner each.
   },
 })

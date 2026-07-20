@@ -12,6 +12,7 @@ import { dividerSection } from "./divider"
 import { skeletonSection } from "./skeleton"
 import { linkSection } from "./link"
 import { chipSection } from "./chip"
+import { alertSection } from "./alert"
 
 export const sections: Section[] = [
   buttonSection,
@@ -27,4 +28,5 @@ export const sections: Section[] = [
   skeletonSection,
   linkSection,
   chipSection,
+  alertSection,
 ]
