@@ -76,7 +76,7 @@ The scope is `@mui/material` core; MUI X (DataGrid, Date Pickers, Tree View) is 
 - [x] Skeleton
 - [ ] LinearProgress / CircularProgress
 - [x] Alert
-- [ ] Card / Paper
+- [x] Card / Paper
 - [ ] Typography
 - [x] Link
 - [ ] Tooltip

@@ -3022,6 +3022,106 @@ export const shadcnTheme = createTheme({
         },
       ],
     },
+    // -----------------------------------------------------------------------
+    // Card / Paper -> shadcn Card
+    //
+    // Ground truth: apps/showcase/src/components/ui/card.tsx. Only the
+    // "default" size is covered (no pair exercises `data-size="sm"`).
+    //
+    // Card root: group/card flex flex-col gap-(--card-spacing) overflow-hidden
+    //   rounded-xl bg-card py-(--card-spacing) text-sm text-card-foreground
+    //   ring-1 ring-foreground/10 [--card-spacing:--spacing(4)]
+    //   has-data-[slot=card-footer]:pb-0
+    //   (--card-spacing = spacing(4) = 1rem at the default size)
+    // CardHeader: grid auto-rows-min items-start gap-1 rounded-t-xl
+    //   px-(--card-spacing)
+    // CardTitle: font-heading text-base leading-snug font-medium
+    //   (font-heading resolves to font-sans in this project's @theme - see
+    //   apps/showcase/src/index.css - so no separate font-family override)
+    // CardDescription: text-sm text-muted-foreground
+    // CardContent: px-(--card-spacing)
+    // CardFooter: flex items-center rounded-b-xl border-t bg-muted/50
+    //   p-(--card-spacing)
+    //
+    // Mapping: MUI's Card renders via `styled(Paper, {name:'MuiCard'})` (the
+    // same "restyle a wrapped component through its own theme key" pattern
+    // MUI itself uses for Card-on-Paper) - `elevation: 0` sidesteps Paper's
+    // own elevation boxShadow computation entirely rather than fighting it,
+    // and the ring-1 ring-foreground/10 "border" is reproduced as a boxShadow
+    // (Tailwind's ring-N utilities ARE box-shadow, not an actual border).
+    // CardHeader/CardContent/CardFooter map onto MUI's own CardHeader (via
+    // its title/subheader props)/CardContent/CardActions.
+    // -----------------------------------------------------------------------
+    MuiCard: {
+      defaultProps: {
+        elevation: 0, // shadcn card carries no elevation shadow, only the ring below
+      },
+      styleOverrides: {
+        root: ({ theme }) => ({
+          display: "flex",
+          flexDirection: "column",
+          gap: "1rem", // shadcn: gap-(--card-spacing)
+          overflow: "hidden", // shadcn: overflow-hidden
+          borderRadius: `calc(${RADIUS} * 1.4)`, // shadcn: rounded-xl
+          backgroundColor: theme.vars.palette.card.main, // shadcn: bg-card
+          color: theme.vars.palette.card.contrastText, // shadcn: text-card-foreground
+          padding: "1rem 0", // shadcn: py-(--card-spacing), no horizontal (children own px)
+          fontSize: "0.875rem", // shadcn: text-sm
+          lineHeight: "1.25rem", // shadcn: text-sm's paired line-height (otherwise plain elements like
+          // CardContent's <p> fall back to the browser/MUI ambient line-height instead of Tailwind's)
+          letterSpacing: "normal", // Card root is a plain div (no MUI Typography variant baggage to
+          // cancel), stated for consistency with every other ambient text-sm root in this theme
+          boxShadow: `0 0 0 1px color-mix(in oklab, ${theme.vars.palette.text.primary} 10%, transparent)`, // shadcn: ring-1 ring-foreground/10 (Tailwind ring-* is a box-shadow, not a border)
+          "&:has(.MuiCardActions-root)": {
+            paddingBottom: 0, // shadcn: has-data-[slot=card-footer]:pb-0
+          },
+        }),
+      },
+    },
+    MuiCardHeader: {
+      styleOverrides: {
+        root: {
+          padding: "0 1rem", // shadcn: px-(--card-spacing)
+        },
+        content: {
+          display: "flex",
+          flexDirection: "column",
+          gap: "0.25rem", // shadcn: gap-1
+        },
+        title: {
+          fontSize: "1rem", // shadcn: text-base
+          lineHeight: "1.375", // shadcn: leading-snug
+          fontWeight: 500, // shadcn: font-medium
+          letterSpacing: "normal", // cancels MUI's injected h5 letter-spacing
+        },
+        subheader: {
+          fontSize: "0.875rem", // shadcn: text-sm
+          lineHeight: "1.25rem", // shadcn: text-sm's paired line-height
+          letterSpacing: "normal", // cancels MUI's injected body1 letter-spacing
+        },
+      },
+    },
+    MuiCardContent: {
+      styleOverrides: {
+        root: {
+          padding: "0 1rem", // shadcn: px-(--card-spacing), no vertical (parent flex gap spaces it)
+        },
+      },
+    },
+    MuiCardActions: {
+      defaultProps: {
+        disableSpacing: true, // shadcn footer has no child-gap class of its own
+      },
+      styleOverrides: {
+        root: ({ theme }) => ({
+          padding: "1rem", // shadcn: p-(--card-spacing)
+          borderTop: `1px solid ${theme.vars.palette.border}`, // shadcn: border-t (base-layer default border-color)
+          borderBottomLeftRadius: `calc(${RADIUS} * 1.4)`, // shadcn: rounded-b-xl
+          borderBottomRightRadius: `calc(${RADIUS} * 1.4)`,
+          backgroundColor: `color-mix(in oklab, ${theme.vars.palette.muted.main} 50%, transparent)`, // shadcn: bg-muted/50
+        }),
+      },
+    },
     // Per-component overrides are appended by later tasks, one banner each.
   },
 })
