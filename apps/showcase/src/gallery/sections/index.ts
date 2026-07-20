@@ -7,6 +7,7 @@ import { radioSection } from "./radio"
 import { switchSection } from "./switch"
 import { selectSection } from "./select"
 import { sliderSection } from "./slider"
+import { avatarSection } from "./avatar"
 
 export const sections: Section[] = [
   buttonSection,
@@ -17,4 +18,5 @@ export const sections: Section[] = [
   switchSection,
   selectSection,
   sliderSection,
+  avatarSection,
 ]

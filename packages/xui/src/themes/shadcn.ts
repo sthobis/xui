@@ -2610,6 +2610,84 @@ export const shadcnTheme = createTheme({
         },
       },
     },
+    // -----------------------------------------------------------------------
+    // Avatar
+    //
+    // Ground truth: apps/showcase/src/components/ui/avatar.tsx (radix-ui
+    // Avatar.Root/Image/Fallback). Gallery exercises only the default size
+    // (`data-size="default"`) with an image and a text fallback - the sm/lg
+    // sizes and the AvatarBadge/AvatarGroup pieces have no gallery pair and
+    // are out of scope.
+    //
+    // avatar.tsx Root classes (verbatim, default-size slice):
+    //   group/avatar relative flex size-8 shrink-0 rounded-full select-none
+    //   after:absolute after:inset-0 after:rounded-full after:border
+    //   after:border-border after:mix-blend-darken dark:after:mix-blend-lighten
+    // avatar.tsx Image classes (verbatim):
+    //   aspect-square size-full rounded-full object-cover
+    // avatar.tsx Fallback classes (verbatim, default-size slice):
+    //   flex size-full items-center justify-center rounded-full bg-muted
+    //   text-sm text-muted-foreground
+    //
+    // Extracted class -> CSS:
+    //   Root: size-8 -> 2rem (32px) square (MUI's own default is 40px,
+    //     overridden below). rounded-full on a square box is visually
+    //     identical to MUI's own default `borderRadius: '50%'` (both clip a
+    //     perfect circle on an equal-side box) - left untouched rather than
+    //     restated with an invented literal.
+    //   after: an unconditional ring overlay on TOP of both the image and
+    //     the fallback - absolute, inset-0, 1px solid border-border,
+    //     blended via mix-blend-mode (darken in light, lighten in dark, so
+    //     the 1px ring reads as a subtle contrast edge over any image/bg
+    //     rather than a flat opaque line). MuiAvatar has no equivalent
+    //     pseudo-element by default, so this is added net-new below.
+    //   Image: size-full object-cover -> MUI's own AvatarImg base style
+    //     already sets width/height 100% and objectFit: 'cover' - byte
+    //     identical, no override needed. Root's own default `overflow:
+    //     hidden` (MUI) clips the image to the circle in place of the
+    //     shadcn Image's own `rounded-full` class - same visual result on
+    //     an image that exactly fills a rounded box, confirmed via the
+    //     parity screenshot rather than assumed.
+    //   Fallback: bg-muted text-sm text-muted-foreground -> only reachable
+    //     on the MUI side via the `.MuiAvatar-colorDefault` variant (fires
+    //     whenever there is no loaded/loading image - confirmed by reading
+    //     Avatar.js: `ownerState.colorDefault = !hasImgNotFailing`), which
+    //     otherwise paints MUI's own grey[400]/background.default combo -
+    //     overridden below to bg-muted/text-muted-foreground.
+    //     text-sm is Tailwind's paired size+line-height utility (0.875rem /
+    //     1.25rem, per the TextField input note above), not just a bare
+    //     font-size - MUI's own default `lineHeight: 1` is restated to match
+    //     to avoid a sub-pixel vertical shift of the centered glyphs.
+    // -----------------------------------------------------------------------
+    MuiAvatar: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          width: "2rem", // shadcn: size-8 (32px, default size - MUI's own default is 40px)
+          height: "2rem",
+          userSelect: "none", // shadcn: select-none
+          "&::after": {
+            content: '""',
+            position: "absolute",
+            inset: 0,
+            borderRadius: "inherit", // shadcn: after:rounded-full (matches Root's own radius)
+            border: `1px solid ${theme.vars.palette.border}`, // shadcn: after:border after:border-border
+            mixBlendMode: "darken", // shadcn: after:mix-blend-darken
+            pointerEvents: "none",
+          },
+          ...theme.applyStyles("dark", {
+            "&::after": {
+              mixBlendMode: "lighten", // shadcn: dark:after:mix-blend-lighten
+            },
+          }),
+          "&.MuiAvatar-colorDefault": {
+            backgroundColor: theme.vars.palette.muted.main, // shadcn AvatarFallback: bg-muted
+            color: theme.vars.palette.text.secondary, // shadcn AvatarFallback: text-muted-foreground
+            fontSize: "0.875rem", // shadcn: text-sm
+            lineHeight: "1.25rem", // shadcn: text-sm's paired line-height
+          },
+        }),
+      },
+    },
     // Per-component overrides are appended by later tasks, one banner each.
   },
 })
