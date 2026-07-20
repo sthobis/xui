@@ -14,6 +14,7 @@ import { linkSection } from "./link"
 import { chipSection } from "./chip"
 import { alertSection } from "./alert"
 import { cardSection } from "./card"
+import { progressSection } from "./progress"
 
 export const sections: Section[] = [
   buttonSection,
@@ -31,4 +32,5 @@ export const sections: Section[] = [
   chipSection,
   alertSection,
   cardSection,
+  progressSection,
 ]
