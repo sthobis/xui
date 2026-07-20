@@ -2820,6 +2820,97 @@ export const shadcnTheme = createTheme({
         },
       },
     },
+    // -----------------------------------------------------------------------
+    // Chip -> shadcn Badge
+    //
+    // Ground truth: apps/showcase/src/components/ui/badge.tsx (cva). Badge is
+    // a small pill LABEL, not a tall interactive chip - the gallery only
+    // exercises the plain non-interactive `<span>` form (no `asChild`, no
+    // delete affordance), so MUI's Chip is themed to that shape and MUI's own
+    // delete-icon slot is left untouched (out of scope - no pair covers it).
+    //
+    // base (every variant):
+    //   group/badge inline-flex h-5 w-fit shrink-0 items-center justify-center
+    //   gap-1 overflow-hidden rounded-4xl border border-transparent px-2 py-0.5
+    //   text-xs font-medium whitespace-nowrap transition-all
+    //   focus-visible:* aria-invalid:* (no focusable/invalid badge in the
+    //   gallery - Badge only gets ButtonBase/focus behavior when `asChild`
+    //   wraps an interactive element, not exercised here - out of scope)
+    //   [&>svg]:size-3! (no icon in any pair - out of scope)
+    //
+    // variant (all four the gallery exercises):
+    //   default:     bg-primary text-primary-foreground
+    //   secondary:   bg-secondary text-secondary-foreground
+    //   destructive: bg-destructive/10 text-destructive dark:bg-destructive/20
+    //   outline:     border-border text-foreground (no bg-* class - transparent)
+    //
+    // Mapping: MUI Chip's own `variant`/`color` props already cover this 1:1 -
+    // variant="filled" (MUI's default) + color="primary"/"secondary"/"error"
+    // for default/secondary/destructive, variant="outlined" for outline - no
+    // sx hacks, no wrapper component.
+    // -----------------------------------------------------------------------
+    MuiChip: {
+      styleOverrides: {
+        root: {
+          height: "1.25rem", // shadcn: h-5
+          width: "fit-content", // shadcn: w-fit
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: "0.25rem", // shadcn: gap-1
+          overflow: "hidden", // shadcn: overflow-hidden
+          borderRadius: `calc(${RADIUS} * 2.6)`, // shadcn: rounded-4xl -> --radius-4xl = radius * 2.6
+          border: "1px solid transparent", // shadcn: border border-transparent
+          padding: "0.125rem 0.5rem", // shadcn: py-0.5 px-2
+          fontSize: "0.75rem", // shadcn: text-xs
+          lineHeight: "1rem", // shadcn: text-xs's paired line-height
+          fontWeight: 500, // shadcn: font-medium
+          whiteSpace: "nowrap", // shadcn: whitespace-nowrap
+          boxSizing: "border-box",
+        },
+        label: {
+          // Badge is a single padded box (padding lives on the root class string
+          // itself), unlike MUI Chip's default two-tier model where the inner
+          // label span carries its own hardcoded padding on top of the root -
+          // zeroed here so the root's own padding above isn't doubled.
+          padding: 0,
+        },
+      },
+      variants: [
+        {
+          props: { variant: "filled", color: "primary" },
+          style: ({ theme }) => ({
+            backgroundColor: theme.vars.palette.primary.main, // shadcn: bg-primary
+            color: theme.vars.palette.primary.contrastText, // shadcn: text-primary-foreground
+          }),
+        },
+        {
+          props: { variant: "filled", color: "secondary" },
+          style: ({ theme }) => ({
+            backgroundColor: theme.vars.palette.secondary.main, // shadcn: bg-secondary
+            color: theme.vars.palette.secondary.contrastText, // shadcn: text-secondary-foreground
+          }),
+        },
+        {
+          props: { variant: "filled", color: "error" },
+          style: ({ theme }) => ({
+            backgroundColor: `color-mix(in oklab, ${theme.vars.palette.error.main} 10%, transparent)`, // shadcn: bg-destructive/10
+            color: theme.vars.palette.error.main, // shadcn: text-destructive
+            ...theme.applyStyles("dark", {
+              backgroundColor: `color-mix(in oklab, ${theme.vars.palette.error.main} 20%, transparent)`, // shadcn: dark:bg-destructive/20
+            }),
+          }),
+        },
+        {
+          props: { variant: "outlined" },
+          style: ({ theme }) => ({
+            backgroundColor: "transparent", // shadcn: outline variant has no bg-* class
+            borderColor: theme.vars.palette.border, // shadcn: border-border
+            color: theme.vars.palette.text.primary, // shadcn: text-foreground
+          }),
+        },
+      ],
+    },
     // Per-component overrides are appended by later tasks, one banner each.
   },
 })
