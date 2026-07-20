@@ -2785,6 +2785,41 @@ export const shadcnTheme = createTheme({
         },
       },
     },
+    // -----------------------------------------------------------------------
+    // Link
+    //
+    // Ground truth: shadcn/ui ships no dedicated Link component - the real
+    // twin is a plain anchor styled with button.tsx's own `variant="link"`
+    // treatment (already implemented on MuiButton above, per this project's
+    // own convention of reusing that exact class string for anchor-style
+    // links elsewhere in a shadcn app):
+    //   text-primary underline-offset-4 hover:underline
+    //
+    // Extracted class -> CSS:
+    //   text-primary -> color: primary.main. MuiLink's default `color`
+    //     prop is already "primary" (see Link.js), which - because "primary"
+    //     is one of MUI's reserved `v6Colors` - is applied via Typography's
+    //     own `color` prop rather than the inline-`sx` fallback path Link.js
+    //     uses for arbitrary colors; either path resolves to the same
+    //     palette.primary.main. No override needed.
+    //   underline-offset-4 -> textUnderlineOffset: 4px. Not one of MUI
+    //     Link's own variants (its `underline` prop only ever toggles
+    //     `text-decoration`, never `text-underline-offset`) - restated
+    //     below, unconditionally (the offset applies whether or not the
+    //     underline is currently painted, matching the class being present
+    //     on the element regardless of hover state).
+    //   hover:underline -> MUI's own `underline="hover"` prop (used in the
+    //     gallery) already resolves to the exact match: `textDecoration:
+    //     'none'` at rest, `&:hover { textDecoration: 'underline' }` - no
+    //     override needed, restated here only for documentation.
+    // -----------------------------------------------------------------------
+    MuiLink: {
+      styleOverrides: {
+        root: {
+          textUnderlineOffset: "4px", // shadcn: underline-offset-4
+        },
+      },
+    },
     // Per-component overrides are appended by later tasks, one banner each.
   },
 })
