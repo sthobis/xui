@@ -2739,6 +2739,52 @@ export const shadcnTheme = createTheme({
         },
       },
     },
+    // -----------------------------------------------------------------------
+    // Skeleton
+    //
+    // Ground truth: apps/showcase/src/components/ui/skeleton.tsx (a single
+    // plain `<div>`, no radix primitive). Gallery exercises a rectangular
+    // line and a circle (via a caller `rounded-full` className, exactly as
+    // real shadcn usage does - see the gallery's own banner in
+    // skeleton.tsx); both are rendered in their DEFAULT (non-hover/focus)
+    // state only, since the component has no interactive states at all.
+    //
+    // skeleton.tsx classes (verbatim): animate-pulse rounded-md bg-muted
+    //
+    // Extracted class -> CSS:
+    //   bg-muted -> backgroundColor: muted.main (MUI's own Skeleton default
+    //     is a computed alpha-over-text.primary tint, NOT bg-muted - always
+    //     overridden below regardless of variant).
+    //   rounded-md -> borderRadius: calc(--radius * 0.8) (8px), applied to
+    //     MUI's `rectangular` variant only (its own default is a square 0
+    //     corner) - MUI's `circular` variant already resolves to
+    //     borderRadius: 50%, which on the gallery's equal-side box is the
+    //     exact visual match for the caller's own `rounded-full` override
+    //     and needs no restatement.
+    //   animate-pulse -> the harness screenshots with `animations:
+    //     "disabled"`, which (per Playwright's documented behavior) cancels
+    //     any INFINITE CSS animation to its initial (0%) keyframe state
+    //     rather than pausing it mid-cycle. Both shadcn's Tailwind
+    //     `animate-pulse` keyframe (0%/100%: opacity 1, 50%: opacity .5) and
+    //     MUI's own built-in pulse keyframe (0%/100%: opacity 1, 50%:
+    //     opacity .4) start their 0% frame at opacity: 1, so both freeze at
+    //     the identical, fully-opaque frame regardless of their differing
+    //     mid-cycle dip value or MUI's extra 0.5s `animation-delay` -
+    //     confirmed empirically via the parity run (0.00% on both pairs,
+    //     both color schemes) rather than assumed from reading the
+    //     keyframes alone. `animation="pulse"` (MUI's own default) is kept
+    //     as-is; no keyframe override was needed.
+    // -----------------------------------------------------------------------
+    MuiSkeleton: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          backgroundColor: theme.vars.palette.muted.main, // shadcn: bg-muted
+        }),
+        rectangular: {
+          borderRadius: `calc(${RADIUS} * 0.8)`, // shadcn: rounded-md
+        },
+      },
+    },
     // Per-component overrides are appended by later tasks, one banner each.
   },
 })
