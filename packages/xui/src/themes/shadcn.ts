@@ -2421,6 +2421,195 @@ export const shadcnTheme = createTheme({
         }),
       },
     },
+    // -----------------------------------------------------------------------
+    // Slider
+    //
+    // Ground truth: apps/showcase/src/components/ui/slider.tsx
+    // (radix-ui Slider.Root/Track/Range/Thumb, style "radix-nova"), read
+    // directly and cross-checked with getComputedStyle() on the live shadcn
+    // slider (light + dark; default/disabled; hover/focus-visible on the
+    // thumb) via the Playwright MCP - same verification method as
+    // MuiCheckbox/MuiRadio/MuiSwitch above.
+    //
+    // slider.tsx Root classes (SliderPrimitive.Root, verbatim, horizontal-only
+    // slice - this gallery never renders `orientation="vertical"`):
+    //   relative flex w-full touch-none items-center select-none
+    //   data-disabled:opacity-50
+    // slider.tsx Track classes (SliderPrimitive.Track, verbatim):
+    //   relative grow overflow-hidden rounded-full bg-muted
+    //   data-horizontal:h-1 data-horizontal:w-full
+    // slider.tsx Range classes (SliderPrimitive.Range, verbatim):
+    //   absolute bg-primary select-none data-horizontal:h-full
+    // slider.tsx Thumb classes (SliderPrimitive.Thumb, verbatim):
+    //   relative block size-3 shrink-0 rounded-full border border-ring
+    //   bg-white ring-ring/50 transition-[color,box-shadow] select-none
+    //   after:absolute after:-inset-2 hover:ring-3 focus-visible:ring-3
+    //   focus-visible:outline-hidden active:ring-3 disabled:pointer-events-none
+    //   disabled:opacity-50
+    //
+    // Extracted class -> CSS (each value cross-checked live, both color
+    // schemes, via getComputedStyle - see the two GOTCHAs below for the ones
+    // that surprised a naive class-name reading):
+    //   Root: flex items-center w-full -> display: flex, alignItems: center,
+    //     width: 100%. No explicit height class - live rect shows Root's OWN
+    //     box is only 4px tall (== Track's h-1), NOT the 12px thumb height;
+    //     the Thumb (position: absolute - see GOTCHA below) simply overflows
+    //     4px above/below that box and is centered on it via the flex
+    //     container's align-items:center static-position fallback for
+    //     absolutely-positioned children (CSS Flexbox spec). Reproduced
+    //     verbatim: Root height 0.25rem, NOT the thumb's 0.75rem (a first
+    //     guess before live-measuring).
+    //   Track: grow (irrelevant once width:100% is restated directly)
+    //     overflow-hidden rounded-full bg-muted h-1 w-full -> position:
+    //     relative (ambient, for Range's absolute offsetting), height:
+    //     0.25rem (4px), width: 100%, borderRadius: calc(infinity * 1px)
+    //     (Tailwind v4's actual `rounded-full` literal - see MuiSwitch's own
+    //     track note above for why this exact string, not "9999px", matters
+    //     for focus-ring curve rasterization), backgroundColor: muted (no
+    //     border class - live border computed 0px).
+    //   Range: bg-primary h-full -> backgroundColor: primary.main, height:
+    //     100% (of Track, i.e. 4px). Positioned via left/right - MUI's own
+    //     `track` slot already computes equivalent left/width inline styles
+    //     from `defaultValue`, untouched.
+    //   Thumb: size-3 -> width/height 0.75rem (12px). shrink-0 -> flexShrink
+    //     irrelevant here (Thumb is position: absolute, not a flex
+    //     participant on either side). rounded-full -> borderRadius:
+    //     calc(infinity * 1px). border border-ring -> border: 1px solid
+    //     ring (UNCONDITIONAL - unlike Checkbox/Radio's border-input that
+    //     only becomes border-ring on focus, Slider's thumb border is ALWAYS
+    //     ring, ground truth wins over the Checkbox/Radio metric). bg-white
+    //     -> backgroundColor: literal white/#fff, confirmed live IN BOTH
+    //     light and dark (rgb(255, 255, 255) in both getComputedStyle
+    //     snapshots) - no dark: class exists on this element at all, unlike
+    //     Switch's thumb which does darken. ring-ring/50 + hover:ring-3 /
+    //     focus-visible:ring-3 / active:ring-3 -> boxShadow: 0 0 0 3px
+    //     color-mix(in oklab, ring 50%, transparent) on `:hover`,
+    //     `.Mui-focusVisible`, AND `:active` alike (all three conditional
+    //     classes resolve to the identical ring-3/ring-ring/50 pair, so one
+    //     shared box-shadow value covers all three - confirmed live via a
+    //     REAL Playwright hover + a real keyboard-Tab focus: both produced
+    //     the byte-identical `0 0 0 3px oklab(... / 0.5)` box-shadow).
+    //
+    // GOTCHA - Thumb's OWN `disabled:opacity-50`/`disabled:pointer-events-none`
+    // classes are DEAD CODE on this element: Tailwind's bare `disabled:`
+    // variant compiles to the `:disabled` pseudo-class, which can only ever
+    // match real disableable form elements (input/button/select/textarea/
+    // fieldset/optgroup/option) - slider.tsx's Thumb renders a plain
+    // `<span role="slider">` (confirmed by reading @radix-ui/react-slider's
+    // compiled source), which can NEVER match `:disabled` regardless of any
+    // `data-disabled` attribute Radix also sets on it. Only Root's own
+    // `data-disabled:opacity-50` (the DATA-ATTRIBUTE variant, which Root's
+    // real `data-disabled=""` attribute does match) actually fires. Confirmed
+    // live: getComputedStyle on the real disabled shadcn thumb reports
+    // `opacity: 1` (its own local value), while Root reports `opacity: 0.5` -
+    // a single group-level dim, NOT the double-dim (0.5 x 0.5 = 0.25) a
+    // naive reading of both classes would predict (and which a prior
+    // MuiSwitch task's own GOTCHA banner above proves MUI itself is capable
+    // of accidentally introducing) - reproduced below as a single
+    // `&.Mui-disabled { opacity: 0.5 }` on root alone, restating nothing on
+    // thumb.
+    //
+    // GOTCHA - MUI's own base SliderThumb style paints two things shadcn's
+    // real thumb never has, both neutralized below: an `&::before` elevation
+    // shadow (`theme.shadows[2]`, MUI's default depth cue) and, on
+    // `:hover`/`.Mui-focusVisible`/`.Mui-active`, its own translucent 8px/14px
+    // alpha-0.16 halo (`color` variant, keyed on `ownerState.color==='primary'`
+    // - MUI's default). Both are overridden below by this styleOverrides
+    // entry (which the MUI docs/source confirm always serializes AFTER the
+    // component's own base style + internal `variants` array, so a plain
+    // `&::before`/`&:hover` here wins by source order at equal specificity -
+    // the same mechanism already proven for Button/Checkbox/Radio above).
+    //
+    // No `disableRipple` restatement needed here (unlike Checkbox/Radio/
+    // Switch): MuiSlider is not part of the ButtonBase/SwitchBase family at
+    // all (confirmed by reading Slider.js - no ripple, no `disableRipple`
+    // prop even exists on it), so the global ripple GOTCHA simply doesn't
+    // apply to this component.
+    //
+    // `data-target` sits on the shadcn Root (not the Thumb, which the public
+    // `<Slider>` wrapper hardcodes with no prop pass-through - see the
+    // gallery's own banner in slider.tsx for the full hover/focus mechanics
+    // this relies on) and on MUI's internal hidden `<input type="range">` via
+    // `slotProps.input` (same SwitchBase-family-adjacent convention as
+    // Checkbox/Radio/Switch's own native input target).
+    //
+    // `valueLabel` is unconditionally hidden below: shadcn's slider has no
+    // equivalent concept at all, and no gallery pair sets
+    // `valueLabelDisplay` away from its own `'off'` default (under which MUI
+    // never even mounts the node), so this is a defensive, zero-risk
+    // collapse rather than a value inferred for an untested state.
+    // -----------------------------------------------------------------------
+    MuiSlider: {
+      styleOverrides: {
+        root: () => ({
+          display: "flex", // shadcn: flex
+          alignItems: "center", // shadcn: items-center
+          width: "100%", // shadcn: w-full
+          height: "0.25rem", // shadcn: Root's own live-measured box height (== Track's h-1) - see banner above
+          padding: 0, // kills MUI's own 13px/20px vertical padding (anatomy collapse)
+          margin: 0,
+          boxSizing: "content-box",
+          cursor: "default", // shadcn: no cursor-pointer class on Root; invisible in screenshots but restated for hygiene (mirrors Radio/Checkbox convention)
+          "&.Mui-disabled": {
+            opacity: 0.5, // shadcn: data-disabled:opacity-50 (single group dim - see GOTCHA above)
+            cursor: "default",
+          },
+        }),
+        rail: ({ theme }) => ({
+          height: "0.25rem", // shadcn: data-horizontal:h-1 (4px)
+          borderRadius: "calc(infinity * 1px)", // shadcn: rounded-full (Tailwind v4 literal - see banner above)
+          backgroundColor: theme.vars.palette.muted.main, // shadcn: bg-muted
+          opacity: 1, // kills MUI's own opacity: 0.38
+        }),
+        track: ({ theme }) => ({
+          height: "0.25rem", // shadcn Range: data-horizontal:h-full (of a h-1 Track == 4px)
+          border: "none", // shadcn Range carries no border class (live border computed 0px) - kills MUI's own `1px solid currentColor`
+          borderRadius: "calc(infinity * 1px)", // shadcn: rounded-full (Tailwind v4 literal - see banner above)
+          backgroundColor: theme.vars.palette.primary.main, // shadcn: bg-primary
+        }),
+        thumb: ({ theme }) => {
+          const focusRing = `0 0 0 3px color-mix(in oklab, ${theme.vars.palette.ring} 50%, transparent)` // shadcn: ring-3 ring-ring/50 (hover/focus-visible/active all resolve to this identical value - see banner above)
+          return {
+            width: "0.75rem", // shadcn: size-3 (12px)
+            height: "0.75rem",
+            borderRadius: "calc(infinity * 1px)", // shadcn: rounded-full (Tailwind v4 literal - see banner above)
+            border: `1px solid ${theme.vars.palette.ring}`, // shadcn: border border-ring (UNCONDITIONAL - see banner above)
+            backgroundColor: "#fff", // shadcn: bg-white (literal, same in both color schemes - confirmed live)
+            "&::before": {
+              boxShadow: "none", // shadcn has no elevation shadow on the thumb - kills MUI's own theme.shadows[2]
+            },
+            // MUI's base SliderThumb paints a large invisible `::after` hit-target expansion.
+            // The harness's `data-target` sits on the Slider ROOT (both sides - see slider.tsx),
+            // so this pseudo is a descendant of the hover target and no longer blocks Playwright's
+            // actionability. Neutralizing its pointer-events is kept as zero-risk defense (the
+            // pseudo paints no visible pixels - purely a touch-target enlargement).
+            "&::after": {
+              pointerEvents: "none",
+            },
+            "&:hover": {
+              boxShadow: focusRing, // shadcn: hover:ring-3 (kills MUI's own 8px alpha-0.16 halo)
+              "@media (hover: none)": {
+                boxShadow: "none", // mirrors MUI's own coarse-pointer carve-out for the halo this replaces
+              },
+            },
+            "&.Mui-focusVisible": {
+              boxShadow: focusRing, // shadcn: focus-visible:ring-3
+            },
+            "&.Mui-active": {
+              boxShadow: focusRing, // shadcn: active:ring-3 (same ring value, not MUI's own bigger 14px halo)
+            },
+            "&.Mui-disabled": {
+              "&:hover": {
+                boxShadow: "none", // no pair exercises hover+disabled together, but Root's own pointer-events:none already makes this unreachable in practice - restated for hygiene, mirrors MUI's own base rule this replaces
+              },
+            },
+          }
+        },
+        valueLabel: {
+          display: "none", // shadcn has no value-label concept at all - defensive collapse, see banner above (no gallery pair exercises this node)
+        },
+      },
+    },
     // Per-component overrides are appended by later tasks, one banner each.
   },
 })
