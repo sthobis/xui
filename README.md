@@ -72,7 +72,7 @@ The scope is `@mui/material` core; MUI X (DataGrid, Date Pickers, Tree View) is 
 - [x] Slider
 - [ ] Chip (shadcn Badge)
 - [x] Avatar
-- [ ] Divider (shadcn Separator)
+- [x] Divider (shadcn Separator)
 - [ ] Skeleton
 - [ ] LinearProgress / CircularProgress
 - [ ] Alert

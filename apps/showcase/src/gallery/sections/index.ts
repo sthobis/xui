@@ -8,6 +8,7 @@ import { switchSection } from "./switch"
 import { selectSection } from "./select"
 import { sliderSection } from "./slider"
 import { avatarSection } from "./avatar"
+import { dividerSection } from "./divider"
 
 export const sections: Section[] = [
   buttonSection,
@@ -19,4 +20,5 @@ export const sections: Section[] = [
   selectSection,
   sliderSection,
   avatarSection,
+  dividerSection,
 ]

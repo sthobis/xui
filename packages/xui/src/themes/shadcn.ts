@@ -2688,6 +2688,57 @@ export const shadcnTheme = createTheme({
         }),
       },
     },
+    // -----------------------------------------------------------------------
+    // Divider
+    //
+    // Ground truth: apps/showcase/src/components/ui/separator.tsx
+    // (radix-ui Separator.Root). Gallery exercises only the default
+    // (non-`decorative`-relevant, no `children`) horizontal and vertical
+    // cases - the `inset`/`middle` MUI variants and text-content dividers
+    // have no shadcn equivalent/gallery pair and are out of scope.
+    //
+    // separator.tsx Root classes (verbatim):
+    //   shrink-0 bg-border data-horizontal:h-px data-horizontal:w-full
+    //   data-vertical:w-px data-vertical:self-stretch
+    //
+    // Extracted class -> CSS:
+    //   shrink-0 -> flexShrink: 0 (MUI's own default already, restated for
+    //     hygiene).
+    //   bg-border h-px/w-px -> a 1px-thick fill of the border token. shadcn
+    //     paints this via `background-color` on a full-box div; MUI's own
+    //     Divider architecture paints the equivalent 1px line via a
+    //     `border` edge instead (borderBottomWidth for horizontal,
+    //     borderRightWidth for vertical) - both resolve to an identical
+    //     single 1px line of the same solid color at the same position, so
+    //     the border approach is kept (idiomatic MUI, no wrapper element)
+    //     rather than replaced with a background hack. MUI's default
+    //     `borderBottomWidth: 'thin'` is restated as an explicit `1px`
+    //     below (not left to the `thin` keyword) since ground truth is an
+    //     explicit `h-px`/`w-px`, not a browser-dependent keyword.
+    //   `palette.divider` is already aliased to the shadcn border token (see
+    //     schemePalette above: `divider: t.border`), so no color override is
+    //     needed - only the margin/thickness reset below.
+    //   data-horizontal:w-full -> MUI's default (fullWidth variant, `<hr>`
+    //     block element) already fills its container's width - no override.
+    //   data-vertical:self-stretch -> MUI's own `flexItem` variant
+    //     (`alignSelf: 'stretch', height: 'auto'`) is the exact match (the
+    //     gallery passes `flexItem` on every vertical pair, mirroring
+    //     shadcn's unconditional self-stretch); MUI's OWN non-flexItem
+    //     vertical default (`height: '100%'`) is a different mechanism
+    //     (requires a 100%-height ancestor chain, not a stretched flex
+    //     item) and is never exercised here.
+    // -----------------------------------------------------------------------
+    MuiDivider: {
+      styleOverrides: {
+        root: {
+          margin: 0, // shadcn carries no margin class (MUI's own default is already 0 for the fullWidth variant used here - restated for hygiene)
+          borderBottomWidth: "1px", // shadcn: data-horizontal:h-px (explicit 1px, not MUI's 'thin' keyword)
+          "&.MuiDivider-vertical": {
+            borderRightWidth: "1px", // shadcn: data-vertical:w-px
+          },
+        },
+      },
+    },
     // Per-component overrides are appended by later tasks, one banner each.
   },
 })
