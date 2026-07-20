@@ -3007,6 +3007,14 @@ export const shadcnTheme = createTheme({
             fontSize: "0.875rem", // shadcn: text-sm
             lineHeight: "1.25rem",
             color: theme.vars.palette.text.secondary, // shadcn: text-muted-foreground
+            // shadcn: text-balance md:text-pretty - at the harness's 1440px viewport (past the
+            // md breakpoint), `md:text-pretty` (text-wrap: pretty) wins the cascade over the
+            // base `text-balance` (text-wrap: balance), changing where a wrapped multi-line
+            // description breaks (measured: invisible on the 2-line default-variant copy, but
+            // shifts the 3-line destructive-variant copy's last line without it - `balance`
+            // instead of `pretty` here made that same case measurably worse, confirming which
+            // of the two competing classes is actually active at this viewport).
+            textWrap: "pretty",
           },
         }),
       },
