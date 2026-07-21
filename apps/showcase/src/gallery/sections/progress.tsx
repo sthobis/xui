@@ -35,13 +35,12 @@ export const progressSection: Section = {
       id: "progress-circular",
       shadcn: <Spinner />,
       mui: (
-        // variant="determinate" value={80} freezes as a static 288deg ring (80% of
-        // 360deg), matching the sweep of Loader2Icon's fixed arc - see the theme's
-        // MuiCircularProgress banner for the full geometric reasoning and the known,
-        // unavoidable residual (ring diameter can't be inset to match the icon's margin).
+        // Indeterminate (the default) so this actually SPINS like shadcn's Spinner. The theme
+        // pins MUI's rotate to shadcn's 1s linear and freezes the dash to Loader2Icon's fixed
+        // 288deg (80%) sweep, so the geometry is the same one previously matched statically -
+        // see the theme's MuiCircularProgress banner for the residual's cause (ring diameter
+        // can't be inset to match the icon's margin).
         <MuiCircularProgress
-          variant="determinate"
-          value={80}
           size={SPINNER_SIZE}
           thickness={SPINNER_THICKNESS}
           color="inherit" // shadcn: spinner carries no text-color class -> inherits ambient foreground

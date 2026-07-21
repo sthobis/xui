@@ -509,6 +509,15 @@ export const shadcnTheme = createTheme({
             borderColor: theme.vars.palette.ring, // shadcn: focus-visible:border-ring
             boxShadow: `0 0 0 3px color-mix(in oklab, ${theme.vars.palette.ring} 50%, transparent)`, // shadcn: focus-visible:ring-ring/50 ring-3
           },
+          // shadcn: active:not-aria-[haspopup]:translate-y-px - the press nudge, skipped for
+          // menu/popover triggers (aria-haspopup) so an anchored overlay doesn't shift with it.
+          // Tailwind v4 compiles this to the independent `translate` property (not `transform`),
+          // so it is matched here exactly - using `transform` would be visually equivalent but
+          // would clobber any transform a consumer sets. Not covered by the parity harness
+          // (it never exercises :active), so this is behavior fidelity, not a pixel requirement.
+          "&:active:not([aria-haspopup])": {
+            translate: "0 1px",
+          },
           "&.Mui-disabled": {
             opacity: 0.5, // shadcn: disabled:opacity-50 (MUI's own graying is undone per-variant below)
           },
@@ -742,6 +751,12 @@ export const shadcnTheme = createTheme({
           "&:focus-visible": {
             borderColor: theme.vars.palette.ring, // shadcn: focus-visible:border-ring
             boxShadow: `0 0 0 3px color-mix(in oklab, ${theme.vars.palette.ring} 50%, transparent)`, // shadcn: focus-visible:ring-ring/50 ring-3
+          },
+          // shadcn: active:not-aria-[haspopup]:translate-y-px - the icon button is the same
+          // button.tsx CVA (size="icon"), so it carries the identical press nudge. Tailwind v4
+          // emits the independent `translate` property, matched exactly here.
+          "&:active:not([aria-haspopup])": {
+            translate: "0 1px",
           },
           "&.Mui-disabled": {
             opacity: 0.5, // shadcn: disabled:opacity-50 (MUI's own graying is undone below)
@@ -3204,9 +3219,32 @@ export const shadcnTheme = createTheme({
     //    the static-value determinate choice made here.
     // -----------------------------------------------------------------------
     MuiCircularProgress: {
+      defaultProps: {
+        disableShrink: true, // shadcn: Loader2Icon's gap is fixed - kills MUI's circular-dash grow/shrink so the arc just rotates
+      },
       styleOverrides: {
         circle: {
           strokeLinecap: "round", // shadcn: Loader2Icon's path renders with lucide's default stroke-linecap="round"
+        },
+        // shadcn's Spinner is Loader2Icon + `animate-spin` = `spin 1s linear infinite`: a FIXED
+        // arc that simply rotates. MUI's indeterminate instead runs a 1.4s rotate PLUS a 1.4s
+        // dash grow/shrink, so out of the box it neither spins at shadcn's rate nor holds a
+        // constant arc. Both are corrected here so a plain `<CircularProgress />` behaves like
+        // the real spinner (this is behavior the pixel harness cannot see - it only ever
+        // screenshots frozen frames).
+        indeterminate: {
+          animationDuration: "1s", // shadcn: --animate-spin: spin 1s linear infinite (MUI's own keyframe is already linear/infinite)
+        },
+        circleDisableShrink: ({ ownerState }) => {
+          // MUI draws its ring at r = (44 - thickness) / 2 inside a 44-unit viewBox.
+          const circumference = 2 * Math.PI * ((44 - (ownerState.thickness ?? 3.6)) / 2)
+          return {
+            // shadcn: Loader2Icon's visible sweep is 288deg of 360deg (80%), so the gap is the
+            // remaining 20% - the same geometry the ring was previously matched against
+            // statically. Overrides MUI's own fixed `80px, 200px` dash pattern.
+            strokeDasharray: `${circumference.toFixed(3)}px`,
+            strokeDashoffset: `${(circumference * 0.2).toFixed(3)}px`,
+          }
         },
       },
     },
