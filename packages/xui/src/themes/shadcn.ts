@@ -3210,6 +3210,85 @@ export const shadcnTheme = createTheme({
         },
       },
     },
+    // -----------------------------------------------------------------------
+    // Typography
+    //
+    // Ground truth: shadcn ships no installed Typography component, so the
+    // twin is the plain element + Tailwind classes used on the shadcn side of
+    // each gallery pair (apps/showcase/src/gallery/sections/typography.tsx),
+    // resolved against the installed Tailwind v4 default theme tokens
+    // (apps/showcase/node_modules/tailwindcss/theme.css) rather than
+    // memorized values - every font-size/line-height/tracking pair below was
+    // read from that file's `--text-*` / `--text-*--line-height` /
+    // `--tracking-*` custom properties and cross-checked with
+    // getComputedStyle() on the live shadcn element.
+    //
+    // MUI's own variant defaults (h1 96px/300/1.167, body2 0.875rem/400/1.43/
+    // 0.01071em letter-spacing, subtitle2 0.875rem/500/1.57/0.00714em, etc.)
+    // are all wrong for this scale and are overridden per-variant here rather
+    // than through the top-level `typography` block, so the change stays
+    // scoped to Typography and cannot ripple into pxToRem-derived sizing used
+    // by Button/Input/other components that only consume `typography.button`
+    // or their own explicit styleOverrides.
+    //
+    //   variant   shadcn (class)                          resolved CSS
+    //   h1        text-4xl font-extrabold tracking-tight   2.25rem / 800 / calc(2.5/2.25) / -0.025em
+    //   h2        text-3xl font-semibold tracking-tight     1.875rem / 600 / calc(2.25/1.875) / -0.025em
+    //   h3        text-2xl font-semibold tracking-tight     1.5rem / 600 / calc(2/1.5) / -0.025em
+    //   h4        text-xl font-semibold tracking-tight      1.25rem / 600 / calc(1.75/1.25) / -0.025em
+    //   body1     (p, leading-7 only)                       already matches MUI's body1 default (1rem/400/
+    //             ...no other classes                       28px via leading-7) at 0.00% parity - left untouched
+    //   body2     text-sm text-muted-foreground              0.875rem / 400 / calc(1.25/0.875) / normal / text.secondary
+    //   subtitle2 text-sm leading-none font-medium            0.875rem / 500 / 1 (leading-none) / normal
+    //
+    // h1-h4 tracking-tight is Tailwind's --tracking-tight: -0.025em (not a
+    // per-size value - identical -0.025em across all four headings, verified
+    // against each heading's own computed letterSpacing/fontSize ratio).
+    // line-height values are Tailwind's own unitless ratios (e.g. text-4xl's
+    // --text-4xl--line-height: calc(2.5 / 2.25)), transcribed as unitless
+    // multipliers so they scale with fontSize the same way Tailwind's do.
+    // -----------------------------------------------------------------------
+    MuiTypography: {
+      styleOverrides: {
+        h1: {
+          fontSize: "2.25rem", // shadcn: text-4xl
+          fontWeight: 800, // shadcn: font-extrabold
+          lineHeight: 2.5 / 2.25, // shadcn: text-4xl line-height (calc(2.5/2.25))
+          letterSpacing: "-0.025em", // shadcn: tracking-tight
+        },
+        h2: {
+          fontSize: "1.875rem", // shadcn: text-3xl
+          fontWeight: 600, // shadcn: font-semibold
+          lineHeight: 2.25 / 1.875, // shadcn: text-3xl line-height (calc(2.25/1.875))
+          letterSpacing: "-0.025em", // shadcn: tracking-tight
+        },
+        h3: {
+          fontSize: "1.5rem", // shadcn: text-2xl
+          fontWeight: 600, // shadcn: font-semibold
+          lineHeight: 2 / 1.5, // shadcn: text-2xl line-height (calc(2/1.5))
+          letterSpacing: "-0.025em", // shadcn: tracking-tight
+        },
+        h4: {
+          fontSize: "1.25rem", // shadcn: text-xl
+          fontWeight: 600, // shadcn: font-semibold
+          lineHeight: 1.75 / 1.25, // shadcn: text-xl line-height (calc(1.75/1.25))
+          letterSpacing: "-0.025em", // shadcn: tracking-tight
+        },
+        body2: ({ theme }) => ({
+          fontSize: "0.875rem", // shadcn: text-sm
+          fontWeight: 400, // shadcn: no font-weight class on the muted <p>
+          lineHeight: 1.25 / 0.875, // shadcn: text-sm line-height (calc(1.25/0.875))
+          letterSpacing: "normal", // shadcn: no tracking class
+          color: theme.vars.palette.text.secondary, // shadcn: text-muted-foreground
+        }),
+        subtitle2: {
+          fontSize: "0.875rem", // shadcn: text-sm
+          fontWeight: 500, // shadcn: font-medium
+          lineHeight: 1, // shadcn: leading-none
+          letterSpacing: "normal", // shadcn: no tracking class
+        },
+      },
+    },
     // Per-component overrides are appended by later tasks, one banner each.
   },
 })
