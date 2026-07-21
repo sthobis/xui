@@ -3416,6 +3416,20 @@ export const shadcnTheme = createTheme({
     MuiTooltip: {
       defaultProps: {
         arrow: true, // shadcn: TooltipContent always renders TooltipPrimitive.Arrow unconditionally
+        // Anchor distance. Measured against the real component: shadcn's content box sits exactly
+        // 10px off the trigger (sideOffset=0 plus the size-2.5 arrow Radix offsets the content
+        // by). MUI's own 14px spacing is a margin on the bubble, which is zeroed below so the
+        // Popper root tightly wraps the bubble for capture - without this modifier that left MUI
+        // flush against the trigger (visibly overlapping it). It must be Popper's offset modifier
+        // rather than CSS: Popper writes `margin: 0` INLINE on its root, so stylesheet margins
+        // there are dead. Offset shifts the transform only, leaving the box - and therefore the
+        // parity screenshot - untouched. The harness captures the overlay in isolation, so it
+        // cannot see anchor distance at all.
+        slotProps: {
+          popper: {
+            modifiers: [{ name: "offset", options: { offset: [0, 10] } }],
+          },
+        },
       },
       styleOverrides: {
         popper: {
