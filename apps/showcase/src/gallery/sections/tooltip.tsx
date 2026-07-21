@@ -81,6 +81,10 @@ function MuiTooltipOpenDemo() {
       title={TITLE}
       placement="top" // shadcn: Radix TooltipContent's own default side is "top" (tooltip.tsx passes no `side` prop) - MUI's own unthemed default placement is "bottom", the opposite side, so this is restated to match the real component and keep both sides' popper-placement-conditional arrow geometry (see the MuiTooltip banner in packages/xui/src/themes/shadcn.ts) resolving the same branch
       open={open}
+      // MUI fires onOpen on hover/focus even while controlled; without it this side would only
+      // respond to the harness's click, so the showcase would misrepresent real tooltip
+      // behavior. The shadcn side already gets hover for free via Radix's onOpenChange.
+      onOpen={onOpen}
       onClose={onClose}
       slotProps={{ popper: portalTargetPopper }}
     >
