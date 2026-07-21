@@ -3289,6 +3289,225 @@ export const shadcnTheme = createTheme({
         },
       },
     },
+    // -----------------------------------------------------------------------
+    // Tooltip - the SECOND portalled component (after Select - see the MuiSelect/MuiMenu banner
+    // above for the shared open-state/portal-capture harness mechanics this reuses). Ground
+    // truth: apps/showcase/src/components/ui/tooltip.tsx (radix-ui Tooltip.Root/Trigger/Portal/
+    // Content/Arrow), cross-checked live via getComputedStyle on the real shadcn twin (light +
+    // dark) - not assumed by analogy to Select's own popover box.
+    //
+    // tooltip.tsx TooltipContent classes (verbatim, static/settled subset only - the
+    // animate-in/zoom-in/slide-in/data-state classes govern the ENTER/EXIT transition, invisible
+    // once the harness's `animations: "disabled"` screenshot call freezes every transition at
+    // its finished value, so they carry no ground truth for the captured frame):
+    //   inline-flex w-fit max-w-xs items-center gap-1.5 rounded-md bg-foreground px-3 py-1.5
+    //   text-xs text-background
+    // tooltip.tsx TooltipPrimitive.Arrow classes (verbatim):
+    //   size-2.5 translate-y-[calc(-50%_-_2px)] rotate-45 rounded-[2px] bg-foreground
+    //   fill-foreground
+    //
+    // Extracted class -> CSS (cross-checked live, both color schemes):
+    //   Content: inline-flex items-center -> display: inline-flex, alignItems: center. w-fit ->
+    //     width: fit-content. max-w-xs -> maxWidth: 20rem (320px). gap-1.5 -> gap: 0.375rem.
+    //     rounded-md -> borderRadius: calc(RADIUS * 0.8). bg-foreground -> backgroundColor:
+    //     text.primary (this theme's `foreground` token - schemePalette maps text.primary <-
+    //     t.foreground, see the top of this file). px-3 py-1.5 -> padding: 0.375rem 0.75rem.
+    //     text-xs -> fontSize: 0.75rem, lineHeight: 1rem (Tailwind v4's text-xs paired
+    //     line-height). text-background -> color: background.default (this theme's `background`
+    //     token). No font-weight class -> fontWeight: 400 (MUI's own unthemed default is 500,
+    //     see GOTCHA below).
+    //   Arrow: size-2.5 -> width/height 0.625rem (10px). rotate-45 -> rotate(45deg).
+    //     rounded-[2px] -> borderRadius: 2px (a literal pixel value - shadcn's own class is a
+    //     raw arbitrary value, not one of the rounded-sm/md/lg/xl scale tokens). bg-foreground
+    //     fill-foreground -> one flat backgroundColor, same text.primary token (see GOTCHA below
+    //     for why one flat box color is the correct reproduction of that two-class pair).
+    //     translate-y-[calc(-50%_-_2px)] -> translateY(calc(-50% - 2px)), composed with the
+    //     rotate above into one transform list, exactly as the single real class attribute
+    //     applies both.
+    //
+    // GOTCHA - Radix's Arrow (@radix-ui/react-arrow, read directly: `Primitive.svg` with
+    // `viewBox="0 0 30 10" preserveAspectRatio="none"` wrapping one `<polygon points="0,0 30,0
+    // 15,10">`) is NOT a plain rotated square - it is a non-uniformly-scaled triangle SVG.
+    // shadcn's arrow classes exploit that rather than replacing it: `size-2.5` (a CSS
+    // width/height, which wins over the SVG's own width=10/height=5 attributes for a replaced
+    // element - confirmed by reading @radix-ui/react-arrow's source, which hardcodes those
+    // attribute defaults) squashes the 30x10 viewBox into a 10x10 box, so the triangle's flat
+    // top edge spans the FULL box width and its apex lands at bottom-center - and `bg-foreground`
+    // (painted on the blank SVG background, since SVG root elements are UA-default `overflow:
+    // hidden`) plus `fill-foreground` (painted on the triangle polygon itself) use the identical
+    // color for both regions, so the two remaining unfilled corner triangles (bottom-left/
+    // bottom-right of the 10x10 box, outside the polygon) read as part of one solid, uniformly
+    // colored square once rotated 45deg - the only way a single `<polygon>` shape reads as a
+    // solid rotated square. MUI ships no Arrow-as-SVG-triangle primitive to reproduce that DOM
+    // trick with, but the trick's own visible RESULT is just a solid, uniformly colored 10x10
+    // rounded-2px square - reproduced directly and more simply below as a plain colored box
+    // (matching this project's established "reproduce shadcn's rendered pixels, not its DOM
+    // mechanism" precedent, e.g. MuiSlider's Track/Range vs slider.tsx's own nested-vs-sibling
+    // DOM split). MUI's own default `.MuiTooltip-arrow::before` (a SEPARATE, smaller 45deg-
+    // rotated currentColor square nested inside the arrow span, sized to only 1em x 0.71em) is
+    // neutralized below (`content: "none"`) so only the one plain box paints.
+    //
+    // GOTCHA - MUI's TooltipPopper/TooltipTooltip styled definitions (read directly in
+    // node_modules/@mui/material/Tooltip/Tooltip.js) hardcode a per-placement `margin`/
+    // `marginTop`/`marginBottom`/`marginInlineStart`/`marginInlineEnd` (14px, the anchor-to-
+    // bubble gap) plus a `transformOrigin` on the INNER `.MuiTooltip-tooltip` div, using
+    // compound selectors like `.MuiTooltip-popper[data-popper-placement*="bottom"] &` - 2-class
+    // specificity that a plain 1-class override cannot beat regardless of source order (the
+    // same specificity trap already documented on MuiSelect's own `select`.paddingRight above).
+    // shadcn's real Content carries no such margin at all - Radix positions the gap via
+    // floating-ui's own offset math (`sideOffset`, defaulted to 0 in tooltip.tsx), not CSS
+    // margin - so this theme's `data-portal-target` marker sits directly on the Popper root
+    // (see anatomy note below) and needs that root's own rendered box to tightly wrap the
+    // visible bubble with NO dead margin space, or the two sides' captured PNGs would differ in
+    // size purely from this leftover gap. Neutralized below with the same `&&` doubling idiom,
+    // restated for every `[data-popper-placement*="..."]` variant.
+    //
+    // Anatomy mapping / portal marker placement:
+    //   TooltipContent (Radix Portal's direct child - the outermost portalled DOM node, exactly
+    //     like Select's own SelectContent) <-> MUI Tooltip's `popper` slot. UNLIKE Select (whose
+    //     `data-portal-target` lands on the Popover's inner Paper, since Popover wraps an extra
+    //     full-viewport Modal root around it), Tooltip's Popper has no such outer wrapper - the
+    //     Popper root IS the outermost portalled node AND (once the margin GOTCHA above is
+    //     neutralized) already tightly wraps the visible bubble, so the marker lands there
+    //     directly - confirmed live via getBoundingClientRect on both sides.
+    //   TooltipPrimitive.Arrow <-> MUI Tooltip's `arrow` slot (enabled via `defaultProps.arrow`
+    //     below, matching tooltip.tsx's own unconditional `<TooltipPrimitive.Arrow />` - every
+    //     real shadcn tooltip always renders one, so this is a faithful global default, not a
+    //     gallery-only convenience).
+    // -----------------------------------------------------------------------
+    MuiTooltip: {
+      defaultProps: {
+        arrow: true, // shadcn: TooltipContent always renders TooltipPrimitive.Arrow unconditionally
+      },
+      styleOverrides: {
+        popper: {
+          "&&": {
+            // shadcn: sideOffset=0 (tooltip.tsx default) - Radix's own gap math, not a margin on
+            // the captured box. Kills MUI's own per-placement anchor-to-bubble margin (14px) so
+            // the Popper root's box tightly wraps the visible bubble - see GOTCHA above.
+            '&[data-popper-placement*="bottom"] .MuiTooltip-tooltip': { marginTop: 0 },
+            '&[data-popper-placement*="top"] .MuiTooltip-tooltip': { marginBottom: 0 },
+            '&[data-popper-placement*="left"] .MuiTooltip-tooltip': { marginInlineEnd: 0 },
+            '&[data-popper-placement*="right"] .MuiTooltip-tooltip': { marginInlineStart: 0 },
+            // Same specificity trap, same fix, for the arrow's own per-placement `margin*:
+            // -0.71em` compiled rule (also on TooltipPopper's own base styles, sized to MUI's
+            // stock 1em x 0.71em triangle) - left un-neutralized, that inherited negative margin
+            // (~10px) stacked underneath this theme's own `arrow` slot translate/rotate below
+            // and shoved the whole shape well past the bubble's edge (confirmed live: the arrow
+            // rendered a bounding box ~20px below the bubble's own bottom edge, entirely outside
+            // the captured screenshot clip).
+            '&[data-popper-placement*="bottom"] .MuiTooltip-arrow': { marginTop: 0 },
+            '&[data-popper-placement*="top"] .MuiTooltip-arrow': { marginBottom: 0 },
+            '&[data-popper-placement*="left"] .MuiTooltip-arrow': { marginInlineEnd: 0 },
+            '&[data-popper-placement*="right"] .MuiTooltip-arrow': { marginInlineStart: 0 },
+            // shadcn: translate-y-[calc(-50%_-_2px)] rotate-45 (composed with Radix's own arrow-
+            // wrapper positioning - see the `arrow` slot's own banner below for the full
+            // derivation) - direction mirrors per placement, the same way shadcn's own Radix
+            // wrapper picks bottom:0/top:0/etc per side, so the diamond always nudges back
+            // toward the bubble it points away from regardless of which edge it sits on.
+            //
+            // GOTCHA - MUI's OWN compiled per-placement rule (same TooltipPopper styled
+            // definition as the margin resets above) also sets `.arrow::before { transformOrigin:
+            // '100% 0' }` (or the mirrored corner per side) - correct for MUI's OWN stock
+            // ::before (a smaller off-center triangle meant to pivot from a corner into a flush
+            // wedge), but wrong for this theme's own flat, centered square, which needs the
+            // ordinary geometric-center pivot. Left un-neutralized, `rotate(45deg)` pivoted the
+            // whole 10x10 box around its TOP-RIGHT corner instead of its center, swinging the
+            // diamond up and to the left by several pixels into the middle of the bubble - which,
+            // since the diamond is painted the exact same color as the bubble's own background,
+            // was invisible as a "shape" but silently painted OVER part of the tooltip text
+            // (confirmed live by temporarily recoloring the diamond bright red and by isolating
+            // rotate-only vs translate-only: rotate ALONE, with no translate at all, already
+            // landed the box mid-bubble instead of straddling the edge like the un-rotated
+            // reference). Restated at the same selector/specificity as the transform above, so no
+            // extra `&&` boost is needed here.
+            '&[data-popper-placement*="top"] .MuiTooltip-arrow::before': {
+              transformOrigin: "center",
+              transform: "translateY(calc(50% - 2px)) rotate(45deg)",
+            },
+            '&[data-popper-placement*="bottom"] .MuiTooltip-arrow::before': {
+              transformOrigin: "center",
+              transform: "translateY(calc(-50% + 2px)) rotate(45deg)",
+            },
+            '&[data-popper-placement*="left"] .MuiTooltip-arrow::before': {
+              transformOrigin: "center",
+              transform: "translateX(calc(50% - 2px)) rotate(45deg)",
+            },
+            '&[data-popper-placement*="right"] .MuiTooltip-arrow::before': {
+              transformOrigin: "center",
+              transform: "translateX(calc(-50% + 2px)) rotate(45deg)",
+            },
+          },
+        },
+        tooltip: ({ theme }) => ({
+          display: "inline-flex", // shadcn: inline-flex
+          alignItems: "center", // shadcn: items-center
+          width: "fit-content", // shadcn: w-fit
+          maxWidth: "20rem", // shadcn: max-w-xs
+          gap: "0.375rem", // shadcn: gap-1.5
+          margin: 0, // shadcn: no margin class - see GOTCHA above (this rule's own 1-class
+          // selector already beats TooltipTooltip's un-placed base `margin: 2px` default; the
+          // placement-scoped 14px overrides need the `&&`-boosted popper-slot rule above)
+          borderRadius: `calc(${RADIUS} * 0.8)`, // shadcn: rounded-md
+          backgroundColor: theme.vars.palette.text.primary, // shadcn: bg-foreground
+          color: theme.vars.palette.background.default, // shadcn: text-background
+          padding: "0.375rem 0.75rem", // shadcn: px-3 py-1.5
+          fontSize: "0.75rem", // shadcn: text-xs
+          lineHeight: "1rem", // shadcn: text-xs's paired line-height
+          fontWeight: 400, // shadcn: no font-weight class (MUI's own unthemed default is 500)
+          wordWrap: "normal", // shadcn: no break-word class (MUI's own unthemed default is break-word)
+        }),
+        // GOTCHA - popper.js's OWN "arrow" modifier (enabled unconditionally whenever `arrow`
+        // is set - see Tooltip.js's `popperOptions` memo) sets an INLINE `transform:
+        // translate3d(<cross-axis offset>px, 0, 0)` on the `.MuiTooltip-arrow` ROOT itself every
+        // render, to center it under the anchor - confirmed live via outerHTML. An inline style
+        // always wins over a same-property class rule, so this theme never fights that element's
+        // own `transform` at all (a plain override on the root was silently discarded outright).
+        // Sidestepped by leaving the root `.MuiTooltip-arrow` exactly as popper.js positions and
+        // sizes it (only its width/height/color/overflow are themed below), and painting shadcn's
+        // actual visible shape on its `::before` pseudo-element instead - a plain descendant of
+        // the root that popper.js's JS never touches, so a completely ordinary `transform`
+        // override applies exactly as written.
+        //
+        // The rotate+shift math below was derived by reading shadcn's real two-element geometry
+        // directly (not guessed): Radix's own arrow wrapper span carries an inline `bottom:0;
+        // transform:translateY(100%)` (placing an UNROTATED, edge-flush copy of the arrow fully
+        // OUTSIDE the bubble, past its own edge) and the arrow SVG inside it then applies its own
+        // real `translate-y-[calc(-50%_-_2px)] rotate-45` on top of THAT - the two combined
+        // (100% + -50% - 2px = 50% - 2px net, both fractions of the same 10px box) is what this
+        // theme reproduces in one step on `::before`, confirmed to land on shadcn's own live-
+        // measured bounding box (relLeft/relTop) to within a fraction of a pixel once applied.
+        arrow: ({ theme }) => ({
+          width: "0.625rem", // shadcn: size-2.5
+          height: "0.625rem", // shadcn: size-2.5 (overrides MUI's own 1em / 0.71em rect)
+          // MUI's own unthemed default is `overflow: 'hidden'` (sized to clip its own smaller
+          // ::before triangle to a 1em x 0.71em rect). Since the root itself stays UNROTATED and
+          // sized to the pre-rotation 10x10 box (only its ::before child below carries the actual
+          // rotate - see the banner above for why), a 45deg-rotated 10x10 shape's own bounding box
+          // grows to ~14.14x14.14 (by a factor of sqrt(2)) and pokes past every edge of that
+          // unrotated parent box - left clipped, this sliced the diamond's four corners off flat,
+          // confirmed live as the exact source of the remaining ~0.7% tooltip-open mismatch after
+          // the geometry above was already confirmed byte-identical to shadcn's own live-measured
+          // bounding box. shadcn has no equivalent clip at all: its real Arrow rotates the SVG
+          // element itself wholesale (not a child within a static frame), so nothing ever needs
+          // clipping in the first place.
+          overflow: "visible",
+          color: theme.vars.palette.text.primary, // shadcn: bg-foreground + fill-foreground (one flat color reproduces both - see the MuiTooltip banner's own GOTCHA) - feeds `::before`'s `currentColor` below
+          "&::before": {
+            backgroundColor: "currentColor",
+            borderRadius: "2px", // shadcn: rounded-[2px]
+          },
+        }),
+      },
+    },
+    // tooltip-open's residual (~0.4% light, ~0.0% dark - both under the 0.5% default threshold,
+    // no e2e/thresholds.ts override needed): with the geometry above proven byte-identical to
+    // shadcn's own live-measured arrow bounding box (getBoundingClientRect: 41.43/18.93/14.14/
+    // 14.14 on both sides, to the fraction of a pixel), the remaining few pixels are the rotated
+    // diamond's antialiased edge landing one glyph-height away from "library"'s own "o" - the two
+    // sides rasterize that shared edge through genuinely different paths (shadcn: an SVG polygon;
+    // this theme: a CSS-rotated pseudo-element box) that don't AA identically at the sub-pixel
+    // level, same class of residual as select-open's own accepted 0.38/0.41%.
     // Per-component overrides are appended by later tasks, one banner each.
   },
 })

@@ -79,7 +79,7 @@ The scope is `@mui/material` core; MUI X (DataGrid, Date Pickers, Tree View) is 
 - [x] Card / Paper
 - [x] Typography
 - [x] Link
-- [ ] Tooltip
+- [x] Tooltip
 
 ### Tier 2 - overlays and navigation
 

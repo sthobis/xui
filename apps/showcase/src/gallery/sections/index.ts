@@ -16,6 +16,7 @@ import { alertSection } from "./alert"
 import { cardSection } from "./card"
 import { progressSection } from "./progress"
 import { typographySection } from "./typography"
+import { tooltipSection } from "./tooltip"
 
 export const sections: Section[] = [
   buttonSection,
@@ -35,4 +36,5 @@ export const sections: Section[] = [
   cardSection,
   progressSection,
   typographySection,
+  tooltipSection,
 ]
