@@ -15,23 +15,25 @@ const overrides: Record<string, number> = {
   // tight so any genuine regression on this pair still trips it.
   "slider-disabled": 0.7,
 
-  // select-open:anchored - the "anchored" state's own capture (e2e/lib/states.ts anchoredClip)
-  // deliberately skips normalizeOverlayPosition's sub-pixel snap (snapping would mask the very
-  // anchor-distance bug this state exists to catch), so `page.screenshot({ clip })` crops at
-  // whatever fractional device-pixel phase the trigger+overlay union happens to land on - a
-  // capture-time rasterization cost, not a style difference. Proven not a real anchoring bug:
-  // fixing the actual, real bug this state found (MUI Select rendering its Menu flush below the
-  // trigger, where shadcn/Radix's real "item-aligned" default overlaps the selected item on the
-  // trigger - see the MuiSelectOpenDemo banner in sections/select.tsx) already got vertical
-  // alignment to an exactly-matching centerY and horizontal text alignment to within 0.125 CSS
-  // px, with the check glyph now a pixel-perfect match in the diff. The remaining residual scales
-  // with text surface area, not position error: tooltip-open's own "anchored" state (one short
-  // line) sits at 0.22% under the very same capture path, while select-open's 5-row option list
-  // (far more glyph edges for the identical per-character AA noise density to land on) scales up
-  // to ~6.8%. Kept just above the measured value, and scoped to ONLY the "anchored" state, so
-  // select-open's "open" state (0.38-0.41%, no origin-rounding involved) keeps its full
-  // sensitivity, and a real regression in either state still trips this.
-  "select-open:anchored": 8,
+  // select-open:anchored - the "anchored" capture (e2e/lib/states.ts anchoredClip) deliberately
+  // skips normalizeOverlayPosition's sub-pixel snap, because snapping the overlay is precisely
+  // what would mask the anchor-distance bug this state exists to catch. The two sides' overlays
+  // therefore render at different sub-pixel phases (measured: shadcn x=275.13 vs MUI x=515), so
+  // every glyph edge re-rasterizes differently - and select-open's 5-row option list is a
+  // text-dense surface.
+  //
+  // Evidence this is phase/AA noise and NOT an anchoring error (diff image inspected directly):
+  // the differing pixels are confined to glyph edges, the border outline, and the check mark,
+  // with ZERO solid/block regions. A real placement error displaces blocks - which is exactly
+  // what this state reported when the real bug was present (54.58% before MUI Select's
+  // item-aligned anchoring was fixed; 25.92% for tooltip when its 10px offset was sabotaged).
+  // Text volume is the multiplier: tooltip-open:anchored is a single short line and sits at
+  // 0.01% through the identical capture path.
+  //
+  // Kept just above the measured 6.81% so there is minimal hiding room, and scoped to ONLY the
+  // "anchored" state - select-open's "open" state keeps the full 0.5% default (it sits at
+  // 0.38-0.41% with the sub-pixel snap applied), so a genuine regression still trips one or both.
+  "select-open:anchored": 7,
 }
 
 export function thresholdFor(pairId: string, state?: string): number {
