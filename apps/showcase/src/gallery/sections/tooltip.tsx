@@ -88,7 +88,17 @@ function MuiTooltipOpenDemo() {
       onClose={onClose}
       slotProps={{ popper: portalTargetPopper }}
     >
-      <MuiButton data-target onClick={onOpen}>
+      {
+        // shadcn: the shadcn side's <Button> passes no `variant`, so it renders button.tsx's
+        // own CVA default ("default" - a solid, filled button). MUI's own unthemed default
+        // variant is "text" (transparent), the opposite look - restated here the same way
+        // button.tsx's own "button-contained" pair maps shadcn's "default" to MUI's
+        // "contained" (see sections/button.tsx). Previously invisible: the "open" state only
+        // ever captured the tooltip bubble in isolation, never the trigger itself, so this
+        // trigger-style mismatch shipped unnoticed until the "anchored" state's union-box
+        // capture (which includes the trigger) revealed it.
+      }
+      <MuiButton data-target variant="contained" onClick={onOpen}>
         {LABEL}
       </MuiButton>
     </MuiTooltip>
@@ -100,7 +110,8 @@ export const tooltipSection: Section = {
   pairs: [
     {
       id: "tooltip-open",
-      states: ["open"],
+      states: ["open", "anchored"],
+      behaviors: ["hover-opens", "escape-closes"],
       shadcn: <ShadcnTooltipOpenDemo />,
       mui: <MuiTooltipOpenDemo />,
     },
