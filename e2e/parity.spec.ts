@@ -1,8 +1,9 @@
-import { expect, test } from "@playwright/test"
+import { expect, test, type Locator, type Page } from "@playwright/test"
 import { mkdirSync, rmSync, writeFileSync } from "node:fs"
 import { PNG } from "pngjs"
 import { diffPngs } from "./lib/compare"
 import {
+  anchoredClip,
   applyState,
   normalizeOverlayPosition,
   openContentLocator,
@@ -13,6 +14,29 @@ import { thresholdFor } from "./thresholds"
 
 const RESULTS_DIR = "e2e/results"
 const rows: Array<{ pair: string; state: string; pct: number; threshold: number }> = []
+
+/**
+ * Captures the screenshot to diff for a given state, per pair/side. Three shapes:
+ *  - "open": overlay content (Tooltip/Select, etc.) renders in a portal outside the cell, so
+ *    capture the overlay itself instead of the (visually empty) cell. Portalled overlays can
+ *    land at a fractional sub-pixel position (Radix/Floating UI vs MUI's integer rounding) -
+ *    normalize both sides to the same phase first so the diff isn't dominated by capture-clip/
+ *    glyph-AA artifacts (see normalizeOverlayPosition's own banner).
+ *  - "anchored": same open overlay, but captured together with its trigger via a page-level clip
+ *    over their union bounding box (see anchoredClip's own banner for why - this is the only
+ *    capture shape that can see anchor distance/placement at all).
+ *  - everything else (default/hover/focus/active): the cell itself, which is where the
+ *    :active press nudge - and every other inline visual state - actually renders.
+ */
+async function captureState(page: Page, cell: Locator, state: PairState, pairId: string): Promise<Buffer> {
+  if (state === "anchored") {
+    const clip = await anchoredClip(page, cell, pairId)
+    return page.screenshot({ animations: "disabled", clip })
+  }
+  const target = state === "open" ? openContentLocator(page, cell, pairId) : cell
+  if (state === "open") await normalizeOverlayPosition(target)
+  return target.screenshot({ animations: "disabled" })
+}
 
 test.beforeEach(async ({ page }, testInfo) => {
   await page.goto("/")
@@ -62,24 +86,15 @@ test("all pairs match within threshold", async ({ page }, testInfo) => {
       const muiCell = row.locator('[data-side="mui"]')
 
       await applyState(page, shadcnCell, state, id)
-      // "open" content (Tooltip/Select, etc.) renders in a portal outside the cell - capture
-      // the overlay itself instead of the (visually empty) cell.
-      const shadcnTarget = state === "open" ? openContentLocator(page, shadcnCell, id) : shadcnCell
-      // Portalled overlays can land at a fractional sub-pixel position (Radix/Floating UI vs
-      // MUI's integer rounding) - normalize both sides to the same phase before screenshotting so
-      // the diff isn't dominated by capture-clip/glyph-AA artifacts. No-op for inline states.
-      if (state === "open") await normalizeOverlayPosition(shadcnTarget)
-      const shadcnShot = await shadcnTarget.screenshot({ animations: "disabled" })
+      const shadcnShot = await captureState(page, shadcnCell, state, id)
       await resetState(page)
 
       await applyState(page, muiCell, state, id)
-      const muiTarget = state === "open" ? openContentLocator(page, muiCell, id) : muiCell
-      if (state === "open") await normalizeOverlayPosition(muiTarget)
-      const muiShot = await muiTarget.screenshot({ animations: "disabled" })
+      const muiShot = await captureState(page, muiCell, state, id)
       await resetState(page)
 
       const result = diffPngs(shadcnShot, muiShot)
-      const threshold = thresholdFor(id)
+      const threshold = thresholdFor(id, state)
       rows.push({ pair: id, state, pct: result.mismatchPct, threshold })
 
       const slug = `${testInfo.project.name}-${id}-${state}`

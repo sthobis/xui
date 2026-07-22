@@ -2,7 +2,7 @@ import { expect, type Locator, type Page } from "@playwright/test"
 
 // Duplicated from apps/showcase/src/gallery/types.ts (e2e must not import app source, and
 // vice versa - keep these two PairState unions in sync by hand).
-export type PairState = "default" | "hover" | "focus" | "open"
+export type PairState = "default" | "hover" | "focus" | "open" | "active" | "anchored"
 
 /** Selector matching any currently-open overlay content, portalled or in-cell. */
 const OPEN_CONTENT_SELECTOR = "[data-portal-target], [data-open-target]"
@@ -46,9 +46,19 @@ export async function applyState(page: Page, cell: Locator, state: PairState, pa
     await target.hover()
   } else if (state === "focus") {
     await focusVisible(target)
-  } else if (state === "open") {
+  } else if (state === "open" || state === "anchored") {
     await target.click()
     await expect(openContentLocator(page, cell, pairId)).toBeVisible({ timeout: 5000 })
+  } else if (state === "active") {
+    // Press and HOLD the primary button over the target's center so the screenshot captures
+    // the pressed (`:active`) state - this is what catches shadcn's press nudge
+    // (active:not-aria-[haspopup]:translate-y-px), which no other state exercises. Uses
+    // mouse.move + mouse.down (not target.click(), which presses and releases in one call)
+    // so the button stays down until the caller screenshots and calls resetState.
+    const box = await target.boundingBox()
+    if (!box) throw new Error(`applyState("active"): no bounding box for [data-target] in pair`)
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+    await page.mouse.down()
   }
   // let 150ms transitions settle
   await page.waitForTimeout(300)
@@ -96,7 +106,57 @@ export async function normalizeOverlayPosition(target: Locator): Promise<void> {
   })
 }
 
+/**
+ * Computes the page-viewport rectangle that contains BOTH a pair's trigger (`[data-target]`) and
+ * its currently-open overlay, for the "anchored" state's page-level clip screenshot
+ * (e2e/parity.spec.ts). This is what makes anchor distance/placement provable: capturing the
+ * overlay ALONE (as "open" does) throws away the trigger entirely, so a 10px vertical offset (or
+ * a wrong Popper/Menu placement) between the two sides is invisible to the diff - the overlay PNG
+ * looks identical either way, just shifted, and shifting doesn't change pixel content. Unioning in
+ * the trigger means the relative distance between the two elements becomes part of what's
+ * rasterized, so a real anchoring difference changes the union's size and/or the gap of
+ * background pixels between the two shapes, and the diff sees it.
+ *
+ * The ORIGIN (top-left corner) only is rounded to the nearest integer CSS pixel, identically for
+ * both sides (same Math.round call, no side-specific branching) - width/height are left exactly
+ * as measured. This is the "normalize the union origin identically on both sides" option this
+ * function's own callers were told to consider (see e2e/parity.spec.ts's captureState banner):
+ * two same-content captures whose crop origin sits at two DIFFERENT fractional device-pixel
+ * phases (e.g. shadcn's cell starts at x=270.125, MUI's at x=511.125 - unrelated absolute page
+ * positions, since the two cells just sit side by side) force the browser to resample/interpolate
+ * every pixel in the crop independently for each side, and that resampling is not guaranteed to
+ * land the same way even for bit-identical content - this shows up as antialiasing "ghosting" on
+ * every glyph, unrelated to any real style or position difference (confirmed live on this exact
+ * pair: after fixing the actual anchoring bug, vertical alignment was provably exact - identical
+ * centerY - and horizontal text alignment was within 0.125 CSS px, yet the diff still ghosted
+ * every line until the origin was rounded). Rounding the origin removes that phase mismatch while
+ * leaving width/height untouched, so a genuine anchor-distance difference - which changes the
+ * union's SIZE, not just its origin's sub-pixel remainder - still changes the diff and still fails.
+ */
+export async function anchoredClip(
+  page: Page,
+  cell: Locator,
+  pairId: string,
+): Promise<{ x: number; y: number; width: number; height: number }> {
+  const target = cell.locator("[data-target]").first()
+  const overlay = openContentLocator(page, cell, pairId)
+  const [targetBox, overlayBox] = await Promise.all([target.boundingBox(), overlay.boundingBox()])
+  if (!targetBox) throw new Error(`anchoredClip(${pairId}): no bounding box for [data-target]`)
+  if (!overlayBox) throw new Error(`anchoredClip(${pairId}): no bounding box for open overlay`)
+  const left = Math.round(Math.min(targetBox.x, overlayBox.x))
+  const top = Math.round(Math.min(targetBox.y, overlayBox.y))
+  const right = Math.max(targetBox.x + targetBox.width, overlayBox.x + overlayBox.width)
+  const bottom = Math.max(targetBox.y + targetBox.height, overlayBox.y + overlayBox.height)
+  return { x: left, y: top, width: right - left, height: bottom - top }
+}
+
 export async function resetState(page: Page): Promise<void> {
+  // Unconditional/idempotent: releases the primary button regardless of whether the state just
+  // applied was "active" (or a prior failure left it pressed). Playwright's mouse.up() is a pure
+  // input-protocol dispatch with no assertion against current button state (see
+  // playwright-core/lib/client/input.js), so calling it when the button is already up is a safe
+  // no-op - this guarantees a stuck-down mouse can never leak into later pairs/states.
+  await page.mouse.up()
   await page.mouse.move(0, 0)
   await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur())
   await page.keyboard.press("Escape")
