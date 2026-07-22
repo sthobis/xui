@@ -108,6 +108,44 @@ function useControlledOpen() {
   return { open, onOpen: () => setOpen(true), onClose: () => setOpen(false) }
 }
 
+// GOTCHA - a REAL anchoring difference, only visible once the parity harness's own "anchored"
+// state (e2e/lib/states.ts) captures the trigger and the open content TOGETHER: shadcn's real
+// Select (Radix, position="item-aligned" - select.tsx's own default, unset by either gallery
+// pair) overlaps the dropdown on the trigger so the SELECTED item's vertical center lands
+// exactly on the trigger's own vertical center (confirmed live: both measured centerY 341 for
+// this exact pair, trigger and selected item, with the trigger literally hidden underneath), AND
+// horizontally aligns the selected item's own TEXT (not its box edge) with the trigger's own
+// TEXT (also confirmed live: both measured textLeft 161.1328125 - identical). MUI's Select has no
+// equivalent feature - `getContentAnchorEl`/item-alignment was removed after MUI v4 - its Menu
+// unconditionally anchors `top-left of paper -> bottom-left of trigger`
+// (SelectInput.js's own anchorOrigin: {vertical:'bottom'}/transformOrigin: {vertical:'top'}),
+// rendering the whole menu flush-left and BELOW the trigger instead of overlapping it.
+//
+// Restoring the overlap needs the same classic anchorOrigin/transformOrigin technique MUI's own
+// (now-removed) getContentAnchorEl used - both accept a raw pixel number (not just the
+// left/center/right keywords), measured from the anchor/paper's own left or top edge
+// (Popover.js's own getOffsetLeft/getOffsetTop):
+//  - vertical: "center" on both sides anchors the Paper's vertical center to the trigger's
+//    vertical center. This reproduces Radix's real alignment here specifically because SELECTED
+//    ("blueberry") is FRUITS' exact middle item (index 2 of 5) - with the Menu's own symmetric
+//    top/bottom list padding, the Paper's vertical center therefore coincides with the selected
+//    item's vertical center. This is the narrow, demo-specific case of the general fix (which
+//    would need to measure the selected item's actual offset within the list); a general fix is
+//    out of scope here since MUI ships no built-in per-item alignment to hook into.
+//  - horizontal: a pixel offset on each side reproduces Radix's TEXT alignment. The trigger's own
+//    box-edge-to-text distance is border(1px, border-input's default width) + pl-2.5(10px) = 11px
+//    (select.tsx's SelectTrigger ground truth); the item's own box-edge-to-text distance is
+//    pl-1.5 (6px) (select.tsx's SelectItem ground truth, restated in the theme's own MuiMenuItem
+//    padding - see the MuiMenuItem banner). Anchoring at the trigger's 11px point and
+//    transform-origin-ing at the Paper's 6px point (the MenuList itself carries no horizontal
+//    padding of its own, so the Paper's own left edge coincides with each MenuItem's) places the
+//    selected item's text exactly under the trigger's text, the same +5px (11-6) box-edge offset
+//    measured live on the real component.
+const TRIGGER_TEXT_INSET = 11 // shadcn: border(1px) + pl-2.5(10px) on SelectTrigger
+const ITEM_TEXT_INSET = 6 // shadcn: pl-1.5(6px) on SelectItem
+const anchorOrigin = { vertical: "center", horizontal: TRIGGER_TEXT_INSET } as const
+const transformOrigin = { vertical: "center", horizontal: ITEM_TEXT_INSET } as const
+
 function MuiSelectOpenDemo() {
   const controlledOpen = useControlledOpen()
   return (
@@ -115,7 +153,7 @@ function MuiSelectOpenDemo() {
       defaultValue={SELECTED}
       SelectDisplayProps={dataTarget}
       renderValue={renderSelectValue}
-      MenuProps={{ slotProps: { paper: portalTargetPaper } }}
+      MenuProps={{ slotProps: { paper: portalTargetPaper }, anchorOrigin, transformOrigin }}
       {...controlledOpen}
     >
       {muiOptions(SELECTED)}
@@ -172,7 +210,8 @@ export const selectSection: Section = {
     },
     {
       id: "select-open",
-      states: ["open"],
+      states: ["open", "anchored"],
+      behaviors: ["escape-closes"],
       shadcn: (
         <Select defaultValue={SELECTED}>
           <SelectTrigger data-target>
