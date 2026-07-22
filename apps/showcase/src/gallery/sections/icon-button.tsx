@@ -8,7 +8,7 @@ export const iconButtonSection: Section = {
   pairs: [
     {
       id: "iconbutton-default",
-      states: ["default", "hover"],
+      states: ["default", "hover", "active"],
       shadcn: (
         <Button data-target variant="ghost" size="icon" aria-label="More options">
           <Ellipsis />

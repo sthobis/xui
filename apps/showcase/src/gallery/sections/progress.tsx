@@ -33,6 +33,7 @@ export const progressSection: Section = {
     },
     {
       id: "progress-circular",
+      behaviors: ["animates"],
       shadcn: <Spinner />,
       mui: (
         // Indeterminate (the default) so this actually SPINS like shadcn's Spinner. The theme

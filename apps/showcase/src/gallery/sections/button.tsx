@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button"
 import { Mail } from "lucide-react"
 import type { Section } from "../types"
 
-const s: Array<"default" | "hover" | "focus"> = ["default", "hover", "focus"]
+const s: Array<"default" | "hover" | "focus" | "active"> = ["default", "hover", "focus", "active"]
 
 export const buttonSection: Section = {
   title: "Button",
