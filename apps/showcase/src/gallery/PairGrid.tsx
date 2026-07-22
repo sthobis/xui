@@ -29,6 +29,7 @@ export function PairRow({ pair, sides }: { pair: Pair; sides: Array<"shadcn" | "
     <div
       data-pair-id={pair.id}
       data-states={(pair.states ?? ["default"]).join(",")}
+      data-behaviors={(pair.behaviors ?? []).join(",")}
       style={{ display: "flex", gap: 0, borderBottom: "1px solid rgba(128,128,128,0.2)" }}
     >
       {sides.map((side) => (
