@@ -3754,6 +3754,97 @@ export const shadcnTheme = createTheme({
         },
       },
     },
+    // -----------------------------------------------------------------------
+    // ToggleButton / ToggleButtonGroup
+    //
+    // Ground truth: apps/showcase/src/components/ui/toggle.tsx (cva) and toggle-group.tsx. Only
+    // the "default" variant/size is themed below - the gallery's three pairs never exercise
+    // "outline" or "sm"/"lg" - out of scope.
+    //
+    // toggle.tsx base (all variants/sizes):
+    //   group/toggle inline-flex items-center justify-center gap-1 rounded-lg text-sm
+    //   font-medium whitespace-nowrap transition-all outline-none hover:bg-muted
+    //   hover:text-foreground focus-visible:border-ring focus-visible:ring-[3px]
+    //   focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50
+    //   aria-invalid:* (no invalid toggle in the gallery - out of scope) aria-pressed:bg-muted
+    //   data-[state=on]:bg-muted [&_svg]:* (no icon in the gallery's plain-text toggles - out of
+    //   scope)
+    // toggle.tsx variant "default": bg-transparent (no border anywhere - this variant carries no
+    //   `border` utility at all, unlike Button, which always has `border border-transparent`;
+    //   confirmed live via getComputedStyle: the real shadcn default Toggle's border-width is 0
+    //   at rest, so `focus-visible:border-ring` has nothing to paint - the only real focus
+    //   indicator is the ring box-shadow, reproduced below without inventing a resting border
+    //   Button-style)
+    // toggle.tsx size "default": h-8 min-w-8 px-2.5 (icon-adjacent padding variants not
+    //   exercised - no icon in the gallery's toggles - out of scope)
+    // toggle.tsx's own data-[state=on]:bg-muted carries NO paired text-color change - "on" and
+    //   "off" render in the SAME ambient (inherited) text color; only the background differs.
+    //
+    // Mapping: MUI's ToggleButtonRoot ships its own hardcoded padding:11/border:1px solid
+    // divider/color:action.active/hover+selected alpha-blend recipe (see ToggleButton.js), all
+    // reset below. theme.typography.button (fontSize/fontWeight/lineHeight/letterSpacing) is
+    // already spread onto ToggleButtonRoot by MUI itself and needs no restating - it already
+    // matches toggle.tsx's own text-sm font-medium (same values already configured for Button).
+    // -----------------------------------------------------------------------
+    MuiToggleButton: {
+      defaultProps: {
+        disableRipple: true, // shadcn has no ripple - restated per the MuiButtonBase-default-doesn't-reach-ToggleButton GOTCHA (see AGENTS.md)
+      },
+      styleOverrides: {
+        root: ({ theme }) => ({
+          height: "2rem", // shadcn: h-8
+          minWidth: "2rem", // shadcn: min-w-8
+          padding: "0 0.625rem", // shadcn: px-2.5 (uniform, no py-*)
+          gap: "0.25rem", // shadcn: gap-1
+          borderRadius: RADIUS, // shadcn: rounded-lg
+          border: "none", // shadcn variant "default" carries no border utility at all (see banner above)
+          backgroundColor: "transparent", // shadcn: bg-transparent
+          color: theme.vars.palette.text.primary, // shadcn: ambient foreground (no color class anywhere in toggle.tsx)
+          textTransform: "none",
+          cursor: "default", // shadcn: no cursor-pointer class
+          "&:hover": {
+            backgroundColor: theme.vars.palette.muted.main, // shadcn: hover:bg-muted
+            color: theme.vars.palette.text.primary, // shadcn: hover:text-foreground (same as ambient - no visible change)
+          },
+          "&:focus-visible": {
+            boxShadow: `0 0 0 3px color-mix(in oklab, ${theme.vars.palette.ring} 50%, transparent)`, // shadcn: focus-visible:ring-[3px] ring-ring/50
+          },
+          "&.Mui-disabled": {
+            opacity: 0.5, // shadcn: disabled:opacity-50
+            color: theme.vars.palette.text.primary,
+            border: "none",
+          },
+          "&.Mui-selected": {
+            backgroundColor: theme.vars.palette.muted.main, // shadcn: data-[state=on]:bg-muted (aria-pressed:bg-muted is the same value)
+            color: theme.vars.palette.text.primary,
+            "&:hover": {
+              backgroundColor: theme.vars.palette.muted.main, // shadcn: hover:bg-muted applies uniformly regardless of on/off - MUI's own unthemed selected-hover is a darker alpha-blend, reset back to the plain muted tint
+            },
+          },
+        }),
+      },
+    },
+    MuiToggleButtonGroup: {
+      styleOverrides: {
+        root: {
+          gap: "0.5rem", // shadcn: toggle-group.tsx's default `spacing={2}` -> gap-[--spacing(2)] = 2 * 0.25rem
+          // MUI's own ToggleButtonGroupRoot unconditionally collapses connected children (negative
+          // margins + zeroed inner corner radii on first/middle/last buttons) - real shadcn only
+          // does that at `spacing={0}` (gated by `group-data-[spacing=0]/toggle-group:*` selectors
+          // in toggle-group.tsx's own ToggleGroupItem class string). This gallery's pair uses the
+          // DEFAULT spacing (2, nonzero), where none of those collapsing rules apply - each item
+          // keeps its own full rounded-lg shape, and gap alone (above) provides the spacing, so
+          // MUI's collapsing behavior is undone below to match.
+          "& .MuiToggleButtonGroup-grouped": {
+            margin: 0, // shadcn: no negative margin at nonzero spacing
+          },
+          "& .MuiToggleButtonGroup-firstButton, & .MuiToggleButtonGroup-middleButton, & .MuiToggleButtonGroup-lastButton":
+            {
+              borderRadius: RADIUS, // shadcn: every item keeps rounded-lg on all four corners at nonzero spacing
+            },
+        },
+      },
+    },
     // Per-component overrides are appended by later tasks, one banner each.
   },
 })
