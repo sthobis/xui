@@ -3845,6 +3845,41 @@ export const shadcnTheme = createTheme({
         },
       },
     },
+    // -----------------------------------------------------------------------
+    // ButtonGroup
+    //
+    // Ground truth: apps/showcase/src/components/ui/button-group.tsx (cva). No styleOverrides
+    // needed at all - verified live via getComputedStyle/pixel parity (0.00% both schemes), not
+    // assumed, after comparing MUI's OWN unthemed default ButtonGroup behavior against the real
+    // shadcn ButtonGroup:
+    //
+    // - Horizontal per-position radius zeroing (buttonGroupVariants' horizontal variant:
+    //   "[&>*:not(:first-child)]:rounded-l-none [&>*:not(:last-child)]:rounded-r-none") is
+    //   IDENTICAL, class-for-class, to MUI ButtonGroupRoot's own built-in firstButton/
+    //   middleButton/lastButton radius-zeroing (see MUI's ButtonGroup.js) - both zero the same
+    //   two inner corners on the first/middle/last child. Already themed Button "outlined"
+    //   variant radius (RADIUS, from the MuiButton banner above) carries through unchanged.
+    // - The shared 1px seam between adjacent buttons uses two DIFFERENT (but pixel-equivalent)
+    //   mechanisms: shadcn strips the LEFT border off every non-first child
+    //   ([&>*:not(:first-child)]:border-l-0), so the visible seam is the earlier button's own
+    //   right border; MUI's own unthemed "outlined"+"horizontal" default instead makes the
+    //   first/middle child's OWN right border transparent and pulls the next child 1px left
+    //   (marginLeft: -1) so ITS left border becomes the seam. Confirmed live (getComputedStyle
+    //   on both real elements): this leaves every button 1px narrower on shadcn's side per
+    //   dropped border vs MUI's transparent-but-present border + compensating negative margin -
+    //   the two approaches land the shared seam and every outer edge at the identical rendered
+    //   pixel position either way, which is what the 0.00% parity result confirms rather than a
+    //   coincidence to take on faith.
+    // - Both sides resolve to `display: flex` for the group root (shadcn: `flex w-fit`; MUI's
+    //   own unthemed default: `inline-flex`, which computes the same shrink-to-fit width as
+    //   `flex` + `w-fit` for this non-full-width row) - no override needed.
+    //
+    // Ship only what this one pair covers: the vertical orientation, the `variant="text"`/
+    // `variant="contained"` border-collapse recipes, and a nested `data-slot=button-group` (the
+    // `has-[>[data-slot=button-group]]:gap-2` rule) are untested by any gallery pair - out of
+    // scope, no styleOverrides added for them.
+    // -----------------------------------------------------------------------
+
     // Per-component overrides are appended by later tasks, one banner each.
   },
 })
