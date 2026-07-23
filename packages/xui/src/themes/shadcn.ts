@@ -3635,6 +3635,125 @@ export const shadcnTheme = createTheme({
         },
       },
     },
+    // -----------------------------------------------------------------------
+    // Pagination
+    //
+    // Ground truth: apps/showcase/src/components/ui/pagination.tsx. Unlike most components
+    // themed so far, this one has NO cva of its own - PaginationLink/Previous/Next each render
+    // shadcn's real <Button> (button.tsx, already themed above) via `asChild`, so this override's
+    // real ground truth is button.tsx's own classes, consumed through Pagination's specific prop
+    // choices - cited below per class rather than re-deriving Button's recipe from scratch.
+    //
+    // PaginationContent (ul): flex items-center gap-0.5 -> gap: 0.125rem.
+    // PaginationLink: <Button asChild variant={isActive ? "outline" : "ghost"} size="icon">
+    //   (size prop defaults to "icon") - i.e. exactly MuiButton's own already-themed
+    //   variant="outlined"/"text" recipes at its "icon" size (32x32, rounded-lg, no radius
+    //   override - see the MuiButton/MuiIconButton banners above for the citations), reproduced
+    //   here for MuiPaginationItem's "page" type since Pagination is a separate MUI component
+    //   with its own class structure, not a consumer of MuiButton's actual styleOverrides.
+    // PaginationPrevious/Next: <Button variant="ghost" size="default" className="pl-1.5!"
+    //   (or "pr-1.5!")> wrapping a lucide icon (data-icon="inline-start"/"inline-end") + a text
+    //   label - Button's own base size="default" is h-8 gap-1.5 px-2.5 (see the MuiButton banner
+    //   above), with the icon-adjacent side's padding forced down from px-2.5 (10px) to pl-1.5!/
+    //   pr-1.5! (6px, "!" wins the cascade over Button's own conditional has-data-[icon=*]:p*-2
+    //   rule) - the OTHER side stays at the plain 10px. Reproduced below on MuiPaginationItem's
+    //   "previousNext" slot, keyed off a plain distinguishing className the gallery passes since
+    //   MUI collapses both directions into that one shared override slot (no separate
+    //   "previous"/"next" slot exists - see sections/pagination.tsx's own banner).
+    // -----------------------------------------------------------------------
+    MuiPagination: {
+      styleOverrides: {
+        ul: {
+          gap: "0.125rem", // shadcn: PaginationContent's gap-0.5
+        },
+      },
+    },
+    MuiPaginationItem: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          fontSize: "0.875rem", // shadcn Button: text-sm
+          fontWeight: 500, // shadcn Button: font-medium
+          borderRadius: RADIUS, // shadcn Button: rounded-lg (icon/default sizes carry no radius override)
+          color: theme.vars.palette.text.primary, // shadcn Button ghost: ambient foreground (no color class)
+          border: "1px solid transparent", // shadcn Button: border border-transparent
+          backgroundClip: "padding-box", // shadcn Button: bg-clip-padding
+          boxSizing: "border-box",
+          transition: "all 150ms cubic-bezier(0.4, 0, 0.2, 1)", // shadcn Button: transition-all
+          cursor: "default", // shadcn Button: no cursor-pointer class
+          "&:hover": {
+            backgroundColor: theme.vars.palette.muted.main, // shadcn Button ghost: hover:bg-muted
+            color: theme.vars.palette.text.primary, // shadcn Button ghost: hover:text-foreground
+          },
+          "&:focus-visible": {
+            borderColor: theme.vars.palette.ring, // shadcn Button: focus-visible:border-ring
+            boxShadow: `0 0 0 3px color-mix(in oklab, ${theme.vars.palette.ring} 50%, transparent)`, // shadcn Button: focus-visible:ring-ring/50 ring-3
+          },
+          "&.Mui-disabled": {
+            opacity: 0.5, // shadcn Button: disabled:opacity-50
+            color: theme.vars.palette.text.primary,
+          },
+          "&.Mui-selected": {
+            // shadcn Button outline variant (PaginationLink's isActive branch) - identical recipe
+            // to MuiButton's own "outlined" variant above, re-derived here for this component's
+            // own class structure (see banner above for why this can't just reuse that override).
+            border: `1px solid ${theme.vars.palette.border}`, // shadcn: border-border
+            backgroundColor: theme.vars.palette.background.default, // shadcn: bg-background
+            color: theme.vars.palette.text.primary,
+            "&:hover": {
+              backgroundColor: theme.vars.palette.muted.main, // shadcn: hover:bg-muted
+            },
+            ...theme.applyStyles("dark", {
+              backgroundColor: `color-mix(in oklab, ${theme.vars.palette.input} 30%, transparent)`, // shadcn: dark:bg-input/30
+              borderColor: theme.vars.palette.input, // shadcn: dark:border-input
+              "&:hover": {
+                backgroundColor: `color-mix(in oklab, ${theme.vars.palette.input} 50%, transparent)`, // shadcn: dark:hover:bg-input/50
+              },
+            }),
+          },
+          ...theme.applyStyles("dark", {
+            "&:hover": {
+              backgroundColor: `color-mix(in oklab, ${theme.vars.palette.muted.main} 50%, transparent)`, // shadcn Button ghost: dark:hover:bg-muted/50
+            },
+          }),
+        }),
+        page: {
+          width: "2rem", // shadcn Button size="icon": size-8
+          height: "2rem",
+          minWidth: 0,
+          margin: 0, // MuiPaginationItem's own unthemed default is "0 3px" - PaginationContent's own gap-0.5 (see MuiPagination.ul above) does the spacing instead, matching shadcn's single spacing mechanism
+        },
+        previousNext: {
+          width: "auto", // shadcn Button size="default" sizes to its icon+label content, not a fixed square
+          height: "2rem", // shadcn Button size="default": h-8
+          minWidth: 0,
+          margin: 0,
+          padding: "0 0.625rem", // shadcn Button size="default": px-2.5 (both sides, before the pl-1.5!/pr-1.5! override below)
+          gap: 0, // this slot's own single child is the icon-wrapper below, which carries its own internal gap
+          "&.pagination-link-previous": {
+            paddingLeft: "0.375rem", // shadcn: PaginationPrevious's pl-1.5! (icon-adjacent side)
+          },
+          "&.pagination-link-next": {
+            paddingRight: "0.375rem", // shadcn: PaginationNext's pr-1.5! (icon-adjacent side)
+          },
+        },
+        icon: {
+          // Resets MuiPaginationItem's own unthemed icon slot (a font-icon-sized div: 20px
+          // fontSize, -8px negative margin - see PaginationItemPageIcon in MUI's own source) and
+          // turns it into the icon+label row shadcn's real Button lays out via its own root
+          // `gap-1.5` flex (not reproducible at THIS component's root, which has only this one
+          // child for "previous"/"next" types - see sections/pagination.tsx's own banner).
+          fontSize: "inherit",
+          margin: 0,
+          display: "inline-flex",
+          alignItems: "center",
+          gap: "0.375rem", // shadcn Button: gap-1.5
+          "& svg": {
+            width: "1rem", // shadcn Button: [&_svg:not([class*='size-'])]:size-4 (size="default" carries no smaller svg override)
+            height: "1rem",
+          },
+        },
+      },
+    },
     // Per-component overrides are appended by later tasks, one banner each.
   },
 })
