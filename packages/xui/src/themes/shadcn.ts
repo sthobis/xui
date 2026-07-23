@@ -2834,6 +2834,20 @@ export const shadcnTheme = createTheme({
           textUnderlineOffset: "4px", // shadcn: underline-offset-4
         },
       },
+      variants: [
+        // shadcn: BreadcrumbLink's own `hover:text-foreground` (breadcrumb.tsx) - scoped to
+        // `color="textSecondary"` (the ambient shade breadcrumb.tsx's BreadcrumbList text-muted-
+        // foreground maps to) so it only fires for links that start from that ambient color,
+        // same scoping technique as MuiButton's per-variant/color style blocks above.
+        {
+          props: { color: "textSecondary" },
+          style: ({ theme }) => ({
+            "&:hover": {
+              color: theme.vars.palette.text.primary, // shadcn: hover:text-foreground
+            },
+          }),
+        },
+      ],
     },
     // -----------------------------------------------------------------------
     // Chip -> shadcn Badge
@@ -3560,6 +3574,67 @@ export const shadcnTheme = createTheme({
     // sides rasterize that shared edge through genuinely different paths (shadcn: an SVG polygon;
     // this theme: a CSS-rotated pseudo-element box) that don't AA identically at the sub-pixel
     // level, same class of residual as select-open's own accepted 0.38/0.41%.
+    // -----------------------------------------------------------------------
+    // Breadcrumbs
+    //
+    // Ground truth: apps/showcase/src/components/ui/breadcrumb.tsx (plain elements, no cva -
+    // no radix primitive either, just a `<nav><ol><li>` structure with Tailwind classes).
+    //
+    // BreadcrumbList (ol): flex flex-wrap items-center gap-1.5 text-sm wrap-break-word
+    //   text-muted-foreground
+    //   -> gap-1.5 = 0.375rem; text-sm/text-muted-foreground (fontSize/lineHeight/color) are
+    //   restated directly on MuiBreadcrumbs' own `root` below rather than by passing
+    //   `variant="body2"` from the gallery - MUI's public `BreadcrumbsProps` type has no `variant`
+    //   slot (Breadcrumbs' internal Typography root only accepts it via an undocumented untyped
+    //   `...other` prop spread), so a typed, idiomatic root override is used instead. Values are
+    //   identical to the MuiTypography "body2" override above (same shadcn text-sm/text-muted-
+    //   foreground classes), duplicated intentionally since Breadcrumbs is its own component with
+    //   its own ground-truth citation, not a consumer of body2; wrap-break-word has no covering
+    //   pair (single-line gallery breadcrumb) - out of scope.
+    // BreadcrumbItem (li): inline-flex items-center gap-1 - no icon-bearing item in the gallery
+    //   pair, so the 4px gap itself is never visually exercised, but `inline-flex` is NOT
+    //   cosmetic-only: making the li a flex container blockifies its inline-level <a>/<span>
+    //   child per the CSS Display spec (an inline box that is a flex item computes to a `block`
+    //   used display value), which is what gives that child a real block-level line box sized by
+    //   its own line-height (20px) - confirmed live via getComputedStyle/getBoundingClientRect:
+    //   without the matching `display` on MUI's own (unstyled) `.MuiBreadcrumbs-li`, its <a>/
+    //   span children stayed plain inline and rendered 2px shorter (18px) than shadcn's
+    //   blockified 20px, a real (if easy to miss) pixel mismatch this restates below.
+    // BreadcrumbLink (a): transition-colors hover:text-foreground - the hover half is the
+    //   MuiLink "textSecondary" variant above; transition-colors is motion only, invisible to a
+    //   static screenshot.
+    // BreadcrumbPage (span): font-normal text-foreground - mapped to the gallery's plain
+    //   `variant="inherit"` Typography (skips its own font styling, keeping the inherited
+    //   font-normal weight) with `color="text.primary"`.
+    // BreadcrumbSeparator (li): role="presentation" aria-hidden, "[&>svg]:size-3.5" only - no
+    //   layout classes of its own; MUI's OWN unthemed BreadcrumbsSeparator instead carries a
+    //   hardcoded marginLeft/marginRight: 8 (see Breadcrumbs.js), which would double up with the
+    //   ol's own gap-1.5 above - zeroed out below so gap alone provides the spacing, matching
+    //   shadcn's actual single spacing mechanism. Icon size (14px) and default lucide 24px size
+    //   are handled directly on the gallery's own <ChevronRight> element (no themeable slot for
+    //   the custom `separator` node) - see sections/breadcrumb.tsx.
+    // -----------------------------------------------------------------------
+    MuiBreadcrumbs: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          fontSize: "0.875rem", // shadcn: text-sm
+          lineHeight: 1.25 / 0.875, // shadcn: text-sm line-height (calc(1.25/0.875))
+          color: theme.vars.palette.text.secondary, // shadcn: text-muted-foreground
+        }),
+        ol: {
+          gap: "0.375rem", // shadcn: gap-1.5
+        },
+        li: {
+          display: "inline-flex", // shadcn: BreadcrumbItem's inline-flex - see banner above for why this matters beyond layout
+          alignItems: "center", // shadcn: items-center
+          gap: "0.25rem", // shadcn: gap-1 (never visually exercised - no icon-bearing item in the gallery pair)
+        },
+        separator: {
+          marginLeft: 0, // shadcn: no margin class on BreadcrumbSeparator - ol's own gap-1.5 does the spacing
+          marginRight: 0,
+        },
+      },
+    },
     // Per-component overrides are appended by later tasks, one banner each.
   },
 })
