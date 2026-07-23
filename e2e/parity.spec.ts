@@ -33,9 +33,31 @@ async function captureState(page: Page, cell: Locator, state: PairState, pairId:
     const clip = await anchoredClip(page, cell, pairId)
     return page.screenshot({ animations: "disabled", clip })
   }
-  const target = state === "open" ? openContentLocator(page, cell, pairId) : cell
-  if (state === "open") await normalizeOverlayPosition(target)
-  return target.screenshot({ animations: "disabled" })
+  if (state === "open") {
+    const overlay = openContentLocator(page, cell, pairId)
+    await normalizeOverlayPosition(overlay)
+    return overlay.screenshot({ animations: "disabled" })
+  }
+  // Inline states capture the cell via a page-level clip with ROUNDED integer bounds rather than
+  // an element screenshot. Element screenshots clip at the element's own fractional device-pixel
+  // span, so two cells of byte-identical CSS width capture to DIFFERENT PNG sizes purely from
+  // sub-pixel phase - measured: pagination-basic is 319.6719px wide on both sides, but shadcn sits
+  // at x=202 (integer) and MUI at x=521.672 (fractional), yielding 640px vs 642px. diffPngs then
+  // zero-pads to the union and counts real pixels against transparent padding (0.66% of a pair
+  // whose every computed style matched). Rounding both origin and size makes the capture
+  // deterministic and phase-consistent, the same reasoning anchoredClip already uses, without
+  // mutating the DOM. A genuine size difference still shows: the rounded sizes would differ too.
+  const box = await cell.boundingBox()
+  if (!box) throw new Error(`cell for ${pairId} (${state}) has no bounding box`)
+  return page.screenshot({
+    animations: "disabled",
+    clip: {
+      x: Math.round(box.x),
+      y: Math.round(box.y),
+      width: Math.round(box.width),
+      height: Math.round(box.height),
+    },
+  })
 }
 
 test.beforeEach(async ({ page }, testInfo) => {
