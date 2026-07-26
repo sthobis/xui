@@ -4031,6 +4031,132 @@ export const shadcnTheme = createTheme({
     },
     // -----------------------------------------------------------------------
 
+    // -----------------------------------------------------------------------
+    // Accordion / AccordionSummary / AccordionDetails
+    //
+    // Ground truth: apps/showcase/src/components/ui/accordion.tsx.
+    //
+    // Accordion root (`data-slot=accordion`): "flex w-full flex-col" - a group wrapper MUI has no
+    // counterpart for (every MuiAccordion IS an item), so it is not themed; the gallery recreates
+    // it as a plain div (see accordion.tsx).
+    //
+    // AccordionItem (`data-slot=accordion-item`): "not-last:border-b" -> MuiAccordion root, whose
+    // entire Paper identity has to be undone: no elevation shadow, no card background, no radius,
+    // and no `::before` divider. shadcn's separator is a real bottom border INSIDE each non-last
+    // item's box (which is why its first item measures 43px against the last one's 42px), whereas
+    // MUI's is an absolutely-positioned 1px `::before` at `top: -1` that overlaps the item above
+    // and takes up no space. The two cannot both be present.
+    //
+    // AccordionTrigger (`data-slot=accordion-trigger`): "group/accordion-trigger relative flex
+    // flex-1 items-start justify-between rounded-lg border border-transparent py-2.5 text-left
+    // text-sm font-medium transition-all outline-none hover:underline focus-visible:border-ring
+    // focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:after:border-ring
+    // disabled:pointer-events-none disabled:opacity-50
+    // **:data-[slot=accordion-trigger-icon]:ml-auto **:data-[slot=accordion-trigger-icon]:size-4
+    // **:data-[slot=accordion-trigger-icon]:text-muted-foreground" -> MuiAccordionSummary. Its
+    // `focus-visible:after:border-ring` is inert: nothing gives the trigger's ::after a `content`,
+    // so no pseudo-element is generated, and it is not themed.
+    //
+    // AccordionContent (`data-slot=accordion-content`): "overflow-hidden text-sm" wrapping an
+    // inner "h-(--radix-accordion-content-height) pt-0 pb-2.5" div -> MuiAccordionDetails carries
+    // the inner div's padding and the wrapper's text-sm. MUI's own Collapse chain
+    // (root > wrapper > wrapperInner > region) is unstyled on both sides and needs nothing.
+    //
+    // defaultProps rather than styleOverrides for square/disableGutters/elevation: those props
+    // gate whole style variants (the first/last-of-type corner radii, the expanded `margin: 16px
+    // 0`, the expanded summary's 64px min-height and 20px content margin, the Paper shadow), so
+    // turning them off removes those rules entirely instead of fighting each one. Setting them in
+    // the theme keeps the gallery's MUI side free of props that exist only to compensate.
+    MuiAccordion: {
+      defaultProps: {
+        square: true, // shadcn: no rounded corners on an item (MUI's default rounds the first and last)
+        disableGutters: true, // shadcn: expanding an item does not move it (MUI's default adds 16px margins)
+        elevation: 0, // shadcn: no shadow on an item
+      },
+      styleOverrides: {
+        root: ({ theme }) => ({
+          backgroundColor: "transparent", // shadcn: no background on an item (MUI's Paper paints background.paper)
+          "&::before": {
+            display: "none", // shadcn: the separator is the item's own bottom border, below - not an overlapping pseudo-element
+          },
+          "&:not(:last-child)": {
+            borderBottom: `1px solid ${theme.vars.palette.border}`, // shadcn: not-last:border-b
+          },
+        }),
+        heading: {
+          display: "flex", // shadcn: <AccordionPrimitive.Header className="flex"> (MUI's h3 slot is `all: unset`, so inline)
+        },
+      },
+    },
+    MuiAccordionSummary: {
+      defaultProps: {
+        // shadcn's trigger always renders a chevron; MUI renders none unless one is passed, so the
+        // theme supplies it the same way MuiSelect's IconComponent is supplied above.
+        //
+        // GOTCHA - shadcn swaps two icons (ChevronDownIcon when collapsed, ChevronUpIcon when
+        // expanded) where MUI keeps one and rotates it 180deg. lucide's two paths are exact
+        // point-for-point rotations of each other (ChevronDown "m6 9 6 6 6-6" about the 24x24
+        // centre is ChevronUp "m18 15-6-6-6 6"), and a 180deg rotation about the centre of an
+        // even-sized box maps device pixels one-to-one, so the rotated glyph rasterizes
+        // identically to the swapped one - verified at 0.00% on accordion-expanded.
+        expandIcon: createElement(ChevronDown, { "aria-hidden": true }),
+      },
+      styleOverrides: {
+        root: ({ theme }) => ({
+          minHeight: 0, // shadcn: no min-height - the height is padding + line box (MUI's default is 48px)
+          padding: "0.625rem 0", // shadcn: py-2.5
+          border: "1px solid transparent", // shadcn: border border-transparent
+          borderRadius: RADIUS, // shadcn: rounded-lg
+          alignItems: "flex-start", // shadcn: items-start (ButtonBase centers)
+          justifyContent: "space-between", // shadcn: justify-between (ButtonBase centers)
+          flex: "1 1 0%", // shadcn: flex-1
+          textAlign: "left", // shadcn: text-left (ButtonBase centers)
+          fontFamily: "inherit", // the summary is a <button>, which takes the UA's own font rather
+          // than inheriting. shadcn's trigger only looks right because Tailwind's preflight sets
+          // `font-family: inherit` on form controls, and ButtonBase sets no font at all - so
+          // without this the theme silently depends on Tailwind being present (caught by preflight).
+          fontSize: "0.875rem", // shadcn: text-sm
+          fontWeight: 500, // shadcn: font-medium
+          lineHeight: "1.25rem", // shadcn: text-sm line-height
+          transition: theme.transitions.create(["all"]), // shadcn: transition-all
+          "&:hover": {
+            textDecoration: "underline", // shadcn: hover:underline
+          },
+          "&.Mui-focusVisible": {
+            backgroundColor: "transparent", // shadcn: no focus background (MUI's default fills with action.focus)
+            borderColor: theme.vars.palette.ring, // shadcn: focus-visible:border-ring
+            boxShadow: `0 0 0 3px color-mix(in oklab, ${theme.vars.palette.ring} 50%, transparent)`, // shadcn: focus-visible:ring-3 ring-ring/50
+          },
+          "&.Mui-disabled": {
+            opacity: 0.5, // shadcn: disabled:opacity-50 (MUI's default is action.disabledOpacity, 0.38)
+          },
+        }),
+        content: {
+          margin: 0, // shadcn: the label is a bare flex child of the trigger, with no margin (MUI wraps it in a span with `margin: 12px 0`)
+          flexGrow: 0, // shadcn: the label does not grow - the icon's ml-auto is what pushes it right
+        },
+        expandIconWrapper: ({ theme }) => ({
+          marginLeft: "auto", // shadcn: **:data-[slot=accordion-trigger-icon]:ml-auto
+          color: theme.vars.palette.text.secondary, // shadcn: **:...:text-muted-foreground (MUI's default is action.active)
+          "& > svg": {
+            width: "1rem", // shadcn: **:...:size-4 (lucide renders 24px attributes)
+            height: "1rem",
+            flexShrink: 0, // shadcn: shrink-0
+          },
+        }),
+      },
+    },
+    MuiAccordionDetails: {
+      styleOverrides: {
+        root: {
+          padding: "0 0 0.625rem", // shadcn: pt-0 pb-2.5, no horizontal padding (MUI's default is 8px 16px 16px)
+          fontSize: "0.875rem", // shadcn: text-sm on the content wrapper
+          lineHeight: "1.25rem",
+        },
+      },
+    },
+    // -----------------------------------------------------------------------
+
     // Per-component overrides are appended by later tasks, one banner each.
   },
 })

@@ -88,7 +88,7 @@ The scope is `@mui/material` core; MUI X (DataGrid, Date Pickers, Tree View) is 
 - [ ] Drawer (shadcn Sheet)
 - [ ] Popover
 - [ ] Snackbar
-- [ ] Accordion
+- [x] Accordion
 - [x] Tabs
 - [x] Breadcrumbs
 - [x] Pagination
