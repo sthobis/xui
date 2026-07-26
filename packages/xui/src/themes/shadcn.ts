@@ -4157,6 +4157,107 @@ export const shadcnTheme = createTheme({
     },
     // -----------------------------------------------------------------------
 
+    // -----------------------------------------------------------------------
+    // Table / TableContainer / TableHead / TableBody / TableRow / TableCell
+    //
+    // Ground truth: apps/showcase/src/components/ui/table.tsx. The gallery pairs cover a header
+    // plus body rows and a selected row; TableFooter and TableCaption have no pair, so neither
+    // shadcn's `tfoot` recipe nor its `caption` recipe is themed (MuiTableFooter is left entirely
+    // at MUI's defaults, and MUI's own `& caption` block is left alone).
+    //
+    // table-container: "relative w-full overflow-x-auto" -> MuiTableContainer already defaults to
+    // width 100% / overflow-x auto, so only `position: relative` is missing.
+    // table: "w-full caption-bottom text-sm" -> MuiTable root (width 100% is already its default).
+    // table-header thead: "[&_tr]:border-b".
+    // table-body tbody: "[&_tr:last-child]:border-0".
+    // table-row tr: "border-b transition-colors hover:bg-muted/50 has-aria-expanded:bg-muted/50
+    //   data-[state=selected]:bg-muted" - has-aria-expanded has no pair and is not themed.
+    // table-head th: "h-10 px-2 text-left align-middle font-medium whitespace-nowrap text-foreground
+    //   [&:has([role=checkbox])]:pr-0" - the checkbox-column rule has no pair and is not themed.
+    // table-cell td: "p-2 align-middle whitespace-nowrap [&:has([role=checkbox])]:pr-0" - same.
+    //
+    // GOTCHA - the row border moves elements. MUI draws each cell's own `borderBottom`, so a row's
+    // line is really N cell lines side by side; shadcn draws one `border-b` on the `tr`. They look
+    // the same until a rule has to remove it (tbody's last row) or a background has to sit over it,
+    // at which point per-cell borders behave differently. The cell border is dropped outright and
+    // the row carries it, exactly as the ground truth does.
+    //
+    // GOTCHA - `font: inherit` on the cell, not a list of font properties. MUI spreads
+    // typography.body2 into TableCell, which pins font-size, weight, line-height AND a
+    // letter-spacing of 0.01071em. shadcn's th/td carry no font classes at all: they inherit
+    // text-sm from the `table` above. Restating `font`/`letter-spacing` as inherit reproduces that
+    // in one place instead of chasing each property body2 happens to set.
+    MuiTableContainer: {
+      styleOverrides: {
+        root: {
+          position: "relative", // shadcn: relative
+        },
+      },
+    },
+    MuiTable: {
+      styleOverrides: {
+        root: {
+          captionSide: "bottom", // shadcn: caption-bottom
+          fontSize: "0.875rem", // shadcn: text-sm - the cells inherit this (see GOTCHA above)
+          lineHeight: "1.25rem", // shadcn: text-sm's paired line-height
+        },
+      },
+    },
+    MuiTableHead: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          "& tr": {
+            borderBottom: `1px solid ${theme.vars.palette.border}`, // shadcn: [&_tr]:border-b
+          },
+        }),
+      },
+    },
+    MuiTableBody: {
+      styleOverrides: {
+        root: {
+          "& tr:last-child": {
+            borderWidth: 0, // shadcn: [&_tr:last-child]:border-0
+          },
+        },
+      },
+    },
+    MuiTableRow: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          borderBottom: `1px solid ${theme.vars.palette.border}`, // shadcn: border-b (on the row, not the cells)
+          transition: theme.transitions.create(["color", "background-color", "border-color", "text-decoration-color", "fill", "stroke"]), // shadcn: transition-colors
+          "&:hover": {
+            backgroundColor: `color-mix(in oklab, ${theme.vars.palette.muted.main} 50%, transparent)`, // shadcn: hover:bg-muted/50 (unconditional - MUI only does this with its `hover` prop)
+          },
+          "&.Mui-selected": {
+            backgroundColor: theme.vars.palette.muted.main, // shadcn: data-[state=selected]:bg-muted
+            "&:hover": {
+              backgroundColor: theme.vars.palette.muted.main, // shadcn: the selected background wins over hover:bg-muted/50 (Tailwind emits data-* variants after hover ones)
+            },
+          },
+        }),
+      },
+    },
+    MuiTableCell: {
+      styleOverrides: {
+        root: {
+          font: "inherit", // shadcn: th/td carry no font classes - they inherit the table's text-sm (see GOTCHA above)
+          letterSpacing: "inherit", // ...including letter-spacing, which the `font` shorthand does not cover
+          borderBottom: "none", // shadcn: no cell border - the row draws it (see GOTCHA above)
+          verticalAlign: "middle", // shadcn: align-middle
+          whiteSpace: "nowrap", // shadcn: whitespace-nowrap
+          padding: "0.5rem", // shadcn: p-2
+        },
+        head: {
+          height: "2.5rem", // shadcn: h-10
+          padding: "0 0.5rem", // shadcn: px-2 (no vertical padding - h-10 sets the height)
+          fontWeight: 500, // shadcn: font-medium
+          lineHeight: "inherit", // shadcn: no line-height class (MUI's head variant pins 1.5rem)
+        },
+      },
+    },
+    // -----------------------------------------------------------------------
+
     // Per-component overrides are appended by later tasks, one banner each.
   },
 })
