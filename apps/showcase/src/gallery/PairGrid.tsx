@@ -1,5 +1,6 @@
 import type { CSSProperties } from "react"
 import type { Pair, Section } from "./types"
+import { GallerySidebar, SIDEBAR_WIDTH, sectionId } from "./Sidebar"
 
 const cellStyle: CSSProperties = {
   display: "flex",
@@ -41,7 +42,7 @@ export function PairRow({ pair, sides }: { pair: Pair; sides: Array<"shadcn" | "
 
 export function SectionBlock({ section, sides }: { section: Section; sides: Array<"shadcn" | "mui"> }) {
   return (
-    <section style={{ marginBottom: 48 }}>
+    <section id={sectionId(section.title)} style={{ marginBottom: 48, scrollMarginTop: 24 }}>
       <h2 style={{ font: "600 16px/24px system-ui", margin: "0 0 4px" }}>{section.title}</h2>
       <div style={{ display: "flex" }}>
         {sides.map((side) => (
@@ -59,10 +60,15 @@ export function SectionBlock({ section, sides }: { section: Section; sides: Arra
 
 export function renderSections(sections: Section[], sides: Array<"shadcn" | "mui">) {
   return (
-    <main style={{ maxWidth: 1100, margin: "0 auto", padding: 32 }}>
-      {sections.map((s) => (
-        <SectionBlock key={s.title} section={s} sides={sides} />
-      ))}
-    </main>
+    <>
+      <GallerySidebar sections={sections} />
+      {/* marginLeft (not a flex row) keeps the content column's own box independent of the fixed
+          sidebar, so cell widths stay exactly what they were before the sidebar existed. */}
+      <main style={{ marginLeft: SIDEBAR_WIDTH, maxWidth: 1100, padding: 32 }}>
+        {sections.map((s) => (
+          <SectionBlock key={s.title} section={s} sides={sides} />
+        ))}
+      </main>
+    </>
   )
 }
