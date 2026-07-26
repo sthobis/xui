@@ -24,6 +24,7 @@ import { buttonGroupSection } from "./button-group"
 import { tabsSection } from "./tabs"
 import { accordionSection } from "./accordion"
 import { tableSection } from "./table"
+import { listSection } from "./list"
 
 export const sections: Section[] = [
   buttonSection,
@@ -51,4 +52,5 @@ export const sections: Section[] = [
   tabsSection,
   accordionSection,
   tableSection,
+  listSection,
 ]

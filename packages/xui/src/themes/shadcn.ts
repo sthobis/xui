@@ -4258,6 +4258,135 @@ export const shadcnTheme = createTheme({
     },
     // -----------------------------------------------------------------------
 
+    // -----------------------------------------------------------------------
+    // List / ListItem / ListItemIcon / ListItemText
+    //
+    // Ground truth: apps/showcase/src/components/ui/item.tsx. shadcn ships no component called
+    // List - its twin for MUI's List family is Item / ItemGroup:
+    //
+    //   ItemGroup (`data-slot=item-group`) -> MuiList
+    //   Item (`data-slot=item`)            -> MuiListItem
+    //   ItemMedia variant="icon"           -> MuiListItemIcon
+    //   ItemContent                        -> MuiListItemText root
+    //   ItemTitle                          -> MuiListItemText `primary` slot
+    //   ItemDescription                    -> MuiListItemText `secondary` slot
+    //
+    // Only the default `variant` and default `size` are covered; Item's `outline`/`muted` variants,
+    // its `sm`/`xs` sizes, ItemGroup's has-data-[size=*] gap steps, ItemSeparator, ItemActions,
+    // ItemHeader and ItemFooter have no pair and are not themed. Item's focus-visible ring is not
+    // themed either: an Item is not focusable unless it is rendered as a link, which no pair does.
+    //
+    // ItemGroup: "flex w-full flex-col gap-4" (MUI's `<ul>` already has listStyle none/margin 0).
+    // Item: "flex w-full flex-wrap items-center rounded-lg border border-transparent text-sm
+    //   transition-colors duration-100 gap-2.5 px-3 py-2.5".
+    // ItemMedia (icon): "flex shrink-0 items-center justify-center gap-2
+    //   [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none".
+    // ItemContent: "flex flex-1 flex-col gap-1".
+    // ItemTitle: "line-clamp-1 flex w-fit items-center gap-2 text-sm leading-snug font-medium
+    //   underline-offset-4" - underline-offset-4 is inert with no underline and is not themed.
+    // ItemDescription: "line-clamp-2 text-left text-sm leading-normal font-normal
+    //   text-muted-foreground".
+    //
+    // GOTCHA - `line-clamp-N` does NOT clamp on either side, so only its `overflow: hidden` is
+    // transcribed. The utility works by switching to `display: -webkit-box`, but ItemTitle's own
+    // `flex` wins that declaration (measured live: display is `flex`, with -webkit-line-clamp: 1
+    // sitting inert beside it) and MUI forces `display: block` on the primary/secondary Typography
+    // regardless. Copying -webkit-line-clamp across would ship a value that does nothing on either
+    // side; the clipping that IS observable comes from overflow.
+    //
+    // GOTCHA - letter-spacing has to be restated as normal. MUI renders primary and secondary as
+    // Typography body1/body2, which carry letterSpacing 0.00938em/0.01071em; shadcn's title and
+    // description have no tracking classes at all and inherit `normal`.
+    MuiList: {
+      styleOverrides: {
+        // GOTCHA - scoped to `:not([role])`, and NOT set through defaultProps. MuiList is not only
+        // the standalone list: Menu, Select and Autocomplete all render their popup contents
+        // through it, so an unscoped `display: flex` + `gap: 1rem` here silently reflows every
+        // dropdown in the theme (measured: select-open jumped from 0.00% to 56%). MUI's standalone
+        // List sets no role attribute, while MenuList always sets one (`role="menu"`, or
+        // `role="listbox"` for a Select), which is what separates the two cases. `disablePadding`
+        // would have to be a defaultProp, and a defaultProp cannot be scoped - so the padding is
+        // zeroed here inside the same guard instead.
+        root: {
+          "&:not([role])": {
+            display: "flex", // shadcn: flex
+            flexDirection: "column", // shadcn: flex-col
+            gap: "1rem", // shadcn: gap-4 (default size)
+            width: "100%", // shadcn: w-full
+            paddingTop: 0, // shadcn: ItemGroup has no padding (MUI's default adds 8px top/bottom)
+            paddingBottom: 0,
+          },
+        },
+      },
+    },
+    MuiListItem: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          flexWrap: "wrap", // shadcn: flex-wrap
+          gap: "0.625rem", // shadcn: gap-2.5
+          padding: "0.625rem 0.75rem", // shadcn: py-2.5 px-3 (MUI's default is 8px 16px)
+          border: "1px solid transparent", // shadcn: border border-transparent
+          borderRadius: RADIUS, // shadcn: rounded-lg
+          fontSize: "0.875rem", // shadcn: text-sm
+          lineHeight: "1.25rem", // shadcn: text-sm's paired line-height
+          transition: theme.transitions.create(
+            ["color", "background-color", "border-color", "outline-color", "text-decoration-color", "fill", "stroke"],
+            { duration: 100 }, // shadcn: duration-100 (transition-colors' own default is 150ms)
+          ),
+        }),
+      },
+    },
+    MuiListItemIcon: {
+      styleOverrides: {
+        root: {
+          display: "flex", // shadcn: flex (MUI uses inline-flex)
+          alignItems: "center", // shadcn: items-center
+          justifyContent: "center", // shadcn: justify-center
+          gap: "0.5rem", // shadcn: gap-2
+          minWidth: "auto", // shadcn: no min-width - the box is the icon (MUI reserves 36px)
+          color: "inherit", // shadcn: no colour of its own (MUI uses action.active)
+          "& svg": {
+            width: "1rem", // shadcn: [&_svg:not([class*='size-'])]:size-4
+            height: "1rem",
+            pointerEvents: "none", // shadcn: [&_svg]:pointer-events-none
+          },
+        },
+      },
+    },
+    MuiListItemText: {
+      styleOverrides: {
+        root: {
+          display: "flex", // shadcn: flex
+          flexDirection: "column", // shadcn: flex-col
+          flex: "1 1 0%", // shadcn: flex-1 (MUI uses 1 1 auto)
+          gap: "0.25rem", // shadcn: gap-1
+          minWidth: "auto", // shadcn: no min-width (MUI sets 0)
+          margin: 0, // shadcn: no margin - the gap does the spacing (MUI adds 4px, or 6px with both lines)
+        },
+        primary: {
+          display: "flex", // shadcn: flex
+          alignItems: "center", // shadcn: items-center
+          gap: "0.5rem", // shadcn: gap-2
+          width: "fit-content", // shadcn: w-fit
+          overflow: "hidden", // shadcn: line-clamp-1's clipping (see GOTCHA above)
+          fontSize: "0.875rem", // shadcn: text-sm
+          fontWeight: 500, // shadcn: font-medium
+          lineHeight: 1.375, // shadcn: leading-snug
+          letterSpacing: "normal", // shadcn: no tracking class (see GOTCHA above)
+        },
+        secondary: ({ theme }) => ({
+          overflow: "hidden", // shadcn: line-clamp-2's clipping (see GOTCHA above)
+          textAlign: "left", // shadcn: text-left
+          fontSize: "0.875rem", // shadcn: text-sm
+          fontWeight: 400, // shadcn: font-normal
+          lineHeight: 1.5, // shadcn: leading-normal
+          letterSpacing: "normal", // shadcn: no tracking class (see GOTCHA above)
+          color: theme.vars.palette.text.secondary, // shadcn: text-muted-foreground
+        }),
+      },
+    },
+    // -----------------------------------------------------------------------
+
     // Per-component overrides are appended by later tasks, one banner each.
   },
 })

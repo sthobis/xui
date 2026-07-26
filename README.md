@@ -93,7 +93,7 @@ The scope is `@mui/material` core; MUI X (DataGrid, Date Pickers, Tree View) is 
 - [x] Breadcrumbs
 - [x] Pagination
 - [x] Table
-- [ ] List
+- [x] List
 - [ ] AppBar / Toolbar
 - [x] ButtonGroup
 - [x] ToggleButton / ToggleButtonGroup
