@@ -5,6 +5,13 @@ export interface DiffResult {
   mismatchedPixels: number
   totalPixels: number
   mismatchPct: number
+  /**
+   * Largest absolute per-channel (R/G/B/A) difference across every pixel, 0-255. Independent of
+   * HOW MANY pixels differ, so it separates "a whole region is the wrong colour" (a style bug,
+   * large delta) from "a flat region landed on opposite sides of an 8-bit rounding boundary"
+   * (a rasterization artifact, delta of exactly 1). See thresholds.ts's maxDeltaOverrides.
+   */
+  maxChannelDelta: number
   diff: PNG
 }
 
@@ -37,10 +44,16 @@ export function diffPngs(aBuf: Buffer, bBuf: Buffer, pixelThreshold = 0): DiffRe
     threshold: pixelThreshold,
   })
   const totalPixels = width * height
+  let maxChannelDelta = 0
+  for (let i = 0; i < pa.data.length; i += 1) {
+    const delta = Math.abs(pa.data[i] - pb.data[i])
+    if (delta > maxChannelDelta) maxChannelDelta = delta
+  }
   return {
     mismatchedPixels,
     totalPixels,
     mismatchPct: (mismatchedPixels / totalPixels) * 100,
+    maxChannelDelta,
     diff,
   }
 }

@@ -10,10 +10,16 @@ import {
   resetState,
   type PairState,
 } from "./lib/states"
-import { thresholdFor } from "./thresholds"
+import { maxDeltaFor, thresholdFor } from "./thresholds"
 
 const RESULTS_DIR = "e2e/results"
-const rows: Array<{ pair: string; state: string; pct: number; threshold: number }> = []
+const rows: Array<{
+  pair: string
+  state: string
+  pct: number
+  delta: number
+  rule: string
+}> = []
 
 /**
  * Captures the screenshot to diff for a given state, per pair/side. Three shapes:
@@ -116,15 +122,31 @@ test("all pairs match within threshold", async ({ page }, testInfo) => {
       await resetState(page)
 
       const result = diffPngs(shadcnShot, muiShot)
+      // A pair with a maxDelta override is judged on the size of its worst per-channel error
+      // instead of on how many pixels differ - see thresholds.ts maxDeltaOverrides. Both numbers
+      // are always reported so a delta-judged pair's pixel count stays visible.
+      const maxDelta = maxDeltaFor(id, state)
       const threshold = thresholdFor(id, state)
-      rows.push({ pair: id, state, pct: result.mismatchPct, threshold })
+      const failed =
+        maxDelta === undefined ? result.mismatchPct > threshold : result.maxChannelDelta > maxDelta
+      rows.push({
+        pair: id,
+        state,
+        pct: result.mismatchPct,
+        delta: result.maxChannelDelta,
+        rule: maxDelta === undefined ? `≤ ${threshold}%` : `Δ ≤ ${maxDelta}`,
+      })
 
       const slug = `${testInfo.project.name}-${id}-${state}`
-      if (result.mismatchPct > threshold) {
+      if (failed) {
         writeFileSync(`${RESULTS_DIR}/diffs/${slug}-shadcn.png`, shadcnShot)
         writeFileSync(`${RESULTS_DIR}/diffs/${slug}-mui.png`, muiShot)
         writeFileSync(`${RESULTS_DIR}/diffs/${slug}-diff.png`, PNG.sync.write(result.diff))
-        failures.push(`${slug}: ${result.mismatchPct.toFixed(2)}% > ${threshold}%`)
+        failures.push(
+          maxDelta === undefined
+            ? `${slug}: ${result.mismatchPct.toFixed(2)}% > ${threshold}%`
+            : `${slug}: max channel delta ${result.maxChannelDelta} > ${maxDelta} (${result.mismatchPct.toFixed(2)}% of pixels)`,
+        )
       }
     }
   }
@@ -132,11 +154,11 @@ test("all pairs match within threshold", async ({ page }, testInfo) => {
   const report = [
     `# Parity report (${testInfo.project.name})`,
     "",
-    "| pair | state | mismatch % | threshold |",
-    "| --- | --- | --- | --- |",
+    "| pair | state | mismatch % | max Δ | rule |",
+    "| --- | --- | --- | --- | --- |",
     ...rows
       .sort((a, b) => b.pct - a.pct)
-      .map((r) => `| ${r.pair} | ${r.state} | ${r.pct.toFixed(2)} | ${r.threshold} |`),
+      .map((r) => `| ${r.pair} | ${r.state} | ${r.pct.toFixed(2)} | ${r.delta} | ${r.rule} |`),
   ].join("\n")
   const reportName = filtered
     ? `report-${testInfo.project.name}.filtered.md`

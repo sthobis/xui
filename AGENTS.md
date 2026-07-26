@@ -54,6 +54,11 @@ Never raise `e2e/thresholds.ts` or re-loosen the pixelmatch threshold to make a 
 Fix the theme instead.
 If a pair truly cannot reach zero for a provable antialiasing reason, prove the geometry is byte-identical and record the exact residual rather than fudging.
 
+For a residual that is an 8-bit rounding artifact rather than an edge-antialiasing one, cap the error instead of the pixel count: add the pair to `maxDeltaOverrides` in `e2e/thresholds.ts` and it is judged on its largest per-channel difference (`Δ ≤ 1` means no channel anywhere may be off by more than one level).
+Reach for this rather than a bigger percentage.
+A percentage bounds how much of the cell may be wrong by any amount; a delta cap bounds how wrong any of it may be, and it does not drift when a layout change moves the pair to a different device-pixel offset.
+`slider-disabled` is the worked example: the same 1/255 artifact measured 0.56% before the gallery gained a sidebar, 1.51% after, and 0.00% in dark - a percentage was never the invariant the proof supported.
+
 ## MUI traps you will hit
 
 MUI applies state and default styles at higher specificity than source order suggests.
