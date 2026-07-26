@@ -125,6 +125,12 @@ const FONT_SANS = '"Geist Variable", ui-sans-serif, system-ui, sans-serif'
 // is no longer a bare unused local once a component uses it.
 const SHADOW_XS = "none"
 
+// Tailwind v4's default `--shadow-sm` token (apps/showcase/src/index.css never redefines
+// --shadow-sm, so the installed app renders Tailwind's own built-in value verbatim - confirmed
+// against node_modules/tailwindcss/theme.css). Used by Tabs' active-trigger `shadow-sm` below;
+// a plain black shadow, unaffected by color scheme.
+const SHADOW_SM = "0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)"
+
 // RESOLVED (Task 4): MUI's CSS-variables pipeline derives a companion
 // "<slot>Channel" CSS var for every main-shaped palette entry (e.g.
 // --mui-palette-primary-mainChannel), a bare "R G B" triplet used to
@@ -3878,6 +3884,151 @@ export const shadcnTheme = createTheme({
     // `variant="contained"` border-collapse recipes, and a nested `data-slot=button-group` (the
     // `has-[>[data-slot=button-group]]:gap-2` rule) are untested by any gallery pair - out of
     // scope, no styleOverrides added for them.
+    // -----------------------------------------------------------------------
+
+    // -----------------------------------------------------------------------
+    // Tabs / Tab
+    //
+    // Ground truth: apps/showcase/src/components/ui/tabs.tsx. Gallery pair covers only the
+    // default variant (`data-variant=default`, i.e. no `variant="line"`) at horizontal
+    // orientation - the `variant="line"` recipe and vertical orientation are unthemed, no
+    // styleOverrides added for them.
+    //
+    // TabsList (`data-slot=tabs-list`, default variant): "group/tabs-list inline-flex w-fit
+    // items-center justify-center rounded-lg p-[3px] text-muted-foreground
+    // group-data-horizontal/tabs:h-8 ... bg-muted" -> MuiTabs' `list` slot: inline-flex, width
+    // fit-content, centered both axes, rounded-lg (RADIUS), 3px padding, text-muted-foreground,
+    // bg-muted, h-8 (2rem) for horizontal orientation (the only orientation any pair covers).
+    //
+    // TabsTrigger (`data-slot=tabs-trigger`): "relative inline-flex h-[calc(100%-1px)] flex-1
+    // items-center justify-center gap-1.5 rounded-md border border-transparent px-1.5 py-0.5
+    // text-sm font-medium whitespace-nowrap text-foreground/60 transition-all
+    // hover:text-foreground focus-visible:border-ring focus-visible:ring-[3px]
+    // focus-visible:ring-ring/50 focus-visible:outline-1 focus-visible:outline-ring
+    // dark:text-muted-foreground dark:hover:text-foreground
+    // group-data-[variant=default]/tabs-list:data-active:shadow-sm ... data-active:bg-background
+    // data-active:text-foreground dark:data-active:border-input dark:data-active:bg-input/30
+    // dark:data-active:text-foreground" -> MuiTab root. text-sm/font-medium/no-uppercase already
+    // come from the shared `typography.button` variant set above (fontSize 0.875rem, fontWeight
+    // 500, lineHeight 1.25rem, textTransform none) - MUI's TabRoot spreads `theme.typography.
+    // button` as its base, so no restatement needed here. `after:` is the `variant="line"`
+    // underline decoration (opacity-0 unless that variant is active) - inert for the default
+    // variant this pair covers, not themed.
+    //
+    // data-active maps to Tab's own `.Mui-selected` class (MUI sets it whenever
+    // ownerState.selected, exactly mirroring Radix's `data-state="active"`).
+    //
+    // GOTCHA - the animated `.MuiTabs-indicator` underline span has no shadcn equivalent at
+    // all: shadcn's active-state affordance is the filled/elevated background+shadow-sm moved
+    // onto the active TRIGGER itself (data-active:bg-background data-active:shadow-sm above),
+    // not a separate sliding bar. Hidden outright (display: none) rather than restyled.
+    //
+    // GOTCHA - MUI wraps the list in two extra elements shadcn has no counterpart for
+    // (`MuiTabs-root` > `MuiTabs-scroller` > `MuiTabs-list`), and both default to
+    // `overflow: hidden`. shadcn's TabsList has no clipping ancestor at all, so the active
+    // trigger's `shadow-sm` genuinely paints ~0.5px BELOW the list's own bottom edge (trigger
+    // bottom sits 3.5px above it; shadow reaches 1px offset + 3px blur = 4px). Left clipped, MUI
+    // swallowed exactly that tail - a 1-2 device-pixel band under the active trigger, 253 vs 255
+    // in light and 9 vs 10 in dark. Both wrappers are unclipped for the non-scrollable (`fixed`)
+    // variant only, so scrollable/vertical Tabs - which need the clip to scroll and which no pair
+    // covers - keep MUI's own behavior.
+    //
+    // The scroller needs `defaultProps.slotProps` rather than `styleOverrides`: MUI writes
+    // `style={{ overflow: 'hidden' }}` INLINE on it (Tabs.js additionalProps), which no class rule
+    // can beat. mergeSlotProps spreads `externalSlotProps.style` last, so a slotProps style wins
+    // cleanly without `!important`.
+    MuiTabs: {
+      defaultProps: {
+        slotProps: {
+          scroller: (ownerState) =>
+            ownerState.fixed ? { style: { overflow: "visible" } } : {},
+        },
+      },
+      styleOverrides: {
+        root: ({ ownerState }) => ({
+          minHeight: 0, // shadcn: no min-height on tabs-list's wrapper (MUI's own Tabs root default
+          // hardcodes minHeight/height: 48px regardless of the `list` slot's own 2rem height,
+          // measured live as a real 16px gap below the visible tab bar vs the shadcn twin).
+          ...(ownerState.fixed ? { overflow: "visible" } : {}), // shadcn: no clipping ancestor (see banner)
+        }),
+        indicator: {
+          display: "none", // shadcn: no indicator bar - the active trigger's own bg/shadow IS the affordance
+        },
+        list: ({ theme }) => ({
+          display: "inline-flex", // shadcn: inline-flex
+          width: "fit-content", // shadcn: w-fit
+          alignItems: "center", // shadcn: items-center
+          justifyContent: "center", // shadcn: justify-center
+          borderRadius: RADIUS, // shadcn: rounded-lg
+          padding: "3px", // shadcn: p-[3px]
+          color: theme.vars.palette.text.secondary, // shadcn: text-muted-foreground
+          backgroundColor: theme.vars.palette.muted.main, // shadcn: bg-muted (variant=default)
+          height: "2rem", // shadcn: group-data-horizontal/tabs:h-8 (only orientation this pair covers)
+          minHeight: "2rem", // MUI's Tabs root/scroller default to a taller intrinsic min-height (48px,
+          // inherited from Tab's own minHeight below) that would otherwise stretch this flex
+          // container past the shadcn twin's fixed 2rem - capped here to match.
+        }),
+      },
+    },
+    MuiTab: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          position: "relative", // shadcn: relative
+          minWidth: "auto", // shadcn: no min-width class -> the flex item's normal UA default of
+          // `min-width: auto` (content-based floor), not 0 - MUI's own Tab default hardcodes 90px,
+          // which must be undone, but undoing it to 0 (rather than "auto") let both triggers
+          // shrink to a perfectly equal share of the flex row regardless of their text's natural
+          // width, whereas shadcn's real (unset) `min-width: auto` gives the longer "Password"
+          // label extra width at "Account"'s expense - measured live: shadcn's two triggers are
+          // 68.6px/78.0px, not equal, and MUI's were wrongly 73.3px/73.3px before this fix.
+          maxWidth: "none", // shadcn: no max-width (MUI's own Tab default caps at 360px)
+          minHeight: 0, // shadcn: no min-height - height instead comes from h-[calc(100%-1px)] below
+          height: "calc(100% - 1px)", // shadcn: h-[calc(100%-1px)]
+          flex: "1 1 0%", // shadcn: flex-1 (MUI's own Tab default sets flexShrink: 0, which this restates)
+          alignItems: "center", // shadcn: items-center
+          justifyContent: "center", // shadcn: justify-center
+          gap: "0.375rem", // shadcn: gap-1.5
+          borderRadius: `calc(${RADIUS} * 0.8)`, // shadcn: rounded-md
+          border: "1px solid transparent", // shadcn: border border-transparent
+          padding: "0.125rem 0.375rem", // shadcn: py-0.5 px-1.5
+          whiteSpace: "nowrap", // shadcn: whitespace-nowrap (MUI's own Tab default sets normal)
+          textAlign: "center", // shadcn: text-center (ambient, kept from MUI's own default)
+          lineHeight: 1.25 / 0.875, // shadcn: text-sm line-height (calc(1.25/0.875)) - MUI's own Tab
+          // default explicitly sets a bare `lineHeight: 1.25` AFTER spreading typography.button,
+          // overriding that variant's own 1.25rem/20px with 1.25x-of-14px/17.5px instead - restated
+          // here at matching specificity (measured live: 17.5px vs the shadcn twin's 20px).
+          overflow: "visible", // shadcn: no overflow clipping (MUI's own Tab default is hidden)
+          color: `color-mix(in oklab, ${theme.vars.palette.text.primary} 60%, transparent)`, // shadcn: text-foreground/60
+          transition: theme.transitions.create(["color", "background-color", "border-color", "box-shadow"]), // shadcn: transition-all
+          "&:hover": {
+            color: theme.vars.palette.text.primary, // shadcn: hover:text-foreground
+          },
+          "&:focus-visible": {
+            borderColor: theme.vars.palette.ring, // shadcn: focus-visible:border-ring
+            boxShadow: `0 0 0 3px color-mix(in oklab, ${theme.vars.palette.ring} 50%, transparent)`, // shadcn: focus-visible:ring-[3px] ring-ring/50
+            outlineWidth: "1px", // shadcn: focus-visible:outline-1
+            outlineStyle: "solid",
+            outlineColor: theme.vars.palette.ring, // shadcn: focus-visible:outline-ring
+          },
+          "&.Mui-selected": {
+            backgroundColor: theme.vars.palette.background.default, // shadcn: data-active:bg-background
+            color: theme.vars.palette.text.primary, // shadcn: data-active:text-foreground
+            boxShadow: SHADOW_SM, // shadcn: group-data-[variant=default]/tabs-list:data-active:shadow-sm
+          },
+          ...theme.applyStyles("dark", {
+            color: theme.vars.palette.text.secondary, // shadcn: dark:text-muted-foreground (overrides the light foreground/60)
+            "&:hover": {
+              color: theme.vars.palette.text.primary, // shadcn: dark:hover:text-foreground
+            },
+            "&.Mui-selected": {
+              borderColor: theme.vars.palette.input, // shadcn: dark:data-active:border-input
+              backgroundColor: `color-mix(in oklab, ${theme.vars.palette.input} 30%, transparent)`, // shadcn: dark:data-active:bg-input/30
+              color: theme.vars.palette.text.primary, // shadcn: dark:data-active:text-foreground
+            },
+          }),
+        }),
+      },
+    },
     // -----------------------------------------------------------------------
 
     // Per-component overrides are appended by later tasks, one banner each.

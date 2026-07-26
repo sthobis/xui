@@ -21,6 +21,7 @@ import { breadcrumbSection } from "./breadcrumb"
 import { paginationSection } from "./pagination"
 import { toggleSection } from "./toggle"
 import { buttonGroupSection } from "./button-group"
+import { tabsSection } from "./tabs"
 
 export const sections: Section[] = [
   buttonSection,
@@ -45,4 +46,5 @@ export const sections: Section[] = [
   paginationSection,
   toggleSection,
   buttonGroupSection,
+  tabsSection,
 ]
