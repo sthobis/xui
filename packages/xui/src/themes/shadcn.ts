@@ -3200,7 +3200,7 @@ export const shadcnTheme = createTheme({
       },
     },
     // -----------------------------------------------------------------------
-    // CircularProgress -> shadcn Spinner  --  DONE WITH CONCERNS, see report.
+    // CircularProgress -> shadcn Spinner
     //
     // Ground truth: apps/showcase/src/components/ui/spinner.tsx wraps lucide-react's
     // Loader2Icon (= LoaderCircle): a single fixed SVG <path d="M21 12a9 9 0 1
@@ -3208,41 +3208,43 @@ export const shadcnTheme = createTheme({
     // stroke-linecap="round", spun via Tailwind's `animate-spin` (`animation:
     // spin 1s linear infinite`), rendered at `size-4` (16x16px).
     //
-    // GEOMETRIC PROOF this cannot reach 0.00% via CircularProgress's public API
-    // (no wrapper/sx - AGENTS.md forbids compensating for the theme with those):
-    // Lucide's path is a true circular arc - center (12,12), r=9, stroke 2 - so its
-    // OUTER edge (r + strokeWidth/2 = 10) sits 2 units inside the 24-unit viewBox's
-    // 12-unit half-extent: a real ~16.7% margin baked into the hand-authored path.
-    // MUI's CircularProgress hardcodes SIZE=44, r=(SIZE-thickness)/2, and
-    // strokeWidth=thickness for the visible circle - so algebraically
-    // r + thickness/2 = 22 = SIZE/2 for EVERY thickness value: the ring's outer
-    // edge ALWAYS touches the component's own bounding box exactly, zero margin,
-    // no matter what `thickness` is passed. `viewBox`/`cx`/`cy`/`r` are computed in
-    // CircularProgress.js from `size`/`thickness` props, not CSS - styleOverrides
-    // cannot touch them. So at size=16 (matching the spinner's 16x16 footprint),
-    // MUI's ring is unavoidably ~20% bigger in diameter than shadcn's inset ring,
-    // both centered in the SAME 240x88 harness cell - a real, structural,
-    // provable mismatch, not a fudge-able antialiasing residual.
+    // Three things separate MUI's ring from that icon, and all three are corrected:
+    //  - Diameter. Lucide's arc is inset inside its viewBox, MUI's always touches its box.
+    //    Handled by scaling the svg - see the `svg` override's own note.
+    //  - Stroke width. Follows from the scale; the gallery derives `thickness` from it.
+    //  - Sweep and spin. Loader2Icon holds a fixed 288deg arc and simply rotates, where MUI
+    //    grows and shrinks a dash over 1.4s. See `indeterminate` and `circleDisableShrink`.
     //
-    // Best-effort restyle applied anyway (see gallery pair for the `value`/
-    // `thickness`/`color` props this pairs with):
-    //  - strokeLinecap: round, matching Loader2Icon's stroke-linecap="round".
-    //  - thickness left for the gallery to compute (effective on-screen stroke
-    //    width should track 2/24 of the rendered size, same ratio as the icon).
-    //  - `variant="determinate"` (in the gallery) instead of the default
-    //    indeterminate: Playwright's `animations: "disabled"` cancels INFINITE
-    //    animations to their initial keyframe frame (both spin and MUI's own
-    //    indeterminate dash-shrink) - shadcn's spinner freezes as a full,
-    //    static 288 degree ring (matching its always-visible resting shape), while
-    //    MUI's indeterminate dash animation's initial (0%) keyframe is a nearly
-    //    invisible 1px dash - freezing there would be an even worse mismatch than
-    //    the static-value determinate choice made here.
+    // The pair runs indeterminate (MUI's default) rather than determinate, so a plain
+    // <CircularProgress /> spins the way the real Spinner does. That is behavior the pixel
+    // harness cannot see - it only screenshots frozen frames - which is why the pair also
+    // carries a `behaviors: ["animates"]` check.
     // -----------------------------------------------------------------------
     MuiCircularProgress: {
       defaultProps: {
         disableShrink: true, // shadcn: Loader2Icon's gap is fixed - kills MUI's circular-dash grow/shrink so the arc just rotates
       },
       styleOverrides: {
+        // Insets the ring to where lucide draws it. Loader2Icon's outer edge sits at
+        // r + strokeWidth/2 = 9 + 1 = 10 units of the 24-unit viewBox's 12-unit half-extent, a
+        // 10/12 margin baked into the hand-authored path. MUI's ring instead always touches its
+        // own box: r = (44 - thickness) / 2 and strokeWidth = thickness give r + thickness/2 = 22
+        // = half the 44-unit viewBox for EVERY thickness, so no prop can inset it - `viewBox`,
+        // `cx`, `cy` and `r` are computed in CircularProgress.js and the <svg> is rendered
+        // directly, with no slot for props to reach. Scaling the rendered svg is the way in: it
+        // shrinks radius and stroke together about the same centre, which is why the gallery pairs
+        // this with a thickness of 44/10 (see its own note) rather than the naive 2/24 ratio.
+        //
+        // This is the residual the pair carried for a long time as "structurally unfixable": the
+        // ring measured 16x16 CSS px against the spinner's 13.33, and the error hid under the
+        // 0.5% pixel threshold because a 1px-per-side ring edge is a thin, mostly-antialiased
+        // shape. It surfaced when the report started printing each pair's largest per-channel
+        // delta, where it read 245 with a solid differing interior - the signature of a real
+        // shape difference rather than edge noise.
+        svg: {
+          transform: "scale(0.833333)", // shadcn: lucide's 10/12 inset (see above)
+          transformOrigin: "center", // the ring is concentric with the box on both sides
+        },
         circle: {
           strokeLinecap: "round", // shadcn: Loader2Icon's path renders with lucide's default stroke-linecap="round"
         },
