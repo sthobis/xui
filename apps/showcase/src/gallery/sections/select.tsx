@@ -47,6 +47,16 @@ interface DataTargetProps extends HTMLAttributes<HTMLDivElement> {
   "data-target"?: boolean
 }
 const dataTarget: DataTargetProps = { "data-target": true }
+
+// Same marker, spread onto the Select ROOT instead of its display div (see the select-open demo's
+// own GOTCHA). Typed against `id` rather than the full HTMLAttributes surface: HTMLAttributes
+// carries a loose `value`/`defaultValue` that clashes with SelectProps' own, and sharing one real
+// property is all TypeScript's weak-type check needs.
+interface DataTargetRootProps {
+  id?: string
+  "data-target"?: boolean
+}
+const dataTargetRoot: DataTargetRootProps = { "data-target": true }
 const portalTargetPaper = { style: menuPaperStyle, "data-portal-target": "select-open" }
 
 // MUI's own Select has no built-in "selected item gets a check glyph" behavior (unlike
@@ -143,6 +153,10 @@ function useControlledOpen() {
 //    measured live on the real component.
 const TRIGGER_TEXT_INSET = 11 // shadcn: border(1px) + pl-2.5(10px) on SelectTrigger
 const ITEM_TEXT_INSET = 6 // shadcn: pl-1.5(6px) on SelectItem
+// Pinned to an EVEN, whole number of pixels wide, for the same reason menu.tsx pins its trigger:
+// Radix positions on the device-pixel grid while MUI's Popover rounds to whole CSS pixels, so a
+// fractionally positioned trigger sends the two overlays 0.5px apart. See menu.tsx's own note.
+const TRIGGER_WIDTH = 144
 const anchorOrigin = { vertical: "center", horizontal: TRIGGER_TEXT_INSET } as const
 const transformOrigin = { vertical: "center", horizontal: ITEM_TEXT_INSET } as const
 
@@ -151,8 +165,16 @@ function MuiSelectOpenDemo() {
   return (
     <MuiSelect
       defaultValue={SELECTED}
-      SelectDisplayProps={dataTarget}
+      // GOTCHA - data-target goes on the Select ROOT here, not on SelectDisplayProps like the
+      // closed pairs above. The anchored capture unions the trigger's box with the overlay's
+      // (e2e/lib/states.ts anchoredClip), so the two sides have to mark the SAME box: shadcn's
+      // marker sits on SelectTrigger, whose box is the whole 144x32 control, while MUI's inner
+      // display div measures 142x36 (inside the border, and taller). Marking different boxes made
+      // the two captures different sizes, which is what the pair's long-standing 6.8% anchored
+      // residual actually was - not sub-pixel noise.
+      {...dataTargetRoot}
       renderValue={renderSelectValue}
+      style={{ width: TRIGGER_WIDTH }}
       MenuProps={{ slotProps: { paper: portalTargetPaper }, anchorOrigin, transformOrigin }}
       {...controlledOpen}
     >
@@ -214,7 +236,7 @@ export const selectSection: Section = {
       behaviors: ["escape-closes"],
       shadcn: (
         <Select defaultValue={SELECTED}>
-          <SelectTrigger data-target>
+          <SelectTrigger data-target style={{ width: TRIGGER_WIDTH }}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent data-portal-target="select-open">{shadcnOptions()}</SelectContent>

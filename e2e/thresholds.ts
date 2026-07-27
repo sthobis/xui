@@ -4,27 +4,17 @@ const DEFAULT_THRESHOLD = 0.5
 // Keys are either a bare pair id (applies to every state of that pair) or "pairId:state" (applies
 // to only that one state, leaving the pair's other states at the default - used for select-open,
 // whose "open" state is already tight at 0.38-0.41% and should stay that way).
-const overrides: Record<string, number> = {
-  // select-open:anchored - the "anchored" capture (e2e/lib/states.ts anchoredClip) deliberately
-  // skips normalizeOverlayPosition's sub-pixel snap, because snapping the overlay is precisely
-  // what would mask the anchor-distance bug this state exists to catch. The two sides' overlays
-  // therefore render at different sub-pixel phases (measured: shadcn x=275.13 vs MUI x=515), so
-  // every glyph edge re-rasterizes differently - and select-open's 5-row option list is a
-  // text-dense surface.
-  //
-  // Evidence this is phase/AA noise and NOT an anchoring error (diff image inspected directly):
-  // the differing pixels are confined to glyph edges, the border outline, and the check mark,
-  // with ZERO solid/block regions. A real placement error displaces blocks - which is exactly
-  // what this state reported when the real bug was present (54.58% before MUI Select's
-  // item-aligned anchoring was fixed; 25.92% for tooltip when its 10px offset was sabotaged).
-  // Text volume is the multiplier: tooltip-open:anchored is a single short line and sits at
-  // 0.01% through the identical capture path.
-  //
-  // Kept just above the measured 6.81% so there is minimal hiding room, and scoped to ONLY the
-  // "anchored" state - select-open's "open" state keeps the full 0.5% default (it sits at
-  // 0.38-0.41% with the sub-pixel snap applied), so a genuine regression still trips one or both.
-  "select-open:anchored": 7,
-}
+// Empty on purpose. `select-open:anchored` used to sit here at 7%, justified as sub-pixel phase
+// noise across a text-dense overlay. That reasoning was wrong: the residual was the harness
+// comparing two differently-sized captures, because the pair marked `data-target` on shadcn's
+// whole trigger but on MUI's inner display div (144x32 against 142x36), and the anchored capture
+// unions the marked box with the overlay's. Marking the same box on both sides took it from 6.81%
+// to 0.32%, under the default threshold, and pinning the trigger to a whole number of pixels wide
+// took the `open` state from 0.38% to 0.00% (see select.tsx and menu.tsx for both notes).
+//
+// Worth remembering before adding an entry here: a residual blamed on antialiasing had a concrete,
+// fixable cause for two suites running. Prefer finding it.
+const overrides: Record<string, number> = {}
 
 // A pair listed here is judged by the LARGEST per-channel difference it produces rather than by
 // how many pixels differ (DiffResult.maxChannelDelta), and its percentage threshold is ignored.

@@ -602,6 +602,13 @@ export const shadcnTheme = createTheme({
               // shadcn: hover:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_5%)]
               backgroundColor: `color-mix(in oklch, ${theme.vars.palette.secondary.main}, ${theme.vars.palette.text.primary} 5%)`,
             },
+            // shadcn: aria-expanded:bg-secondary aria-expanded:text-secondary-foreground - the
+            // secondary button's expanded look is its own resting fill, i.e. the hover mix is
+            // dropped rather than kept. See the outlined variant's note above.
+            "&[aria-expanded='true']": {
+              backgroundColor: theme.vars.palette.secondary.main,
+              color: theme.vars.palette.secondary.contrastText,
+            },
             "&.Mui-disabled": {
               backgroundColor: theme.vars.palette.secondary.main,
               color: theme.vars.palette.secondary.contrastText,
@@ -649,6 +656,14 @@ export const shadcnTheme = createTheme({
               backgroundColor: theme.vars.palette.muted.main, // shadcn: hover:bg-muted
               color: theme.vars.palette.text.primary, // shadcn: hover:text-foreground
             },
+            // shadcn: aria-expanded:bg-muted aria-expanded:text-foreground - a button that owns an
+            // open overlay stays filled while it is open, not only while hovered. Radix sets
+            // aria-expanded on its triggers automatically; a MUI trigger sets it itself (see
+            // menu.tsx). No pair covered an expanded button until the Menu pair existed.
+            "&[aria-expanded='true']": {
+              backgroundColor: theme.vars.palette.muted.main, // shadcn: aria-expanded:bg-muted
+              color: theme.vars.palette.text.primary, // shadcn: aria-expanded:text-foreground
+            },
             "&.Mui-disabled": {
               border: `1px solid ${theme.vars.palette.border}`,
               backgroundColor: theme.vars.palette.background.default,
@@ -671,6 +686,17 @@ export const shadcnTheme = createTheme({
               "&:focus-visible": {
                 borderColor: theme.vars.palette.input,
               },
+              // Same cascade quirk as the border above, on background this time: Tailwind emits
+              // the `dark:` variant after `aria-expanded:`, so `dark:bg-input/30` beats
+              // `aria-expanded:bg-muted` and a dark expanded trigger keeps its ambient tint rather
+              // than filling with muted (measured live: shadcn's read oklab(1 0 0 / 0.045), i.e.
+              // input/30, while the unrestated MUI twin filled with muted's oklch(0.269 0 0) -
+              // a solid block over the whole trigger, 12.52% of the anchored capture in dark
+              // against 1.39% in light). The expanded TEXT color is unaffected: foreground and
+              // dark foreground are the same token here.
+              "&[aria-expanded='true']": {
+                backgroundColor: `color-mix(in oklab, ${theme.vars.palette.input} 30%, transparent)`,
+              },
               "&.Mui-disabled": {
                 backgroundColor: `color-mix(in oklab, ${theme.vars.palette.input} 30%, transparent)`,
                 borderColor: theme.vars.palette.input,
@@ -685,6 +711,12 @@ export const shadcnTheme = createTheme({
             "&:hover": {
               backgroundColor: theme.vars.palette.muted.main, // shadcn ghost: hover:bg-muted
               color: theme.vars.palette.text.primary, // shadcn ghost: hover:text-foreground
+            },
+            // shadcn ghost: aria-expanded:bg-muted aria-expanded:text-foreground - see the
+            // outlined variant's note above.
+            "&[aria-expanded='true']": {
+              backgroundColor: theme.vars.palette.muted.main,
+              color: theme.vars.palette.text.primary,
             },
             "&.Mui-disabled": {
               color: theme.vars.palette.text.primary,
@@ -2374,6 +2406,30 @@ export const shadcnTheme = createTheme({
     //   p-1 reserve - content height measured at exactly items.length * 28px, no slack).
     // -----------------------------------------------------------------------
     MuiMenu: {
+      defaultProps: {
+        // shadcn's DropdownMenuContent is `side="bottom" align="start" sideOffset={4}`: the panel's
+        // top-left sits 4px below the trigger's bottom-left. MUI's Menu instead defaults to
+        // top-left-on-top-left, overlapping the trigger entirely.
+        //
+        // The 4px gap rides on `transformOrigin.vertical: -4` rather than a margin, because
+        // Popover writes `top`/`left` as inline styles and computes them as
+        // `anchorTop + getOffsetTop(anchorRect, anchorVertical) - getOffsetTop(elemRect,
+        // transformVertical)` - a negative transform origin is a documented numeric offset there
+        // (Popover.js's own getOffsetTop), and it is the same technique the Select pair's own
+        // MenuProps already uses for its item-aligned overlap.
+        //
+        // Safe for Select: SelectInput passes its own anchorOrigin/transformOrigin through
+        // MenuProps, and explicit props outrank theme defaults.
+        anchorOrigin: { vertical: "bottom", horizontal: "left" },
+        transformOrigin: { vertical: -4, horizontal: "left" },
+        // Radix's own collision avoidance keeps 0px of viewport padding
+        // (@radix-ui/react-popper's `collisionPadding = 0`), where MUI's Popover reserves 16px and
+        // nudges the panel up to respect it. With the trigger anywhere near the bottom of the
+        // viewport the two therefore disagree - measured on menu-open, whose panel ended 987px
+        // down a 1000px viewport: Radix left the 4px gap alone, MUI shifted the panel up 3px to
+        // clear its own threshold. Matched to Radix's number.
+        marginThreshold: 0,
+      },
       styleOverrides: {
         paper: ({ theme }) => ({
           borderRadius: RADIUS, // shadcn: rounded-lg
@@ -2393,13 +2449,25 @@ export const shadcnTheme = createTheme({
           // global MuiPaper, per this project's own scoping convention).
           backgroundImage: "none",
           color: theme.vars.palette.popover.contrastText, // shadcn: text-popover-foreground
-          minWidth: "9rem", // shadcn: min-w-36 (the gallery's MenuProps overrides MUI's own trigger-width-tied inline `style.minWidth` so this intrinsic value actually takes effect - see gallery banner)
-          padding: 0,
           boxShadow: [
             `0 0 0 1px color-mix(in oklab, ${theme.vars.palette.text.primary} 10%, transparent)`, // shadcn: ring-1 ring-foreground/10
             "0 4px 6px -1px rgba(0, 0, 0, 0.1)", // shadcn: shadow-md (literal, not oklch-derived - measured verbatim)
             "0 2px 4px -2px rgba(0, 0, 0, 0.1)", // shadcn: shadow-md
           ].join(", "),
+          // MUI reuses ONE Menu for two shadcn components with different boxes, so the values they
+          // disagree on are split by the role MUI puts on the list inside: `listbox` for a
+          // Select's popup, `menu` for a standalone Menu. Everything above is common to both
+          // recipes. See the DropdownMenu banner below for the dropdown's own ground truth.
+          "&:has([role='listbox'])": {
+            minWidth: "9rem", // shadcn: SelectContent's min-w-36 (the gallery's MenuProps overrides MUI's own trigger-width-tied inline `style.minWidth` so this intrinsic value actually takes effect - see gallery banner)
+            padding: 0, // shadcn: no p-1 reserve at rest - see banner above
+          },
+          "&:has([role='menu'])": {
+            minWidth: "8rem", // shadcn: DropdownMenuContent's min-w-32
+            padding: "0.25rem", // shadcn: DropdownMenuContent's p-1
+            overflowX: "hidden", // shadcn: overflow-x-hidden
+            overflowY: "auto", // shadcn: overflow-y-auto
+          },
         }),
         list: {
           padding: 0, // shadcn: no p-1 reserve at rest - see banner above
@@ -2424,7 +2492,15 @@ export const shadcnTheme = createTheme({
           outline: "none", // shadcn: outline-hidden
           borderRadius: `calc(${RADIUS} * 0.8)`, // shadcn: rounded-md
           minHeight: 0, // kills MUI's own ~48px default gutters-driven min-height
-          padding: "0.25rem 2rem 0.25rem 0.375rem", // shadcn: py-1 pr-8 pl-1.5
+          // Padding is the one value the two shadcn recipes disagree on, split by the role MUI
+          // gives the item - `option` inside a Select, `menuitem` inside a Menu. SelectItem
+          // reserves a wide right gutter for its check glyph; DropdownMenuItem is symmetric.
+          "&[role='option']": {
+            padding: "0.25rem 2rem 0.25rem 0.375rem", // shadcn: SelectItem's py-1 pr-8 pl-1.5
+          },
+          "&[role='menuitem']": {
+            padding: "0.25rem 0.375rem", // shadcn: DropdownMenuItem's py-1 px-1.5
+          },
           fontSize: "0.875rem", // shadcn: text-sm
           lineHeight: "1.25rem", // shadcn: text-sm's paired line-height
           color: "inherit", // shadcn: no unconditional text color class - inherits text-popover-foreground from the Menu paper above

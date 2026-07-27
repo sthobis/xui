@@ -25,6 +25,7 @@ import { tabsSection } from "./tabs"
 import { accordionSection } from "./accordion"
 import { tableSection } from "./table"
 import { listSection } from "./list"
+import { menuSection } from "./menu"
 
 export const sections: Section[] = [
   buttonSection,
@@ -53,4 +54,5 @@ export const sections: Section[] = [
   accordionSection,
   tableSection,
   listSection,
+  menuSection,
 ]
