@@ -91,6 +91,47 @@ test.describe("animates", () => {
   })
 })
 
+test.describe("no ripple", () => {
+  // Not a per-pair opt-in: shadcn has no ripple anywhere, so this sweeps EVERY MUI ButtonBase in
+  // the gallery at once. The pixel harness cannot cover it - a ripple only exists mid-interaction
+  // and is gone by the time a frozen frame is captured - and the theme's defence is partly an
+  // enumeration of components that resolve their own `disableRipple` default, which is exactly the
+  // kind of list that rots as components are added.
+  //
+  // GOTCHA - simply counting `.MuiTouchRipple-root` in the DOM proves nothing. ButtonBase mounts
+  // the ripple container lazily (`ripple.shouldMount`, flipped inside the pointer handlers), so a
+  // freshly loaded page has zero of them whether or not the ripple is disabled. Every button has
+  // to be pressed first. Verified to catch a regression by removing the theme's
+  // `disableTouchRipple`/`focusRipple` defaults: one press then mounted a visible ripple.
+  test("no MUI ButtonBase paints a ripple when pressed", async ({ page }) => {
+    const bases = page.locator(".MuiButtonBase-root")
+    const count = await bases.count()
+    expect(count, "no MUI ButtonBase instances found in the gallery").toBeGreaterThan(0)
+
+    const offenders: string[] = []
+    for (let i = 0; i < count; i++) {
+      const base = bases.nth(i)
+      await base.scrollIntoViewIfNeeded()
+      const box = await base.boundingBox()
+      if (!box) continue // disabled/hidden instances have no box and cannot be pressed
+      await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+      await page.mouse.down()
+      const painted = await base.evaluate((el) => {
+        const ripple = el.querySelector(":scope > .MuiTouchRipple-root")
+        if (!ripple) return null
+        return getComputedStyle(ripple).display
+      })
+      await page.mouse.up()
+      if (painted !== null && painted !== "none") {
+        const label = await base.evaluate((el) => `${el.className} :: ${el.textContent?.trim() ?? ""}`)
+        offenders.push(`${label} -> ripple display: ${painted}`)
+      }
+    }
+    await page.mouse.move(0, 0)
+    expect(offenders, `these MUI components painted a ripple on press:\n${offenders.join("\n")}`).toEqual([])
+  })
+})
+
 test.describe("hover-opens", () => {
   test("each tagged pair's overlay opens on hover alone, no click", async ({ page }) => {
     const pairs = (await discover(page)).filter((p) => p.behaviors.includes("hover-opens"))

@@ -49,6 +49,17 @@ declare module "@mui/material/styles" {
     ring?: string
     dividerChannel?: string
   }
+  // TouchRipple is a real themeable slot at runtime (ButtonBase/TouchRipple.js declares
+  // `name: 'MuiTouchRipple', slot: 'Root'`) but MUI omits it from the public `Components` map,
+  // so declaring it here is what lets the ripple backstop below typecheck.
+  interface ComponentNameToClassKey {
+    MuiTouchRipple: "root" | "ripple" | "rippleVisible" | "child" | "childLeaving"
+  }
+  interface Components {
+    MuiTouchRipple?: {
+      styleOverrides?: { root?: { display?: "none" } }
+    }
+  }
 }
 
 declare module "@mui/material/Button" {
@@ -411,9 +422,47 @@ export const shadcnTheme = createTheme({
     },
   },
   components: {
+    // -----------------------------------------------------------------------
+    // No ripple, anywhere
+    //
+    // shadcn has no ripple on any component, so the theme has to guarantee its absence rather
+    // than switch it off case by case. That takes three layers, because MUI gives the ripple
+    // three different ways back in:
+    //
+    //  1. `MuiButtonBase.defaultProps` covers every component that simply forwards the prop.
+    //  2. Components that resolve their OWN `disableRipple = false` before forwarding it never see
+    //     that default, so each has to restate it: Checkbox, Radio, Switch, ToggleButton (each
+    //     with its own GOTCHA note below) and ButtonGroup, which additionally publishes its
+    //     resolved value through ButtonGroupContext - and Button reads context at HIGHER priority
+    //     than theme defaults ("props priority: inProps > contextProps > themeDefaultProps",
+    //     Button.js), so a group would otherwise hand the ripple back to all of its children.
+    //  3. MuiTouchRipple's own styleOverrides, as the backstop. Layers 1 and 2 are an enumeration,
+    //     and an enumeration is only correct until the next component or MUI version - anything
+    //     that resolves its default somewhere this file has not anticipated (Fab, SpeedDial,
+    //     Autocomplete's clear button, the pickers, @mui/lab) would ripple silently, in an app
+    //     where no gallery pair is watching. Hiding the ripple container means no ripple can
+    //     paint even when a prop slips through. It is deliberately not a substitute for the
+    //     defaultProps above: those stop the ripple from mounting and animating at all.
+    // -----------------------------------------------------------------------
     MuiButtonBase: {
       defaultProps: {
         disableRipple: true, // shadcn has no ripple
+        disableTouchRipple: true, // ...including the press ripple on touch
+        focusRipple: false, // ...and the keyboard-focus pulse (MUI's own default, restated so it cannot drift)
+      },
+    },
+    MuiTouchRipple: {
+      styleOverrides: {
+        root: {
+          display: "none", // backstop - see the "No ripple, anywhere" banner above
+        },
+      },
+    },
+    MuiButtonGroup: {
+      defaultProps: {
+        disableRipple: true, // see layer 2 in the "No ripple, anywhere" banner above - a group
+        // otherwise pushes `disableRipple: false` onto every child Button through its context,
+        // which outranks MuiButtonBase's default.
       },
     },
     // -----------------------------------------------------------------------
