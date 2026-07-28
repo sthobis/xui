@@ -4838,6 +4838,89 @@ export const shadcnTheme = createTheme({
     },
     // -----------------------------------------------------------------------
 
+    // -----------------------------------------------------------------------
+    // Autocomplete -> shadcn Combobox (closed control only)
+    //
+    // Ground truth: apps/showcase/src/components/ui/combobox.tsx, which is built ON InputGroup.
+    // ComboboxInput is an InputGroup holding the control plus an `inline-end` InputGroupAddon with
+    // an icon-xs ghost trigger, so this SHOULD have come free from the InputAdornment work above.
+    // It did not, because Autocomplete re-specifies the box it sits in. Measured against the
+    // untouched twin, four things had to be put back: the control's padding (9px, plus 30px of
+    // reserved room for indicators it pulls out of flow), the input's own padding (7.5px 4px 7.5px
+    // 5px), the indicator's size (a full 32px IconButton where shadcn uses the 24px icon-xs), and
+    // the icon itself (a filled triangle at stroke-width 1 against lucide's chevron at 2).
+    //
+    // Only the CLOSED control is themed. The popup (ComboboxContent/List/Item) has no pair yet, so
+    // none of it ships - it needs a check indicator MUI's Autocomplete does not render at all, and
+    // a panel 28px WIDER than its anchor, since ComboboxContent's min-width wins over its width.
+    // Chips, groups, the group label and the empty state have no pair either.
+    MuiAutocomplete: {
+      defaultProps: {
+        // shadcn: ComboboxTrigger renders lucide's ChevronDownIcon; MUI's own is a filled triangle.
+        // Supplied the same way MuiSelect's IconComponent is.
+        popupIcon: createElement(ChevronDown, { "aria-hidden": true }),
+      },
+      styleOverrides: {
+        // GOTCHA - the control's padding has to be reset from the ROOT slot, nested as deeply as
+        // MUI nests it. Autocomplete does not style the control through its `inputRoot`/`input`
+        // slots at all; it reaches down from its own root as
+        // `.MuiAutocomplete-root .MuiOutlinedInput-root .MuiAutocomplete-input`, and gates the
+        // reserved indicator room behind a further `.MuiAutocomplete-hasPopupIcon`. A plain slot
+        // override is one or two classes short and loses - measured: the control kept a 39px right
+        // padding and the input its 7.5px/5px while every other rule here applied. Matching the
+        // depth ties on specificity and wins on order, since theme overrides are emitted last.
+        root: {
+          "& .MuiOutlinedInput-root": {
+            padding: 0, // shadcn: InputGroup has no padding of its own - the addon provides the inset
+            "& .MuiAutocomplete-input": {
+              padding: "0.25rem 0.375rem 0.25rem 0.625rem", // shadcn: the InputGroupInput's py-1 px-2.5, tightened to pr-1.5 by the addon
+              height: "2rem", // shadcn: the Input's own h-8
+              boxSizing: "border-box",
+            },
+          },
+          "&.MuiAutocomplete-hasPopupIcon .MuiOutlinedInput-root": {
+            paddingRight: 0, // shadcn reserves nothing: its addon is in flow and takes its own width
+          },
+        },
+        endAdornment: ({ theme }) => ({
+          position: "static", // shadcn: the addon is an ordinary flex child (MUI pulls it out of flow)
+          top: "auto",
+          right: "auto",
+          // GOTCHA - MUI centres the adornment with `top: 50%` AND `translate(0, -50%)`. Making it
+          // static renders the offsets inert but leaves the transform live, which is a silent 18px
+          // lift: every layout property matched across the two sides - same parent, same box, same
+          // align-items, offsetTop identical - and the icon still drew well above the field. Only
+          // reading `transform` directly showed it.
+          transform: "none",
+          // From here down this mirrors InputGroupAddon - see the MuiInputAdornment banner.
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: "0.5rem", // shadcn: gap-2
+          padding: "0.375rem 0.5rem 0.375rem 0", // shadcn: py-1.5 pr-2 on an inline-end addon
+          color: theme.vars.palette.text.secondary, // shadcn: text-muted-foreground, which the trigger inherits
+          "&:has(> button)": {
+            marginRight: "-0.3rem", // shadcn: has-[>button]:mr-[-0.3rem]
+          },
+        }),
+        popupIndicator: {
+          width: "1.5rem", // shadcn: InputGroupButton size="icon-xs" - size-6
+          height: "1.5rem",
+          padding: 0, // shadcn: p-0 (MUI uses 2px plus a -2px margin)
+          margin: 0,
+          borderRadius: `calc(${RADIUS} - 3px)`, // shadcn: rounded-[calc(var(--radius)-3px)]
+          "& > svg": {
+            width: "1rem", // shadcn: the ghost Button's own size-4
+            height: "1rem",
+          },
+        },
+        popupIndicatorOpen: {
+          transform: "none", // shadcn: the chevron never rotates open (MUI flips it 180deg)
+        },
+      },
+    },
+    // -----------------------------------------------------------------------
+
     // Per-component overrides are appended by later tasks, one banner each.
   },
 })
