@@ -2504,15 +2504,20 @@ export const shadcnTheme = createTheme({
           fontSize: "0.875rem", // shadcn: text-sm
           lineHeight: "1.25rem", // shadcn: text-sm's paired line-height
           color: "inherit", // shadcn: no unconditional text color class - inherits text-popover-foreground from the Menu paper above
-          // GOTCHA - MuiMenuItem/ButtonBase ships its OWN unthemed `&:hover { backgroundColor:
-          // action.hover }` rule regardless of disableRipple (confirmed live via
-          // document.styleSheets: a real Playwright hover painted a translucent grey overlay on
-          // whatever item the mouse geometrically sat over post-click, even with no `&:hover`
-          // rule of our own) - item.tsx has no `hover:` class at all, so this is neutralized
-          // back to transparent below, same "restate to kill MUI's own default" idiom already
-          // used throughout this file (e.g. MuiFilledInput's hover reset above).
+          // GOTCHA - hover and focus paint the SAME thing here, and reading only the class list
+          // says otherwise. Neither SelectItem nor DropdownMenuItem has a `hover:` class, which
+          // once led to hover being neutralized to transparent - leaving the themed menus with no
+          // pointer feedback at all. The class list is not the whole ground truth: Radix focuses
+          // the item under the pointer on pointermove (`event.currentTarget.focus({ preventScroll:
+          // true })` in both react-menu and react-select), so in the real component hovering an
+          // item IS what triggers `focus:bg-accent`. MUI's MenuItem does not move focus on hover
+          // and expresses the same affordance through `:hover`, so `:hover` gets the focus colours.
+          //
+          // MUI's own `&:hover { backgroundColor: action.hover }` default still has to be replaced
+          // rather than left alone - it paints a translucent grey overlay, not the accent fill.
           "&:hover": {
-            backgroundColor: "transparent",
+            backgroundColor: theme.vars.palette.accent.main, // shadcn: focus:bg-accent, reached by hovering
+            color: theme.vars.palette.accent.contrastText, // shadcn: focus:text-accent-foreground
           },
           // shadcn: focus:bg-accent focus:text-accent-foreground - a real CSS `:focus`
           // pseudo-class (NOT `focus-visible:`) - see the GOTCHA above for why this must be
@@ -2538,7 +2543,8 @@ export const shadcnTheme = createTheme({
           "&.Mui-selected": {
             backgroundColor: "transparent",
             "&:hover": {
-              backgroundColor: "transparent",
+              backgroundColor: theme.vars.palette.accent.main, // hovering a selected item highlights it too - see the hover GOTCHA above
+              color: theme.vars.palette.accent.contrastText,
             },
             "&:focus": {
               backgroundColor: theme.vars.palette.accent.main,

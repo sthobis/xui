@@ -233,7 +233,7 @@ export const selectSection: Section = {
     {
       id: "select-open",
       states: ["open", "anchored"],
-      behaviors: ["escape-closes"],
+      behaviors: ["escape-closes", "item-hover-highlights"],
       shadcn: (
         <Select defaultValue={SELECTED}>
           <SelectTrigger data-target style={{ width: TRIGGER_WIDTH }}>

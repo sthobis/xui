@@ -1,3 +1,4 @@
+import { useState } from "react"
 import MuiTabs from "@mui/material/Tabs"
 import MuiTab from "@mui/material/Tab"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -29,6 +30,25 @@ const panelStyle = {
   lineHeight: 1.25 / 0.875, // shadcn: text-sm line-height (calc(1.25/0.875))
   outline: "none",
 } as const
+
+// MUI's Tabs is controlled - with a `value` and no `onChange` the tabs render but do not respond to
+// clicks. shadcn's side is uncontrolled (`defaultValue`), so it switched while the twin sat inert.
+// The state lives here rather than in the theme because it is how any MUI app wires Tabs; the pair
+// still starts on "password" so every capture is unchanged.
+function MuiTabsDemo() {
+  const [value, setValue] = useState("password")
+  return (
+    <div style={tabsRootStyle}>
+      <MuiTabs value={value} onChange={(_, next: string) => setValue(next)}>
+        <MuiTab data-target value="account" label="Account" />
+        <MuiTab value="password" label="Password" />
+      </MuiTabs>
+      <div style={panelStyle}>
+        {value === "password" ? "Change your password here." : "Manage your account here."}
+      </div>
+    </div>
+  )
+}
 
 export const tabsSection: Section = {
   title: "Tabs",
@@ -67,20 +87,11 @@ export const tabsSection: Section = {
             </TabsTrigger>
             <TabsTrigger value="password">Password</TabsTrigger>
           </TabsList>
-          <TabsContent value="password">
-            Change your password here.
-          </TabsContent>
+          <TabsContent value="account">Manage your account here.</TabsContent>
+          <TabsContent value="password">Change your password here.</TabsContent>
         </Tabs>
       ),
-      mui: (
-        <div style={tabsRootStyle}>
-          <MuiTabs value="password">
-            <MuiTab data-target value="account" label="Account" />
-            <MuiTab value="password" label="Password" />
-          </MuiTabs>
-          <div style={panelStyle}>Change your password here.</div>
-        </div>
-      ),
+      mui: <MuiTabsDemo />,
     },
   ],
 }

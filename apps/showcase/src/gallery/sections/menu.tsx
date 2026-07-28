@@ -109,7 +109,7 @@ export const menuSection: Section = {
     {
       id: "menu-open",
       states: ["open", "anchored"],
-      behaviors: ["escape-closes"],
+      behaviors: ["escape-closes", "item-hover-highlights"],
       shadcn: (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

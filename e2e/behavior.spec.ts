@@ -142,6 +142,46 @@ test.describe("backdrop-matches", () => {
   })
 })
 
+test.describe("item-hover-highlights", () => {
+  // Hovering an item inside an open overlay is invisible to the pixel harness: its "open" state
+  // parks the mouse on the trigger and screenshots the panel, so no item is ever under the pointer.
+  // That let the themed menus ship with NO hover feedback at all - the class lists have no `hover:`
+  // rule, so hover had been neutralized, missing that Radix focuses the item under the pointer on
+  // pointermove and `focus:bg-accent` is what paints. This compares the hovered item's own
+  // background across the two sides, which is the thing that differed.
+  test("each tagged pair's overlay items highlight the same way on hover", async ({ page }) => {
+    const pairs = (await discover(page)).filter((p) => p.behaviors.includes("item-hover-highlights"))
+    expect(pairs.length, "no pairs tagged with the item-hover-highlights behavior").toBeGreaterThan(0)
+
+    for (const { id } of pairs) {
+      const row = page.locator(`[data-pair-id="${id}"]`)
+      await row.scrollIntoViewIfNeeded()
+      const measured: Record<string, string> = {}
+      for (const side of ["shadcn", "mui"] as const) {
+        const cell = row.locator(`[data-side="${side}"]`)
+        await cell.locator("[data-target]").first().click()
+        const overlay = openContentLocator(page, cell, id)
+        await expect(overlay).toBeVisible({ timeout: 5000 })
+        // The LAST item, so the result cannot be confused with whatever the overlay autofocuses.
+        const item = overlay.locator("[role='menuitem'], [role='option']").last()
+        await item.hover()
+        await page.waitForTimeout(200)
+        measured[side] = await item.evaluate((el) => getComputedStyle(el).backgroundColor)
+        await resetState(page)
+      }
+      expect(
+        measured.mui,
+        `${id}: hovering an item paints a different background on the two sides\n` +
+          `  shadcn: ${measured.shadcn}\n  mui:    ${measured.mui}`,
+      ).toBe(measured.shadcn)
+      expect(
+        measured.shadcn,
+        `${id}: hovering an item paints nothing on either side - the check proves nothing`,
+      ).not.toBe("rgba(0, 0, 0, 0)")
+    }
+  })
+})
+
 test.describe("no ripple", () => {
   // Not a per-pair opt-in: shadcn has no ripple anywhere, so this sweeps EVERY MUI ButtonBase in
   // the gallery at once. The pixel harness cannot cover it - a ripple only exists mid-interaction
