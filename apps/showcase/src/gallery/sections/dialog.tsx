@@ -86,7 +86,7 @@ export const dialogSection: Section = {
       // 240px apart by construction, making one side's union 577px wide and the other's 384px.
       // The diff then pads two differently-sized captures and reports ~42% of nothing.
       //
-      // The overlay is covered by the `backdrop-matches` behavior instead (e2e/behavior.spec.ts),
+      // The overlay is covered by the `overlay-matches` behavior instead (e2e/behavior.spec.ts),
       // which is the honest instrument for it: a full-viewport translucent, blurred layer sits over
       // whatever the page happens to show behind each cell, so diffing its pixels compares
       // different content on the two sides no matter how the capture is framed. What can be
@@ -94,7 +94,7 @@ export const dialogSection: Section = {
       // asserts.
       id: "dialog-open",
       states: ["open"],
-      behaviors: ["escape-closes", "backdrop-matches"],
+      behaviors: ["escape-closes", "overlay-matches"],
       shadcn: (
         <Dialog>
           <DialogTrigger asChild>

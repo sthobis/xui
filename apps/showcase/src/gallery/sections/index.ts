@@ -28,6 +28,7 @@ import { listSection } from "./list"
 import { menuSection } from "./menu"
 import { popoverSection } from "./popover"
 import { dialogSection } from "./dialog"
+import { drawerSection } from "./drawer"
 
 export const sections: Section[] = [
   buttonSection,
@@ -59,4 +60,5 @@ export const sections: Section[] = [
   menuSection,
   popoverSection,
   dialogSection,
+  drawerSection,
 ]

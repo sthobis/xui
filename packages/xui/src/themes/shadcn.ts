@@ -4615,7 +4615,12 @@ export const shadcnTheme = createTheme({
             // transcribe the mix rather than a pre-blended literal.
             backgroundColor: "color-mix(in oklab, black 10%, transparent)",
             backdropFilter: "blur(4px)", // shadcn: supports-backdrop-filter:backdrop-blur-xs (--blur-xs)
-            isolation: "isolate", // shadcn: isolate - see the banner above
+            // `isolate` belongs to DialogOverlay alone. SheetOverlay's class list is otherwise
+            // identical but carries no `isolate`, and MuiBackdrop is the twin of both, so this is
+            // scoped by the Modal flavour that owns it rather than applied to every scrim.
+            ".MuiDialog-root &": {
+              isolation: "isolate", // shadcn: DialogOverlay's isolate - see the banner above
+            },
           },
         },
       },
@@ -4660,6 +4665,57 @@ export const shadcnTheme = createTheme({
           lineHeight: "1.25rem", // shadcn: text-sm's paired line-height
           letterSpacing: "normal", // shadcn: no tracking class
           color: theme.vars.palette.text.secondary, // shadcn: text-muted-foreground
+        }),
+      },
+    },
+    // -----------------------------------------------------------------------
+
+    // -----------------------------------------------------------------------
+    // Drawer -> shadcn Sheet
+    //
+    // Ground truth: apps/showcase/src/components/ui/sheet.tsx.
+    //
+    // SheetOverlay is DialogOverlay minus `isolate` - handled in the MuiBackdrop block above.
+    //
+    // SheetContent at its default side="right": "fixed z-50 flex flex-col gap-4 bg-popover
+    // bg-clip-padding text-sm text-popover-foreground shadow-lg transition duration-200
+    // ease-in-out data-[side=right]:inset-y-0 data-[side=right]:right-0 data-[side=right]:h-full
+    // data-[side=right]:w-3/4 data-[side=right]:border-l data-[side=right]:sm:max-w-sm ..."
+    // -> MuiDrawer's paper. Only the right side is covered: no pair opens a top, bottom or left
+    // sheet, so none of those recipes is themed. The slide-in animation classes are Radix plumbing
+    // with no MUI counterpart and no pair.
+    //
+    // `shadow-lg` is Tailwind's own token (this app never redefines it): two literal black layers,
+    // NOT the ring-plus-shadow combination Popover and Menu use.
+    //
+    // MUI already gets two of these right for anchor="right" and they are not restated: the paper
+    // is `position: fixed; top: 0; height: 100%; display: flex; flex-direction: column`, and its
+    // `paperAnchorRight` variant already draws a left border from the divider token.
+    //
+    // SheetHeader/SheetFooter/SheetTitle/SheetDescription are composition slots, recreated as
+    // plain markup in drawer.tsx - the panel itself carries no padding, which is why the header's
+    // own p-4 is what insets the content.
+    MuiDrawer: {
+      styleOverrides: {
+        paper: ({ theme }) => ({
+          width: "min(75vw, 24rem)", // shadcn: w-3/4 with sm:max-w-sm
+          gap: "1rem", // shadcn: gap-4
+          backgroundColor: theme.vars.palette.popover.main, // shadcn: bg-popover
+          backgroundImage: "none", // kills MUI Paper's dark-mode elevation overlay - see the MuiMenu banner
+          backgroundClip: "padding-box", // shadcn: bg-clip-padding
+          color: theme.vars.palette.popover.contrastText, // shadcn: text-popover-foreground
+          fontSize: "0.875rem", // shadcn: text-sm
+          lineHeight: "1.25rem", // shadcn: text-sm's paired line-height
+          // shadcn: border-l. MUI gates its own anchorRight border on `variant !== 'temporary'`,
+          // so a modal drawer - the only kind with a Sheet twin - draws none at all. Stating just a
+          // colour therefore had nothing to colour; the whole border has to be declared. It is
+          // load-bearing beyond the line itself: the border widens the box, so without it every
+          // glyph inside sat a pixel off (0.40% of the panel, all of it in the leading 275px).
+          borderLeft: `1px solid ${theme.vars.palette.border}`,
+          boxShadow: [
+            "0 10px 15px -3px rgba(0, 0, 0, 0.1)", // shadcn: shadow-lg
+            "0 4px 6px -4px rgba(0, 0, 0, 0.1)", // shadcn: shadow-lg
+          ].join(", "),
         }),
       },
     },

@@ -95,20 +95,51 @@ test.describe("animates", () => {
 // Backdrop. These are the only two side-specific selectors in the harness, and they are here rather
 // than in the gallery because shadcn's DialogContent renders its overlay internally - a pair cannot
 // put a marker on it.
+/**
+ * Drops fully transparent layers from a computed `box-shadow` before comparing two of them.
+ *
+ * Tailwind builds its shadow utilities out of stacked custom properties, so anything using one
+ * carries placeholder layers for the slots it does NOT use - shadcn's dialog panel computes to four
+ * `rgba(0, 0, 0, 0) 0px 0px 0px 0px` entries around its single real ring. A zero-alpha layer paints
+ * nothing, so keeping them would fail the comparison on strings that render identically. Splitting
+ * respects parentheses, since every colour function in these values contains commas of its own.
+ */
+function significantShadowLayers(boxShadow: string): string[] {
+  const layers: string[] = []
+  let depth = 0
+  let current = ""
+  for (const ch of boxShadow) {
+    if (ch === "(") depth++
+    if (ch === ")") depth--
+    if (ch === "," && depth === 0) {
+      layers.push(current.trim())
+      current = ""
+      continue
+    }
+    current += ch
+  }
+  layers.push(current.trim())
+  return layers.filter((layer) => layer !== "none" && !/(,\s*0\s*\)|\/\s*0\s*\))/.test(layer))
+}
+
 const BACKDROP_SELECTOR = {
   shadcn: "[data-slot$='-overlay']",
   mui: ".MuiBackdrop-root:not(.MuiBackdrop-invisible)",
 } as const
 
-test.describe("backdrop-matches", () => {
-  // A full-viewport translucent, blurred scrim cannot be compared by pixels: it sits over whatever
-  // the page shows behind each cell, and the two cells are 240px apart, so the two captures are
-  // over different content by construction (see dialog.tsx's own note). What CAN be compared is the
-  // layer itself - the tint it paints, the blur it applies, and the box it covers - which is what
-  // the theme actually owns.
-  test("each tagged pair's scrim has the same tint, blur and box on both sides", async ({ page }) => {
-    const pairs = (await discover(page)).filter((p) => p.behaviors.includes("backdrop-matches"))
-    expect(pairs.length, "no pairs tagged with the backdrop-matches behavior").toBeGreaterThan(0)
+test.describe("overlay-matches", () => {
+  // Covers the two things a modal overlay paints that the pixel harness structurally cannot reach.
+  //
+  // The scrim, because it is a full-viewport translucent, blurred layer sitting over whatever the
+  // page shows behind each cell - and the two cells are 240px apart, so any framing compares
+  // different content (see dialog.tsx's own note).
+  //
+  // The panel's OUTER decoration, because the open state screenshots the panel element, and an
+  // element capture clips at its border box: a drop shadow or a ring falls outside it and is simply
+  // not in the picture. Sabotaging the drawer's shadow left the pair at 0.00% before this.
+  test("each tagged pair's scrim and panel chrome match on both sides", async ({ page }) => {
+    const pairs = (await discover(page)).filter((p) => p.behaviors.includes("overlay-matches"))
+    expect(pairs.length, "no pairs tagged with the overlay-matches behavior").toBeGreaterThan(0)
 
     for (const { id } of pairs) {
       const row = page.locator(`[data-pair-id="${id}"]`)
@@ -121,21 +152,33 @@ test.describe("backdrop-matches", () => {
         await expect(scrim, `${id} (${side}): no scrim appeared after opening`).toBeVisible({
           timeout: 5000,
         })
-        measured[side] = await scrim.evaluate((el) => {
-          const c = getComputedStyle(el)
-          const r = el.getBoundingClientRect()
-          return {
-            backgroundColor: c.backgroundColor,
-            backdropFilter: c.backdropFilter,
-            isolation: c.isolation,
-            box: `${Math.round(r.width)}x${Math.round(r.height)} @ ${Math.round(r.x)},${Math.round(r.y)}`,
-          }
+        const panel = openContentLocator(page, cell, id)
+        await expect(panel, `${id} (${side}): no panel appeared after opening`).toBeVisible({
+          timeout: 5000,
         })
+        measured[side] = {
+          scrim: await scrim.evaluate((el) => {
+            const c = getComputedStyle(el)
+            const r = el.getBoundingClientRect()
+            return {
+              backgroundColor: c.backgroundColor,
+              backdropFilter: c.backdropFilter,
+              isolation: c.isolation,
+              box: `${Math.round(r.width)}x${Math.round(r.height)} @ ${Math.round(r.x)},${Math.round(r.y)}`,
+            }
+          }),
+          panel: await panel
+            .evaluate((el) => {
+              const c = getComputedStyle(el)
+              return { boxShadow: c.boxShadow, border: c.border, borderRadius: c.borderRadius }
+            })
+            .then((p) => ({ ...p, boxShadow: significantShadowLayers(p.boxShadow) })),
+        }
         await resetState(page)
       }
       expect(
         measured.mui,
-        `${id}: the MUI scrim does not match the shadcn one\n` +
+        `${id}: the MUI overlay does not match the shadcn one\n` +
           `  shadcn: ${JSON.stringify(measured.shadcn)}\n  mui:    ${JSON.stringify(measured.mui)}`,
       ).toEqual(measured.shadcn)
     }
