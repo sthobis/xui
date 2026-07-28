@@ -4917,6 +4917,69 @@ export const shadcnTheme = createTheme({
         popupIndicatorOpen: {
           transform: "none", // shadcn: the chevron never rotates open (MUI flips it 180deg)
         },
+        paper: ({ theme }) => ({
+          borderRadius: RADIUS, // shadcn: rounded-lg
+          margin: 0, // shadcn: no margin - the gap comes from the positioner's sideOffset
+          overflow: "hidden", // shadcn: overflow-hidden (MUI scrolls the paper instead of the list)
+          backgroundColor: theme.vars.palette.popover.main, // shadcn: bg-popover
+          backgroundImage: "none", // kills MUI Paper's dark-mode elevation overlay - see the MuiMenu banner
+          color: theme.vars.palette.popover.contrastText, // shadcn: text-popover-foreground
+          fontSize: "0.875rem", // shadcn: text-sm, which the items inherit
+          lineHeight: "1.25rem",
+          boxShadow: [
+            `0 0 0 1px color-mix(in oklab, ${theme.vars.palette.text.primary} 10%, transparent)`, // shadcn: ring-1 ring-foreground/10
+            "0 4px 6px -1px rgba(0, 0, 0, 0.1)", // shadcn: shadow-md
+            "0 2px 4px -2px rgba(0, 0, 0, 0.1)", // shadcn: shadow-md
+          ].join(", "),
+        }),
+        // GOTCHA - the option styling lives HERE, nested under the listbox, rather than in the
+        // `option` slot. MUI writes it as `.MuiAutocomplete-listbox .MuiAutocomplete-option`, with
+        // its state rules a class deeper still, so a plain `option` override is one class short and
+        // loses. Measured with the styles in that slot: font size, gap and radius applied while the
+        // padding and the selected background silently kept MUI's own. Same trap as the control's
+        // padding above, and the reason both are written at MUI's own depth.
+        listbox: ({ theme }) => ({
+          padding: "0.25rem", // shadcn: ComboboxList's p-1 (MUI uses 8px 0)
+          maxHeight: "none", // shadcn caps by the space actually available, not MUI's fixed 40vh
+          "& .MuiAutocomplete-option": {
+            position: "relative", // shadcn: relative (anchors the check indicator)
+            minHeight: 0, // shadcn: no min-height (MUI reserves 48px)
+            gap: "0.5rem", // shadcn: gap-2
+            borderRadius: `calc(${RADIUS} * 0.8)`, // shadcn: rounded-md
+            padding: "0.25rem 2rem 0.25rem 0.375rem", // shadcn: py-1 pr-8 pl-1.5
+            fontSize: "0.875rem", // shadcn: text-sm
+            lineHeight: "1.25rem",
+            cursor: "default", // shadcn: cursor-default (MUI uses pointer)
+            userSelect: "none", // shadcn: select-none
+            // shadcn: data-highlighted:bg-accent data-highlighted:text-accent-foreground. MUI marks
+            // the highlighted option `.Mui-focused`; hover gets the same fill for the reason the
+            // MuiMenuItem hover GOTCHA sets out.
+            "&.Mui-focused, &:hover": {
+              backgroundColor: theme.vars.palette.accent.main,
+              color: theme.vars.palette.accent.contrastText,
+            },
+            '&[aria-selected="true"]': {
+              backgroundColor: "transparent", // shadcn: a selected item carries no persistent tint, only the check
+              "&.Mui-focused, &:hover": {
+                backgroundColor: theme.vars.palette.accent.main,
+                color: theme.vars.palette.accent.contrastText,
+              },
+            },
+            // The gallery hand-renders a lucide Check tagged `data-slot="combobox-item-check"`, the
+            // same arrangement select.tsx uses - MUI's Autocomplete marks the selected option with
+            // a background and never draws a glyph. Colour is deliberately unset: lucide strokes
+            // with currentColor, so it follows the option's own colour exactly as shadcn's does.
+            "& [data-slot='combobox-item-check']": {
+              position: "absolute",
+              right: "0.5rem", // shadcn: the indicator span's absolute right-2
+              top: "50%",
+              transform: "translateY(-50%)",
+              width: "1rem", // shadcn: size-4
+              height: "1rem",
+              pointerEvents: "none", // shadcn: pointer-events-none
+            },
+          },
+        }),
       },
     },
     // -----------------------------------------------------------------------

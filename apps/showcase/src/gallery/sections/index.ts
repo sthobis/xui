@@ -40,6 +40,7 @@ export const sections: Section[] = [
   radioSection,
   switchSection,
   selectSection,
+  autocompleteSection,
   sliderSection,
   avatarSection,
   dividerSection,
@@ -64,5 +65,4 @@ export const sections: Section[] = [
   dialogSection,
   drawerSection,
   inputGroupSection,
-  autocompleteSection,
 ]
