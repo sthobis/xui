@@ -4514,6 +4514,151 @@ export const shadcnTheme = createTheme({
     },
     // -----------------------------------------------------------------------
 
+    // -----------------------------------------------------------------------
+    // Popover
+    //
+    // Ground truth: apps/showcase/src/components/ui/popover.tsx. PopoverContent is
+    // "z-50 flex w-72 origin-(--radix-popover-content-transform-origin) flex-col gap-2.5
+    // rounded-lg bg-popover p-2.5 text-sm text-popover-foreground shadow-md ring-1
+    // ring-foreground/10 outline-hidden duration-100 ..." at align="center" sideOffset={4}.
+    // The enter/exit animation classes and the transform-origin custom property are Radix
+    // plumbing with no MUI counterpart and no pair, and are not themed.
+    //
+    // PopoverHeader/PopoverTitle/PopoverDescription are shadcn composition slots, restated as
+    // plain markup on the gallery's MUI side (see popover.tsx) rather than themed.
+    //
+    // GOTCHA - every override here is scoped away from Menu. MUI's Menu is built ON Popover
+    // (MenuRoot is `styled(Popover)`, MenuPaper is `styled(PopoverPaper)`), so an unscoped
+    // `MuiPopover.paper` rule also restyles every Menu and every Select dropdown in the theme -
+    // the same shared-internals trap MuiList hit. `.MuiMenu-paper` is the class MUI puts on the
+    // Menu-flavoured paper, which is what tells the two apart.
+    MuiPopover: {
+      defaultProps: {
+        // shadcn: align="center" sideOffset={4} - the panel is centred on the trigger and sits 4px
+        // below it. MUI's Popover defaults to top-left-on-top-left, i.e. over the trigger. The
+        // negative transformOrigin is Popover's own documented numeric-offset form (see the
+        // MuiMenu banner for the arithmetic).
+        //
+        // Safe for Menu: Menu passes its own anchorOrigin/transformOrigin explicitly, and explicit
+        // props outrank theme defaults.
+        anchorOrigin: { vertical: "bottom", horizontal: "center" },
+        transformOrigin: { vertical: -4, horizontal: "center" },
+        marginThreshold: 0, // Radix's own collisionPadding default - see the MuiMenu banner
+      },
+      styleOverrides: {
+        paper: ({ theme }) => ({
+          "&:not(.MuiMenu-paper)": {
+            display: "flex", // shadcn: flex
+            flexDirection: "column", // shadcn: flex-col
+            gap: "0.625rem", // shadcn: gap-2.5
+            width: "18rem", // shadcn: w-72
+            maxWidth: "none", // MUI's Paper has no cap of its own here, but Popover's paper can inherit one - stated so w-72 is exact
+            padding: "0.625rem", // shadcn: p-2.5
+            borderRadius: RADIUS, // shadcn: rounded-lg
+            backgroundColor: theme.vars.palette.popover.main, // shadcn: bg-popover
+            backgroundImage: "none", // kills MUI Paper's dark-mode elevation overlay - see the MuiMenu banner for the full diagnosis
+            color: theme.vars.palette.popover.contrastText, // shadcn: text-popover-foreground
+            fontSize: "0.875rem", // shadcn: text-sm
+            lineHeight: "1.25rem", // shadcn: text-sm's paired line-height
+            outline: "none", // shadcn: outline-hidden
+            boxShadow: [
+              `0 0 0 1px color-mix(in oklab, ${theme.vars.palette.text.primary} 10%, transparent)`, // shadcn: ring-1 ring-foreground/10
+              "0 4px 6px -1px rgba(0, 0, 0, 0.1)", // shadcn: shadow-md
+              "0 2px 4px -2px rgba(0, 0, 0, 0.1)", // shadcn: shadow-md
+            ].join(", "),
+          },
+        }),
+      },
+    },
+    // -----------------------------------------------------------------------
+
+    // -----------------------------------------------------------------------
+    // Dialog / Backdrop / DialogTitle / DialogContentText
+    //
+    // Ground truth: apps/showcase/src/components/ui/dialog.tsx.
+    //
+    // DialogOverlay: "fixed inset-0 isolate z-50 bg-black/10 duration-100
+    //   supports-backdrop-filter:backdrop-blur-xs ..." -> MuiBackdrop. `--blur-xs` is 4px
+    //   (Tailwind's own theme.css). `isolate` is transcribed because it is load-bearing next to a
+    //   backdrop-filter, not decoration: it decides which layers the blur samples.
+    // DialogContent: "fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)]
+    //   -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl bg-popover p-4 text-sm
+    //   text-popover-foreground ring-1 ring-foreground/10 duration-100 outline-none sm:max-w-sm"
+    //   -> MuiDialog's paper. Note there is NO shadow-md here, unlike Popover and Menu: a dialog
+    //   gets the 1px ring only.
+    // DialogTitle: "font-heading text-base leading-none font-medium" - `--font-heading` resolves to
+    //   `var(--font-sans)` in the installed app (index.css), so it is the same family already set
+    //   globally and needs no restatement.
+    // DialogDescription: "text-sm text-muted-foreground ..." (the `*:[a]` link rules have no pair).
+    // DialogHeader/DialogFooter are composition slots, recreated as plain markup in dialog.tsx.
+    // `rounded-xl` is `calc(var(--radius) * 1.4)` in this app's own scale (index.css), NOT
+    // Tailwind's stock 0.75rem - the radius scale here is multiplicative throughout.
+    //
+    // GOTCHA - the Backdrop rule is scoped away from `.MuiBackdrop-invisible`. Popover (and
+    // therefore Menu and Select) renders an INVISIBLE backdrop to catch click-away; MUI expresses
+    // that as a variant on the same styled component, and a theme's `root` override lands after
+    // MUI's own variants - so an unscoped background here would paint a visible dim behind every
+    // dropdown in the theme.
+    MuiBackdrop: {
+      styleOverrides: {
+        root: {
+          "&:not(.MuiBackdrop-invisible)": {
+            // shadcn: bg-black/10. Tailwind compiles a `/NN` alpha to a color-mix, so the computed
+            // value is `oklab(0 0 0 / 0.1)`, not `rgba(0,0,0,0.1)` - the two paint the same but the
+            // backdrop-matches check compares computed values, and this file's convention is to
+            // transcribe the mix rather than a pre-blended literal.
+            backgroundColor: "color-mix(in oklab, black 10%, transparent)",
+            backdropFilter: "blur(4px)", // shadcn: supports-backdrop-filter:backdrop-blur-xs (--blur-xs)
+            isolation: "isolate", // shadcn: isolate - see the banner above
+          },
+        },
+      },
+    },
+    MuiDialog: {
+      styleOverrides: {
+        paper: ({ theme }) => ({
+          display: "grid", // shadcn: grid (MUI's scroll="paper" default makes this a flex column)
+          gap: "1rem", // shadcn: gap-4
+          margin: 0, // shadcn: no margin - the viewport inset lives in max-width instead (MUI adds 32px)
+          width: "100%", // shadcn: w-full
+          maxWidth: "min(calc(100% - 2rem), 24rem)", // shadcn: max-w-[calc(100%-2rem)] with sm:max-w-sm
+          maxHeight: "none", // shadcn: no height cap (MUI's scroll="paper" default caps at calc(100% - 64px))
+          padding: "1rem", // shadcn: p-4
+          borderRadius: `calc(${RADIUS} * 1.4)`, // shadcn: rounded-xl
+          backgroundColor: theme.vars.palette.popover.main, // shadcn: bg-popover
+          backgroundImage: "none", // kills MUI Paper's dark-mode elevation overlay - see the MuiMenu banner
+          color: theme.vars.palette.popover.contrastText, // shadcn: text-popover-foreground
+          fontSize: "0.875rem", // shadcn: text-sm
+          lineHeight: "1.25rem", // shadcn: text-sm's paired line-height
+          // shadcn: ring-1 ring-foreground/10, and nothing else - a dialog has no drop shadow
+          boxShadow: `0 0 0 1px color-mix(in oklab, ${theme.vars.palette.text.primary} 10%, transparent)`,
+        }),
+      },
+    },
+    MuiDialogTitle: {
+      styleOverrides: {
+        root: {
+          padding: 0, // shadcn: no padding of its own - the panel's p-4 and gap-4 do the spacing (MUI adds 16px 24px)
+          fontSize: "1rem", // shadcn: text-base
+          fontWeight: 500, // shadcn: font-medium
+          lineHeight: 1, // shadcn: leading-none
+          letterSpacing: "normal", // shadcn: no tracking class (MUI's h6 variant adds 0.0075em)
+        },
+      },
+    },
+    MuiDialogContentText: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          margin: 0, // shadcn: no margin (MUI's own default adds 12px below)
+          fontSize: "0.875rem", // shadcn: text-sm
+          lineHeight: "1.25rem", // shadcn: text-sm's paired line-height
+          letterSpacing: "normal", // shadcn: no tracking class
+          color: theme.vars.palette.text.secondary, // shadcn: text-muted-foreground
+        }),
+      },
+    },
+    // -----------------------------------------------------------------------
+
     // Per-component overrides are appended by later tasks, one banner each.
   },
 })

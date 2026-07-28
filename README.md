@@ -84,9 +84,9 @@ The scope is `@mui/material` core; MUI X (DataGrid, Date Pickers, Tree View) is 
 ### Tier 2 - overlays and navigation
 
 - [x] Menu
-- [ ] Dialog
+- [x] Dialog
 - [ ] Drawer (shadcn Sheet)
-- [ ] Popover
+- [x] Popover
 - [ ] Snackbar
 - [x] Accordion
 - [x] Tabs

@@ -26,6 +26,8 @@ import { accordionSection } from "./accordion"
 import { tableSection } from "./table"
 import { listSection } from "./list"
 import { menuSection } from "./menu"
+import { popoverSection } from "./popover"
+import { dialogSection } from "./dialog"
 
 export const sections: Section[] = [
   buttonSection,
@@ -55,4 +57,6 @@ export const sections: Section[] = [
   tableSection,
   listSection,
   menuSection,
+  popoverSection,
+  dialogSection,
 ]

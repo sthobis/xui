@@ -91,6 +91,57 @@ test.describe("animates", () => {
   })
 })
 
+// The scrim behind a modal overlay, per side. shadcn marks its own with a data-slot; MUI's is a
+// Backdrop. These are the only two side-specific selectors in the harness, and they are here rather
+// than in the gallery because shadcn's DialogContent renders its overlay internally - a pair cannot
+// put a marker on it.
+const BACKDROP_SELECTOR = {
+  shadcn: "[data-slot$='-overlay']",
+  mui: ".MuiBackdrop-root:not(.MuiBackdrop-invisible)",
+} as const
+
+test.describe("backdrop-matches", () => {
+  // A full-viewport translucent, blurred scrim cannot be compared by pixels: it sits over whatever
+  // the page shows behind each cell, and the two cells are 240px apart, so the two captures are
+  // over different content by construction (see dialog.tsx's own note). What CAN be compared is the
+  // layer itself - the tint it paints, the blur it applies, and the box it covers - which is what
+  // the theme actually owns.
+  test("each tagged pair's scrim has the same tint, blur and box on both sides", async ({ page }) => {
+    const pairs = (await discover(page)).filter((p) => p.behaviors.includes("backdrop-matches"))
+    expect(pairs.length, "no pairs tagged with the backdrop-matches behavior").toBeGreaterThan(0)
+
+    for (const { id } of pairs) {
+      const row = page.locator(`[data-pair-id="${id}"]`)
+      await row.scrollIntoViewIfNeeded()
+      const measured: Record<string, unknown> = {}
+      for (const side of ["shadcn", "mui"] as const) {
+        const cell = row.locator(`[data-side="${side}"]`)
+        await cell.locator("[data-target]").first().click()
+        const scrim = page.locator(BACKDROP_SELECTOR[side]).first()
+        await expect(scrim, `${id} (${side}): no scrim appeared after opening`).toBeVisible({
+          timeout: 5000,
+        })
+        measured[side] = await scrim.evaluate((el) => {
+          const c = getComputedStyle(el)
+          const r = el.getBoundingClientRect()
+          return {
+            backgroundColor: c.backgroundColor,
+            backdropFilter: c.backdropFilter,
+            isolation: c.isolation,
+            box: `${Math.round(r.width)}x${Math.round(r.height)} @ ${Math.round(r.x)},${Math.round(r.y)}`,
+          }
+        })
+        await resetState(page)
+      }
+      expect(
+        measured.mui,
+        `${id}: the MUI scrim does not match the shadcn one\n` +
+          `  shadcn: ${JSON.stringify(measured.shadcn)}\n  mui:    ${JSON.stringify(measured.mui)}`,
+      ).toEqual(measured.shadcn)
+    }
+  })
+})
+
 test.describe("no ripple", () => {
   // Not a per-pair opt-in: shadcn has no ripple anywhere, so this sweeps EVERY MUI ButtonBase in
   // the gallery at once. The pixel harness cannot cover it - a ripple only exists mid-interaction
