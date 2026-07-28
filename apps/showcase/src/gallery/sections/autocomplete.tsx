@@ -24,8 +24,10 @@ const wrapStyle = { width: WRAP_WIDTH } as const
 // which still reserves its width - so without this the two addons are different sizes before any
 // styling is involved.
 //
-// `readOnly` likewise mirrors the shadcn side: the pair is comparing a combobox at rest, and a
-// typeable MUI input would put a caret in one capture and not the other.
+// Both sides are fully typeable, and both hold their own value. An earlier version pinned `value`
+// and set `readOnly` on each side to keep the captures still; that made the showcase's comboboxes
+// dead to the keyboard, and it was never needed - Playwright hides the text caret in screenshots by
+// default (`caret: "hide"`), so a focused, editable input captures exactly like a read-only one.
 function renderMuiInput(params: Parameters<
   NonNullable<React.ComponentProps<typeof MuiAutocomplete<string, false, true, false>>["renderInput"]>
 >[0]) {
@@ -34,7 +36,7 @@ function renderMuiInput(params: Parameters<
       {...params}
       slotProps={{
         ...params.slotProps,
-        htmlInput: { ...params.slotProps.htmlInput, "data-target": true, readOnly: true },
+        htmlInput: { ...params.slotProps.htmlInput, "data-target": true },
       }}
     />
   )
@@ -86,11 +88,11 @@ function ShadcnComboboxOpenDemo() {
   return (
     <Combobox
       items={OPTIONS}
-      value={VALUE}
+      defaultValue={VALUE}
       open={open}
       onOpenChange={(next) => (next ? onOpen() : onClose())}
     >
-      <ComboboxInput data-target readOnly onClick={onOpen} />
+      <ComboboxInput data-target onClick={onOpen} />
       <ComboboxContent data-portal-target="autocomplete-open">
         <ComboboxList>
           {OPTIONS.map((option) => (
@@ -114,7 +116,7 @@ function MuiAutocompleteOpenDemo() {
       // of configuration match as disableClearable above, not a styling workaround.
       selectOnFocus={false}
       options={OPTIONS}
-      value={VALUE}
+      defaultValue={VALUE}
       open={open}
       onOpen={onOpen}
       onClose={onClose}
@@ -144,8 +146,8 @@ export const autocompleteSection: Section = {
       states: ["default", "focus"],
       shadcn: (
         <div style={wrapStyle}>
-          <Combobox items={OPTIONS} value={VALUE}>
-            <ComboboxInput data-target readOnly />
+          <Combobox items={OPTIONS} defaultValue={VALUE}>
+            <ComboboxInput data-target />
           </Combobox>
         </div>
       ),
@@ -153,8 +155,9 @@ export const autocompleteSection: Section = {
         <div style={wrapStyle}>
           <MuiAutocomplete
             disableClearable
+            selectOnFocus={false}
             options={OPTIONS}
-            value={VALUE}
+            defaultValue={VALUE}
             renderInput={renderMuiInput}
           />
         </div>
