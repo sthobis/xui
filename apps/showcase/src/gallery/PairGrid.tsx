@@ -1,6 +1,7 @@
 import type { CSSProperties } from "react"
 import type { Pair, Section } from "./types"
 import { GallerySidebar, SIDEBAR_WIDTH, sectionId } from "./Sidebar"
+import { ThemePanel, THEME_PANEL_WIDTH } from "./ThemePanel"
 
 const cellStyle: CSSProperties = {
   display: "flex",
@@ -9,6 +10,12 @@ const cellStyle: CSSProperties = {
   padding: 24,
   minWidth: 240,
   minHeight: 88,
+  // A cell must never resize to fit the column. index.html lays out two cells per row and pure.html
+  // only one, so a shrinkable cell ends up a different width on the two pages the moment a row
+  // stops fitting - and preflight compares the same MUI cell across both. That is exactly what
+  // happened when the theme panel narrowed the column: every typography pair reported ~13% against
+  // itself. Pinning shrink to 0 makes a cell's width depend only on its own content.
+  flexShrink: 0,
 }
 
 const labelStyle: CSSProperties = {
@@ -62,13 +69,21 @@ export function renderSections(sections: Section[], sides: Array<"shadcn" | "mui
   return (
     <>
       <GallerySidebar sections={sections} />
-      {/* marginLeft (not a flex row) keeps the content column's own box independent of the fixed
-          sidebar, so cell widths stay exactly what they were before the sidebar existed. */}
-      <main style={{ marginLeft: SIDEBAR_WIDTH, maxWidth: 1100, padding: 32 }}>
+      {/* Margins (not a flex row) keep the content column's own box independent of the two fixed
+          rails, so cell widths stay predictable regardless of what the rails do. */}
+      <main
+        style={{
+          marginLeft: SIDEBAR_WIDTH,
+          marginRight: THEME_PANEL_WIDTH,
+          maxWidth: 1100,
+          padding: 32,
+        }}
+      >
         {sections.map((s) => (
           <SectionBlock key={s.title} section={s} sides={sides} />
         ))}
       </main>
+      <ThemePanel />
     </>
   )
 }
