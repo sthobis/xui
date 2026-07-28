@@ -68,6 +68,16 @@ declare module "@mui/material/Button" {
   }
 }
 
+declare module "@mui/material/IconButton" {
+  // shadcn's icon button comes in four sizes and MUI ships three. `icon`, `icon-sm` and `icon-lg`
+  // map onto medium/small/large; `icon-xs` - the 24px square the InputGroup and Combobox clear
+  // controls are built from - has nowhere left to go, so the theme adds it as a real size rather
+  // than asking every call site to restate the dimensions.
+  interface IconButtonPropsSizeOverrides {
+    xsmall: true
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Design tokens - transcribed from shadcn ground truth. Generated file wins.
 // ---------------------------------------------------------------------------
@@ -823,7 +833,13 @@ export const shadcnTheme = createTheme({
           backgroundColor: "transparent", // shadcn ghost: no base bg class
           backgroundClip: "padding-box", // shadcn: bg-clip-padding
           boxSizing: "border-box",
-          color: theme.vars.palette.text.primary, // shadcn ghost: ambient foreground (MUI defaults to action.active)
+          // shadcn's ghost Button sets no text colour at all - it INHERITS, and only names a colour
+          // on hover. Pinning this to the foreground token looked identical for a standalone icon
+          // button, where the ambient colour IS the foreground, but it was wrong the moment one sat
+          // somewhere with a colour of its own: inside an input addon (text-muted-foreground) the
+          // shadcn icon went grey and the themed twin stayed black. Stating `inherit` is what the
+          // ground truth actually says. MUI's own default here is action.active.
+          color: "inherit",
           fontSize: "0.875rem", // shadcn: text-sm (base class; icon sizes carry no font-size override) - MUI IconButton otherwise sets 24/18/28px by size
           boxShadow: SHADOW_XS, // shadcn: no shadow on any button state
           transition: "all 150ms cubic-bezier(0.4, 0, 0.2, 1)", // shadcn: transition-all
@@ -871,6 +887,21 @@ export const shadcnTheme = createTheme({
             width: "2.25rem", // shadcn: icon-lg size-9
             height: "2.25rem",
             // radius/svg unchanged from default - icon-lg has no rounded/svg override
+          },
+        },
+        {
+          // shadcn has a FOURTH icon size that MUI does not: `icon-xs`, the 24px square the
+          // InputGroup and Combobox clear controls are built from (input-group.tsx's
+          // inputGroupButtonVariants). It is added as a real size here rather than left to call
+          // sites to restate - see the IconButtonPropsSizeOverrides augmentation at the top of this
+          // file. Its radius is SUBTRACTIVE, an arbitrary value in the class rather than a step on
+          // this app's multiplicative radius scale, so it is transcribed literally.
+          props: { size: "xsmall" },
+          style: {
+            width: "1.5rem", // shadcn: size-6
+            height: "1.5rem",
+            padding: 0, // shadcn: p-0
+            borderRadius: `calc(${RADIUS} - 3px)`, // shadcn: rounded-[calc(var(--radius)-3px)]
           },
         },
       ],
@@ -4717,6 +4748,92 @@ export const shadcnTheme = createTheme({
             "0 4px 6px -4px rgba(0, 0, 0, 0.1)", // shadcn: shadow-lg
           ].join(", "),
         }),
+      },
+    },
+    // -----------------------------------------------------------------------
+
+    // -----------------------------------------------------------------------
+    // InputAdornment -> shadcn InputGroupAddon (and IconButton's added `xsmall` size)
+    //
+    // Ground truth: apps/showcase/src/components/ui/input-group.tsx.
+    //
+    // InputGroup's own box needs nothing new: "relative flex h-8 w-full min-w-0 items-center
+    // rounded-lg border border-input transition-colors dark:bg-input/30" plus its focus ring and
+    // disabled treatment is the same recipe shadcn's Input uses, which the outlined input root
+    // above already carries. Its `has-[>textarea]:h-auto` / block-align / aria-invalid branches
+    // have no pair and are not themed.
+    //
+    // InputGroupAddon (align inline-start, the default): "flex h-auto cursor-text items-center
+    // justify-center gap-2 py-1.5 text-sm font-medium text-muted-foreground select-none
+    // [&>svg:not([class*='size-'])]:size-4" plus "order-first pl-2 has-[>button]:ml-[-0.3rem]";
+    // inline-end swaps to "order-last pr-2 has-[>button]:mr-[-0.3rem]".
+    //
+    // InputGroupButton at size="icon-xs": "size-6 rounded-[calc(var(--radius)-3px)] p-0" over the
+    // ghost Button. Note the radius is SUBTRACTIVE - an arbitrary value in the class, not a step on
+    // this app's multiplicative radius scale - so it is transcribed literally.
+    //
+    // GOTCHA - the negative margin is not decoration. A button sitting in an addon is pulled back
+    // 0.3rem so its ghost hit area overhangs the addon's own padding, which is what keeps the icon
+    // optically centred against the group's edge. MUI instead gives InputAdornment a flat 8px
+    // margin on the side facing the input, and a `height: 0.01em` hack that has to be undone.
+    MuiInputAdornment: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          height: "auto", // shadcn: h-auto (MUI uses a 0.01em/2em max-height hack to centre itself)
+          maxHeight: "none",
+          alignItems: "center", // shadcn: items-center
+          justifyContent: "center", // shadcn: justify-center
+          gap: "0.5rem", // shadcn: gap-2
+          margin: 0, // shadcn: no margin - the padding below does the spacing (MUI adds 8px)
+          padding: "0.375rem 0", // shadcn: py-1.5
+          fontSize: "0.875rem", // shadcn: text-sm
+          fontWeight: 500, // shadcn: font-medium
+          color: theme.vars.palette.text.secondary, // shadcn: text-muted-foreground
+          lineHeight: "1.25rem", // shadcn: text-sm's paired line-height (MUI inherits body1's 23px here)
+          userSelect: "none", // shadcn: select-none
+          cursor: "text", // shadcn: cursor-text
+          // GOTCHA - MUI puts an invisible `<span class="notranslate">` inside every adornment (a
+          // zero-width space, a Safari workaround). It has no shadcn counterpart and it is not
+          // harmless here: as a flex item it takes a share of this element's `gap`, pushing the
+          // real content 8px right, and its 23px line box made the adornment taller than the
+          // control that holds it (measured 32x35 against the twin's 24x28).
+          "& > .notranslate": {
+            display: "none",
+          },
+          "& > svg": {
+            width: "1rem", // shadcn: [&>svg:not([class*='size-'])]:size-4
+            height: "1rem",
+          },
+        }),
+        positionStart: {
+          paddingLeft: "0.5rem", // shadcn: pl-2
+          "&:has(> button)": {
+            marginLeft: "-0.3rem", // shadcn: has-[>button]:ml-[-0.3rem] - see the GOTCHA above
+          },
+        },
+        positionEnd: {
+          paddingRight: "0.5rem", // shadcn: pr-2
+          "&:has(> button)": {
+            marginRight: "-0.3rem", // shadcn: has-[>button]:mr-[-0.3rem] - see the GOTCHA above
+          },
+        },
+      },
+    },
+    // An adornment also changes the CONTROL's padding on the side it sits: shadcn tightens the
+    // input to pl-1.5/pr-1.5 there, since the addon's own padding already provides the inset
+    // (input-group.tsx's `has-[>[data-align=inline-start]]:[&>input]:pl-1.5`). MUI leaves the
+    // input's full px-2.5 in place, which pushed the text 4px further in. Scoped by the classes MUI
+    // puts on the root when an adornment is present, so a plain input is untouched.
+    MuiInputBase: {
+      styleOverrides: {
+        root: {
+          "&.MuiInputBase-adornedStart .MuiInputBase-input": {
+            paddingLeft: "0.375rem", // shadcn: pl-1.5
+          },
+          "&.MuiInputBase-adornedEnd .MuiInputBase-input": {
+            paddingRight: "0.375rem", // shadcn: pr-1.5
+          },
+        },
       },
     },
     // -----------------------------------------------------------------------

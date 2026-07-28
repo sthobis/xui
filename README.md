@@ -97,6 +97,7 @@ The scope is `@mui/material` core; MUI X (DataGrid, Date Pickers, Tree View) is 
 - [ ] AppBar / Toolbar
 - [x] ButtonGroup
 - [x] ToggleButton / ToggleButtonGroup
+- [x] InputGroup (MUI InputAdornment)
 - [ ] Autocomplete (shadcn Combobox)
 
 ### Tier 3 - long tail and components with no direct shadcn equivalent
