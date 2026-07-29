@@ -12,6 +12,16 @@ export interface DiffResult {
    * (a rasterization artifact, delta of exactly 1). See thresholds.ts's maxDeltaOverrides.
    */
   maxChannelDelta: number
+  /**
+   * The two captures' pixel dimensions. Equal sizes are the normal case and the only one a
+   * percentage can describe honestly: `pad()` below grows the smaller capture to the union with
+   * TRANSPARENT pixels, so a size difference turns into "some fraction of the cell differs"
+   * rather than "these are not the same shape". That dilution is how a real geometry bug reads as
+   * a small percentage - sonner's toast captured 2 device px taller than MUI's and scored 6.27%,
+   * a number indistinguishable from a font-rendering wobble. Callers should treat a size
+   * difference as its own failure and never let a threshold absorb it.
+   */
+  sizes: { shadcn: { width: number; height: number }; mui: { width: number; height: number } }
   diff: PNG
 }
 
@@ -54,6 +64,10 @@ export function diffPngs(aBuf: Buffer, bBuf: Buffer, pixelThreshold = 0): DiffRe
     totalPixels,
     mismatchPct: (mismatchedPixels / totalPixels) * 100,
     maxChannelDelta,
+    sizes: {
+      shadcn: { width: a.width, height: a.height },
+      mui: { width: b.width, height: b.height },
+    },
     diff,
   }
 }

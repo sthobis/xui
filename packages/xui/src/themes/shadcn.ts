@@ -3842,6 +3842,11 @@ export const shadcnTheme = createTheme({
       styleOverrides: {
         root: ({ theme }) => ({
           fontSize: "0.875rem", // shadcn Button: text-sm
+          // Tailwind's text-sm sets a line-height as well as a size, and leaving it off let MUI's
+          // body2 default (1.43) stand: 14 * 1.43 = 20.016px against shadcn's flat 20px. Every box
+          // in the pair still measured identical, so the pixel diff saw only a 0.016px vertical
+          // shift of the label and icon - 257 stray pixels reported as a passing 0.23%.
+          lineHeight: "1.25rem", // shadcn: text-sm's paired line-height
           fontWeight: 500, // shadcn Button: font-medium
           borderRadius: RADIUS, // shadcn Button: rounded-lg (icon/default sizes carry no radius override)
           color: theme.vars.palette.text.primary, // shadcn Button ghost: ambient foreground (no color class)

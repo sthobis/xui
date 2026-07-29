@@ -16,6 +16,28 @@ const DEFAULT_THRESHOLD = 0.5
 // fixable cause for two suites running. Prefer finding it.
 const overrides: Record<string, number> = {}
 
+// KNOWN GAP - the default above is looser than the evidence supports, and this is deliberate
+// rather than settled.
+//
+// The report now prints the RAW mismatched-pixel count next to the percentage, because "0.00" is
+// rounded and was hiding the difference between an exact match and hundreds of stray pixels.
+// Running the suite with this default temporarily set to 0 shows ~24 rows (light) and ~31 (dark)
+// that pass today while differing by 1-275 pixels. Most are single-digit counts at small deltas,
+// but a few carry per-channel deltas of 150-245, which is a whole-pixel shift of a glyph or a
+// stroke, not antialiasing:
+//     pagination-basic default   257px  Δ245      textfield-multiline default  81px  Δ153
+//     autocomplete-open  open     16px  Δ235      togglegroup-basic   default   9px  Δ235
+// That class is exactly what this threshold is meant to catch, and at 0.5% it does not: the
+// pagination line-height bug fixed alongside this comment measured 0.23%, comfortably passing.
+//
+// Two of the three noise sources that used to justify a loose default are now gone - captures of
+// unequal size fail outright (see parity.spec.ts) and inline cells are snapped onto the pixel grid
+// before capture (see snapToPixelGrid), which alone took breadcrumb-basic from 283 stray pixels to
+// 0 and pagination-basic from 469 to 257. Tightening the default is the right next step, but it
+// needs each remaining residual diagnosed first and given either a fix or its own proven rule.
+// Lowering the number before then would just convert this into a wall of unexplained exceptions,
+// which is the failure mode the note above is about.
+
 // A pair listed here is judged by the LARGEST per-channel difference it produces rather than by
 // how many pixels differ (DiffResult.maxChannelDelta), and its percentage threshold is ignored.
 // Use this - not a bigger percentage - when a residual is provably an 8-bit rounding artifact:

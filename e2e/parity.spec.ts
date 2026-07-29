@@ -8,6 +8,7 @@ import {
   normalizeOverlayPosition,
   openContentLocator,
   resetState,
+  snapToPixelGrid,
   type PairState,
 } from "./lib/states"
 import { maxDeltaFor, thresholdFor } from "./thresholds"
@@ -17,6 +18,7 @@ const rows: Array<{
   pair: string
   state: string
   pct: number
+  px: number
   delta: number
   rule: string
 }> = []
@@ -53,6 +55,10 @@ async function captureState(page: Page, cell: Locator, state: PairState, pairId:
   // whose every computed style matched). Rounding both origin and size makes the capture
   // deterministic and phase-consistent, the same reasoning anchoredClip already uses, without
   // mutating the DOM. A genuine size difference still shows: the rounded sizes would differ too.
+  // Snap the cell onto whole pixels FIRST, so both sides rasterize at the same sub-pixel phase.
+  // Rounding the clip below only moves the crop; it cannot fix where the content inside it landed.
+  // See snapToPixelGrid's banner for the measurements that made this necessary.
+  await snapToPixelGrid(cell)
   const box = await cell.boundingBox()
   if (!box) throw new Error(`cell for ${pairId} (${state}) has no bounding box`)
   return page.screenshot({
@@ -127,12 +133,23 @@ test("all pairs match within threshold", async ({ page }, testInfo) => {
       // are always reported so a delta-judged pair's pixel count stays visible.
       const maxDelta = maxDeltaFor(id, state)
       const threshold = thresholdFor(id, state)
+      // A size difference is its own failure and is NEVER judged by a threshold. diffPngs pads the
+      // smaller capture to the union with transparent pixels, so two differently-shaped captures
+      // produce a percentage - and a percentage cannot distinguish "one side is a pixel taller"
+      // from "a glyph rendered slightly differently". Both sides render the same component at the
+      // same size in the same browser, so unequal captures always mean a real geometry difference
+      // (or a capture bug); either way the number underneath is meaningless and the run should say
+      // so in those terms rather than quoting a mismatch percentage.
+      const { shadcn: sizeA, mui: sizeB } = result.sizes
+      const sizeMismatch = sizeA.width !== sizeB.width || sizeA.height !== sizeB.height
       const failed =
-        maxDelta === undefined ? result.mismatchPct > threshold : result.maxChannelDelta > maxDelta
+        sizeMismatch ||
+        (maxDelta === undefined ? result.mismatchPct > threshold : result.maxChannelDelta > maxDelta)
       rows.push({
         pair: id,
         state,
         pct: result.mismatchPct,
+        px: result.mismatchedPixels,
         delta: result.maxChannelDelta,
         rule: maxDelta === undefined ? `≤ ${threshold}%` : `Δ ≤ ${maxDelta}`,
       })
@@ -143,9 +160,11 @@ test("all pairs match within threshold", async ({ page }, testInfo) => {
         writeFileSync(`${RESULTS_DIR}/diffs/${slug}-mui.png`, muiShot)
         writeFileSync(`${RESULTS_DIR}/diffs/${slug}-diff.png`, PNG.sync.write(result.diff))
         failures.push(
-          maxDelta === undefined
-            ? `${slug}: ${result.mismatchPct.toFixed(2)}% > ${threshold}%`
-            : `${slug}: max channel delta ${result.maxChannelDelta} > ${maxDelta} (${result.mismatchPct.toFixed(2)}% of pixels)`,
+          sizeMismatch
+            ? `${slug}: captures are different sizes - shadcn ${sizeA.width}x${sizeA.height}, mui ${sizeB.width}x${sizeB.height}. The two sides do not render the same geometry; the mismatch % below is padding noise, not a colour difference.`
+            : maxDelta === undefined
+              ? `${slug}: ${result.mismatchPct.toFixed(2)}% (${result.mismatchedPixels}px) > ${threshold}%`
+              : `${slug}: max channel delta ${result.maxChannelDelta} > ${maxDelta} (${result.mismatchedPixels}px, ${result.mismatchPct.toFixed(2)}%)`,
         )
       }
     }
@@ -154,11 +173,14 @@ test("all pairs match within threshold", async ({ page }, testInfo) => {
   const report = [
     `# Parity report (${testInfo.project.name})`,
     "",
-    "| pair | state | mismatch % | max Δ | rule |",
-    "| --- | --- | --- | --- | --- |",
+    // Raw mismatched-pixel count sits next to the percentage on purpose: "0.00" is a rounded
+    // number and hides the difference between an exact match and a handful of stray pixels, which
+    // is exactly the resolution needed to tell a real residual from a clean pair.
+    "| pair | state | mismatch % | px | max Δ | rule |",
+    "| --- | --- | --- | --- | --- | --- |",
     ...rows
       .sort((a, b) => b.pct - a.pct)
-      .map((r) => `| ${r.pair} | ${r.state} | ${r.pct.toFixed(2)} | ${r.delta} | ${r.rule} |`),
+      .map((r) => `| ${r.pair} | ${r.state} | ${r.pct.toFixed(2)} | ${r.px} | ${r.delta} | ${r.rule} |`),
   ].join("\n")
   const reportName = filtered
     ? `report-${testInfo.project.name}.filtered.md`

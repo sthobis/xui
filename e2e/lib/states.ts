@@ -129,6 +129,50 @@ export async function normalizeOverlayPosition(target: Locator): Promise<void> {
 }
 
 /**
+ * Snaps an INLINE cell's rendered top-left onto whole CSS pixels, the same measurement-only nudge
+ * normalizeOverlayPosition applies to portalled overlays, for the same reason - and, it turns out,
+ * against a much larger source of noise.
+ *
+ * The two cells of a pair sit side by side, so their absolute page positions are unrelated: the
+ * shadcn cell always starts at x=252, while the MUI cell starts wherever the shadcn cell's
+ * content-sized width happens to end. Measured, that lands on a fraction for any pair whose
+ * content is not a whole number of pixels wide - pagination-basic at x=571.672, breadcrumb-basic
+ * at 550.156, checkbox-with-label at 511.453 - so the same glyphs rasterize at a different
+ * sub-pixel phase on each side. Rounding the screenshot CLIP (which captureState already did)
+ * does not help: it moves the crop, not the content inside it, so the phase difference survives.
+ *
+ * That was the single biggest residual in the suite. pagination-basic reported 469 differing
+ * pixels at a per-channel delta of 245 - a number that looks like a serious colour bug and was
+ * really just every letter landing two thirds of a pixel over. Pairs that happened to line up
+ * (togglegroup-basic, avatar-fallback, both at phase 0) were already clean.
+ *
+ * Undone by resetState via `clearPixelSnap`, because unlike an overlay - which is destroyed when
+ * it closes - a cell lives for the whole run, and a leftover transform would follow it into every
+ * later state and measurement.
+ */
+export async function snapToPixelGrid(target: Locator): Promise<void> {
+  await target.evaluate((el) => {
+    const node = el as HTMLElement
+    const rect = node.getBoundingClientRect()
+    const dx = Math.round(rect.left) - rect.left
+    const dy = Math.round(rect.top) - rect.top
+    if (dx === 0 && dy === 0) return
+    node.style.setProperty("transform", `translate(${dx}px, ${dy}px)`, "important")
+    node.setAttribute("data-pixel-snapped", "")
+  })
+}
+
+/** Removes every nudge snapToPixelGrid left behind. Called from resetState. */
+export async function clearPixelSnap(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    for (const el of document.querySelectorAll("[data-pixel-snapped]")) {
+      ;(el as HTMLElement).style.removeProperty("transform")
+      el.removeAttribute("data-pixel-snapped")
+    }
+  })
+}
+
+/**
  * Computes the page-viewport rectangle that contains BOTH a pair's trigger (`[data-target]`) and
  * its currently-open overlay, for the "anchored" state's page-level clip screenshot
  * (e2e/parity.spec.ts). This is what makes anchor distance/placement provable: capturing the
@@ -181,6 +225,7 @@ export async function resetState(page: Page): Promise<void> {
   await page.mouse.up()
   await page.mouse.move(0, 0)
   await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur())
+  await clearPixelSnap(page)
   await page.keyboard.press("Escape")
   await expect(page.locator(OPEN_CONTENT_SELECTOR)).toHaveCount(0, { timeout: 5000 })
   await page.waitForTimeout(300)
