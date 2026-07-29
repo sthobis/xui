@@ -4984,6 +4984,90 @@ export const shadcnTheme = createTheme({
     },
     // -----------------------------------------------------------------------
 
+    // ---- Snackbar (shadcn Sonner) ----
+    //
+    // PROVENANCE WARNING - this is the ONE block whose values do not come from `components/ui/`.
+    //
+    // shadcn's `sonner.tsx` is a wrapper around the third-party `sonner` package. All it
+    // contributes visually is four CSS variables and a `cn-toast` class that is not defined
+    // anywhere:
+    //     style={{ "--normal-bg": "var(--popover)", "--normal-text": "var(--popover-foreground)",
+    //              "--normal-border": "var(--border)", "--border-radius": "var(--radius)" }}
+    // Everything else a toast looks like lives in sonner's own injected stylesheet:
+    //     [data-sonner-toaster] { width: var(--width); font-family: ui-sans-serif,system-ui,... }
+    //     [data-sonner-toast][data-styled=true] {
+    //       padding:16px; background:var(--normal-bg); border:1px solid var(--normal-border);
+    //       color:var(--normal-text); border-radius:var(--border-radius);
+    //       box-shadow:0 4px 12px rgba(0,0,0,.1); width:var(--width); font-size:13px;
+    //       display:flex; align-items:center; gap:6px }
+    //     [data-sonner-toast][data-styled=true] [data-content] { display:flex;
+    //       flex-direction:column; gap:2px }
+    //     [data-sonner-toast][data-styled=true] [data-title] { font-weight:500; line-height:1.5 }
+    // with `--width: 356px` written inline onto the toaster by sonner itself (TOAST_WIDTH).
+    //
+    // Four of those are sonner's aesthetics rather than shadcn's design language, and they are
+    // transcribed EXACTLY rather than "corrected" onto shadcn tokens: the system-ui font stack
+    // (so a real shadcn toast is not in Geist, unlike every other shadcn component), the 13px
+    // font size (off shadcn's 12/14/16 scale), and the 0 4px 12px rgba(0,0,0,.1) shadow (not
+    // shadcn's shadow-lg). Aligning them to shadcn tokens would look tidier and would stop
+    // matching what a shadcn user actually sees. Ground truth wins, including when it is
+    // inconsistent.
+    //
+    // Verified against the live rendered toast in both schemes, which is the only place these
+    // resolve: light bg oklch(1 0 0) / border oklch(0.922 0 0) / text oklch(0.145 0 0), dark
+    // bg oklch(0.205 0 0) / border oklch(1 0 0 / 0.1) / text oklch(0.985 0 0) - exactly the
+    // popover and border tokens, so both schemes come from one definition below.
+    //
+    // SCOPE: single-line message. sonner splits its body into [data-title] and [data-description]
+    // inside a [data-content] column; MUI's SnackbarContent has one opaque `message` slot with no
+    // counterpart for either, so only the title-only toast is expressible in idiomatic MUI. With
+    // a title alone, [data-content] collapses to the title box and `message` maps onto it exactly
+    // - which is why `message` below carries BOTH the content column and the title's weight.
+    MuiSnackbarContent: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          // sonner writes --width: 356px (TOAST_WIDTH) inline onto the toaster and the toast reads
+          // it. MUI's own `min-width: 288px` is left in place rather than restated: it is smaller
+          // than this width, so it can never bind, and measured it does not (both sides report a
+          // 356px box). Restating it would be a declaration that changes nothing.
+          //
+          // DESKTOP ONLY. Below 600px sonner switches the toast to
+          // `width: calc(100% - var(--mobile-offset-left) * 2)`, which this does not reproduce -
+          // no gallery pair renders at that width, so per AGENTS.md it does not ship. A consumer
+          // narrower than 356px will see the toast overflow where a real sonner toast would go
+          // fluid; adding the media query needs a pair that can prove it.
+          width: "22.25rem", // sonner: --width / TOAST_WIDTH = 356px
+          padding: "1rem", // sonner: padding:16px
+          backgroundColor: theme.vars.palette.popover.main, // shadcn: --normal-bg = var(--popover)
+          backgroundImage: "none", // kills MUI Paper's dark-mode elevation overlay - see the MuiMenu banner
+          color: theme.vars.palette.popover.contrastText, // shadcn: --normal-text
+          border: `1px solid ${theme.vars.palette.border}`, // shadcn: --normal-border = var(--border)
+          borderRadius: "0.625rem", // shadcn: --border-radius = var(--radius)
+          boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)", // sonner: box-shadow (NOT shadcn's shadow-lg)
+          display: "flex",
+          alignItems: "center",
+          gap: "0.375rem", // sonner: gap:6px
+          // sonner's own stack, inherited from [data-sonner-toaster]. Deliberately not Geist -
+          // see the provenance warning above.
+          fontFamily:
+            "ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica Neue, Arial, Noto Sans, sans-serif, Apple Color Emoji, Segoe UI Emoji, Segoe UI Symbol, Noto Color Emoji",
+          fontSize: "0.8125rem", // sonner: font-size:13px
+          lineHeight: 1.5, // sonner: [data-title] line-height:1.5 -> 19.5px at 13px
+          // sonner: overflow-wrap:anywhere on the toast root.
+          overflowWrap: "anywhere",
+        }),
+        message: {
+          padding: 0, // MUI ships `padding: 8px 0`; sonner's [data-content] has none
+          display: "flex", // sonner: [data-content] display:flex
+          flexDirection: "column", // sonner: [data-content] flex-direction:column
+          gap: "0.125rem", // sonner: [data-content] gap:2px
+          fontWeight: 500, // sonner: [data-title] font-weight:500
+          lineHeight: 1.5, // sonner: [data-title] line-height:1.5
+        },
+      },
+    },
+    // -----------------------------------------------------------------------
+
     // Per-component overrides are appended by later tasks, one banner each.
   },
 })

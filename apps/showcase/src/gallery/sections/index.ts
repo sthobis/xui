@@ -31,6 +31,7 @@ import { dialogSection } from "./dialog"
 import { drawerSection } from "./drawer"
 import { inputGroupSection } from "./input-group"
 import { autocompleteSection } from "./autocomplete"
+import { snackbarSection } from "./snackbar"
 
 export const sections: Section[] = [
   buttonSection,
@@ -65,4 +66,5 @@ export const sections: Section[] = [
   dialogSection,
   drawerSection,
   inputGroupSection,
+  snackbarSection,
 ]

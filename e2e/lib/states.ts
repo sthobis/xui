@@ -84,23 +84,45 @@ export async function applyState(page: Page, cell: Locator, state: PairState, pa
 export async function normalizeOverlayPosition(target: Locator): Promise<void> {
   await target.evaluate((el) => {
     const node = el as HTMLElement
-    const rect = node.getBoundingClientRect()
-    const dx = Math.round(rect.left) - rect.left
-    const dy = Math.round(rect.top) - rect.top
-    if (dx === 0 && dy === 0) return
     // Radix's tailwindcss-animate enter/exit classes leave a *finished* CSS Transition on
     // `transform` sitting on the node; a CSS Transition outranks a plain (non-!important) inline
     // style in the cascade, and - worse - setting `transform` while one is still wired up makes
     // the browser animate FROM the old value TOWARD ours over the transition's duration, so a
     // synchronous re-measure right after setting it would still observe the pre-nudge position.
-    // Kill the transition first (with a forced reflow so it actually commits before the transform
-    // write) and set the transform with `!important` so both the animation-cascade priority and
-    // the timing race are neutralized - the nudge then takes effect instantly and synchronously.
+    // Kill the transition first (with a forced reflow so it actually commits before anything else)
+    // and set the transform with `!important` so both the animation-cascade priority and the
+    // timing race are neutralized - the nudge then takes effect instantly and synchronously.
     node.style.setProperty("transition", "none", "important")
-    void node.offsetWidth // force reflow: commit transition:none before writing the transform
+    void node.offsetWidth // force reflow: commit transition:none before measuring or writing
+
+    // MEASURE AFTER killing the transition, never before. An overlay caught with a transform
+    // transition still in flight reports an interpolated position, so a dx/dy computed from it
+    // aims at where the element WAS rather than where it comes to rest - it lands off-integer and
+    // the capture clip rounds outward by an extra device pixel. Found on sonner's toast, which
+    // still had `matrix(1, 0, 0, 1, 0, 0.209426)` on it 400ms after opening: normalizing moved it
+    // to y=922.88 instead of 923, so its capture came out 110 device px tall against MUI's 108 and
+    // every glyph ghosted (6.27% mismatch on a pair whose every computed style already matched).
+    const rect = node.getBoundingClientRect()
+    const dx = Math.round(rect.left) - rect.left
+    const dy = Math.round(rect.top) - rect.top
+    if (dx === 0 && dy === 0) return
+
+    // Compose against the COMPUTED transform, not the inline one. Radix and MUI both write their
+    // overlay transform inline, so reading `node.style.transform` happened to work for them; a
+    // library that sets it from a stylesheet instead (sonner: `transform: var(--y)`) reports ""
+    // there, and the nudge then REPLACED that transform rather than adding to it - silently
+    // moving the element by the wrong amount. getComputedStyle returns a matrix that already
+    // includes whatever the stylesheet contributed, and `matrix(...) translate(dx, dy)` adds the
+    // nudge on top of it. dx/dy are measured from a rect that already reflects the base
+    // transform, so adding is the correct composition.
+    //
+    // Caveat, unexercised today: a base transform carrying a scale/rotate applies to the appended
+    // translate too, so the nudge would be scaled. Every overlay here rests at scale 1 by capture
+    // time (MUI's Grow settles to `transform: none`), and this only ever shifts by a sub-pixel
+    // remainder, so it cannot mask a real difference either way.
     // `transform: none` cannot be combined with a translate() in the same value list (`none` must
     // be the sole value), so treat "none"/unset the same as "no existing transform to preserve".
-    const existing = node.style.transform
+    const existing = getComputedStyle(node).transform
     const base = existing && existing !== "none" ? `${existing} ` : ""
     node.style.setProperty("transform", `${base}translate(${dx}px, ${dy}px)`, "important")
   })
