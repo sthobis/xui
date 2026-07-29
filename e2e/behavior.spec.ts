@@ -225,6 +225,62 @@ test.describe("item-hover-highlights", () => {
   })
 })
 
+test.describe("accepts input", () => {
+  // Swept rather than opted into per pair, like the ripple check: a control that renders perfectly
+  // and ignores the keyboard is invisible to the pixel harness, and the gallery's own wiring has
+  // been the weak point twice - the tabs pair held a controlled value with no change handler, and
+  // the autocomplete pair was pinned read-only on both sides. Both looked right in every capture.
+  //
+  // Anything genuinely disabled is skipped, since that IS the intended behavior. Everything else
+  // must take a keystroke on BOTH sides, which also catches one side being read-only while the
+  // other is not.
+  test("every editable control in the gallery takes a keystroke on both sides", async ({ page }, testInfo) => {
+    testInfo.setTimeout(120_000) // a sweep over every pair, two sides each
+    // Excludes the inputs that are not user-facing text controls. The aria-hidden/tabindex=-1 pair
+    // is what rules out MUI's `.MuiSelect-nativeInput`: a Select renders one to carry its value for
+    // form submission, and it is not typeable by design - without this it reported as a control
+    // that ignores input, which is true and irrelevant.
+    const EDITABLE =
+      "input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=hidden])" +
+      ':not([aria-hidden]):not([tabindex="-1"]), textarea'
+    const pairIds = await page.evaluate(() =>
+      Array.from(document.querySelectorAll("[data-pair-id]")).map((el) => el.getAttribute("data-pair-id")!),
+    )
+
+    const offenders: string[] = []
+    let checked = 0
+    for (const id of pairIds) {
+      const row = page.locator(`[data-pair-id="${id}"]`)
+      for (const side of ["shadcn", "mui"] as const) {
+        const control = row.locator(`[data-side="${side}"]`).locator(EDITABLE).first()
+        if ((await control.count()) === 0) continue
+        if (!(await control.isVisible())) continue
+        if (await control.isDisabled()) continue
+
+        await row.scrollIntoViewIfNeeded()
+        const before = await control.inputValue()
+        checked++
+        // `fill` rather than click-and-type: it needs no pointer, so it never opens an overlay that
+        // would then sit over the next control, and it probes both failure modes directly. A
+        // read-only control makes it throw; a control whose value is pinned with no change handler
+        // lets it write and then React puts the old value straight back.
+        try {
+          await control.fill(`${before}xy`, { timeout: 5000 })
+        } catch {
+          offenders.push(`${id} (${side}): not editable - fill was rejected`)
+          continue
+        }
+        if ((await control.inputValue()) === before) {
+          offenders.push(`${id} (${side}): value snapped back to "${before}" - no change handler?`)
+        }
+      }
+    }
+
+    expect(checked, "no editable controls found in the gallery").toBeGreaterThan(0)
+    expect(offenders, `these controls ignored typed input:\n${offenders.join("\n")}`).toEqual([])
+  })
+})
+
 test.describe("no ripple", () => {
   // Not a per-pair opt-in: shadcn has no ripple anywhere, so this sweeps EVERY MUI ButtonBase in
   // the gallery at once. The pixel harness cannot cover it - a ripple only exists mid-interaction
