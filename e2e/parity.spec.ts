@@ -155,10 +155,16 @@ test("all pairs match within threshold", async ({ page }, testInfo) => {
       })
 
       const slug = `${testInfo.project.name}-${id}-${state}`
-      if (failed) {
+      // `PARITY_DUMP=1` writes the captures and diff for every pair the run touches, not just the
+      // failing ones. A pair that PASSES can still differ - that is the whole point of the raw
+      // pixel count in the report - and diagnosing one used to mean temporarily editing
+      // thresholds.ts to force a failure, which is both fiddly and easy to commit by accident.
+      if (failed || process.env.PARITY_DUMP) {
         writeFileSync(`${RESULTS_DIR}/diffs/${slug}-shadcn.png`, shadcnShot)
         writeFileSync(`${RESULTS_DIR}/diffs/${slug}-mui.png`, muiShot)
         writeFileSync(`${RESULTS_DIR}/diffs/${slug}-diff.png`, PNG.sync.write(result.diff))
+      }
+      if (failed) {
         failures.push(
           sizeMismatch
             ? `${slug}: captures are different sizes - shadcn ${sizeA.width}x${sizeA.height}, mui ${sizeB.width}x${sizeB.height}. The two sides do not render the same geometry; the mismatch % below is padding noise, not a colour difference.`

@@ -403,6 +403,28 @@ function textFieldInputStyle(theme: ThemeWithVars, ownerState: { multiline?: boo
           // base styles (`textarea { resize: vertical }`), which the installed shadcn
           // textarea inherits as an unstyled base element.
           resize: "vertical" as const,
+          // shadcn's min-h-16 sits on the textarea itself, because there the textarea IS the
+          // bordered box. MUI splits those apart - the border lives on the InputBase root and the
+          // textarea sits inside it - so the same minimum has to be restated here, less the 2px of
+          // border the root now owns, or the textarea does not fill the box.
+          //
+          // Without it, TextareaAutosize's inline `height` (36px for an empty field) leaves the
+          // textarea top-anchored in a 64px box, and `resize: vertical` above then draws the
+          // native resize grip 27px above where shadcn's sits. That was the whole of this pair's
+          // residual: 81 stray pixels in light, 138 in dark.
+          //
+          // min-height rather than height: min-height outranks the inline height when content is
+          // short, and loses to it once the content is taller than the minimum - so the box still
+          // grows as you type, exactly as shadcn's field-sizing-content does. Verified live: both
+          // sides go from 64px to 138px on the same six lines of text.
+          //
+          // Scoped off [aria-hidden] because MUI renders a SECOND, hidden textarea with these same
+          // classes and measures the content in it to compute that inline height. Applying a
+          // minimum to the measuring copy inflates what it reports, which pushed the visible box
+          // to 80px - the shadow has to keep its natural size.
+          "&:not([aria-hidden])": {
+            minHeight: "calc(4rem - 2px)", // shadcn textarea: min-h-16, less the root's border
+          },
         }
       : {
           padding: "0.25rem 0.625rem", // shadcn input: px-2.5 py-1
@@ -4012,6 +4034,14 @@ export const shadcnTheme = createTheme({
           // MUI's collapsing behavior is undone below to match.
           "& .MuiToggleButtonGroup-grouped": {
             margin: 0, // shadcn: no negative margin at nonzero spacing
+            // The other half of the same collapsing recipe, and it was missed: alongside the
+            // negative margin MUI gives every button after the first a 1px left border, so the two
+            // overlap into a single shared seam. Zeroing only the margin left the border behind on
+            // the middle and last buttons, where shadcn has no border at all at nonzero spacing.
+            // It is transparent, so nothing looked wrong - but it still takes a pixel out of the
+            // content box, which re-centred the label half a pixel right of shadcn's on every
+            // button but the first.
+            borderLeft: 0, // shadcn: no seam border at nonzero spacing
           },
           "& .MuiToggleButtonGroup-firstButton, & .MuiToggleButtonGroup-middleButton, & .MuiToggleButtonGroup-lastButton":
             {
