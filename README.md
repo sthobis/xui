@@ -50,7 +50,12 @@ pnpm dev              # run the showcase (side-by-side comparison at /, MUI-only
 pnpm verify:parity    # pixel-compare every shadcn/MUI pair, light and dark
 pnpm verify           # parity plus the preflight independence check
 pnpm typecheck
+pnpm test:unit          # the compare-utility tests
+pnpm --filter xui build # emit dist/ for publishing (consumers get the built output; this repo uses src)
 ```
+
+`xui`'s `exports` deliberately point at TypeScript source so a theme edit shows up in the showcase and the parity harness without a build step; `publishConfig` swaps in `dist/` for consumers.
+The published package ships both, because copying `src/themes/shadcn.ts` into your own app is a supported way to use it.
 
 Contributor and agent guidance lives in [AGENTS.md](AGENTS.md).
 

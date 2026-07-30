@@ -1,15 +1,40 @@
 {
   "name": "xui",
-  "version": "0.0.0",
+  "version": "0.1.0",
+  "description": "Material UI v9 themes that make MUI components look pixel-for-pixel identical to another design system. The first theme replicates shadcn/ui.",
+  "keywords": [
+    "mui",
+    "material-ui",
+    "shadcn",
+    "shadcn-ui",
+    "theme",
+    "design-system"
+  ],
   "type": "module",
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "src",
+    "README.md"
+  ],
   "exports": {
     ".": {
       "types": "./src/index.ts",
       "default": "./src/index.ts"
     }
   },
+  "publishConfig": {
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
+    }
+  },
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "pnpm run build"
   },
   "peerDependencies": {
     "@emotion/react": "^11.5.0",
