@@ -5609,25 +5609,44 @@ export const shadcnTheme = createTheme({
     },
     // -----------------------------------------------------------------------
 
-    // ---- SpeedDial: deliberately NOT themed, and this note is the deliverable ----
+    // ---- SpeedDial (no shadcn twin) ----
     //
-    // A closed speed dial is a floating action button, and MuiFab above already gives it the shadcn
-    // surface - verified live: same 56px box, same bg-primary fill, same fully-round radius, same
-    // shadow-lg, same transparent border. Nothing further is needed for it to look right.
+    // PROVENANCE: composed. shadcn has no speed dial, and a CLOSED one is a floating action button,
+    // so the twin is fab.tsx's circular lifted Button and MuiFab above supplies the surface.
     //
-    // What was tried and abandoned: a pair asserting that a closed speed dial is pixel-identical to a
-    // bare FAB. It is not, and cannot be made so without fighting the component. MUI's root is
-    // block-level and centres its button in whatever width it is given, and its actions container
-    // reserves 48px above the button even while hidden, because that padding is what positions the
-    // action stack once open. Shrinking the box to its content moved the button horizontally into
-    // place and then left it overflowing its own box vertically; zeroing the reserved padding moved
-    // the box and not the button. Each fix produced a new symptom somewhere else, which is the shape
-    // of a wrong approach rather than a missing declaration.
+    // What needed fixing is the BOX, and it is a real defect rather than a parity technicality: MUI
+    // reserves room above the button for the actions even while they are hidden, so a closed speed
+    // dial measured 96x72 around a 56px button and sat 16px above where it was placed. A consumer
+    // pinning one to a corner gets it in the wrong corner.
     //
-    // So the open state gets no treatment either - a stack of smaller FABs with staggered transitions
-    // and per-action tooltips has no shadcn counterpart to be faithful to. A consumer who opens one
-    // sees themed FABs arranged by MUI. That is the honest outcome, and it is recorded here rather
-    // than papered over with a contrived twin that would have proved nothing beyond the Fab pair.
+    // The fix is to take the hidden actions OUT OF FLOW rather than to shrink them. Zeroing their
+    // padding was tried first and is worse than doing nothing: the container stays in the
+    // column-reverse flow at zero height, the root collapses to 24px, and the button then overflows
+    // its own box upwards. Absolute positioning removes it from the sizing calculation entirely, so
+    // the root becomes exactly the button. Scoped to `.MuiSpeedDial-actionsClosed`, the class MUI
+    // itself applies while closed, so the OPEN layout keeps its own padding and flow.
+    //
+    // SCOPE: closed. Open, the actions are themed FABs in MUI's arrangement - shadcn has no
+    // equivalent stack to be faithful to, so their layout, stagger and tooltips get no treatment.
+    MuiSpeedDial: {
+      styleOverrides: {
+        root: {
+          // MUI's root is block-level, so it fills its container and centres the button in that
+          // width - in a 96px box the button sat 20px in. Shrinking to content puts it at the origin.
+          width: "fit-content",
+          // The closed actions below are positioned absolutely; this makes the root their containing
+          // block so they cannot escape to some distant positioned ancestor.
+          position: "relative",
+        },
+        actions: {
+          "&.MuiSpeedDial-actionsClosed": {
+            position: "absolute",
+            bottom: "100%", // parked directly above the button, where they will animate in from
+            padding: 0,
+          },
+        },
+      },
+    },
     // -----------------------------------------------------------------------
 
     // Per-component overrides are appended by later tasks, one banner each.

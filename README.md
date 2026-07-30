@@ -115,7 +115,7 @@ AppBar / Toolbar above is the first of these.
 - [x] Rating (no shadcn twin - read-only display)
 - [x] Stepper (no shadcn twin - horizontal, first step)
 - [x] Fab (no shadcn twin - composed from Button)
-- [ ] SpeedDial - not themed on purpose; its surface comes from Fab, see the note in shadcn.ts
+- [x] SpeedDial (no shadcn twin - closed state)
 - [x] BottomNavigation (no shadcn twin)
 - [x] Backdrop (shadcn Dialog/Sheet overlay)
 - [x] Modal (the primitive under Dialog/Drawer)

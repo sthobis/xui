@@ -41,6 +41,7 @@ import { bottomNavigationSection } from "./bottom-navigation"
 import { stepperSection } from "./stepper"
 import { tablePaginationSection } from "./table-pagination"
 import { imageListSection } from "./image-list"
+import { speedDialSection } from "./speed-dial"
 
 export const sections: Section[] = [
   buttonSection,
@@ -85,4 +86,5 @@ export const sections: Section[] = [
   stepperSection,
   tablePaginationSection,
   imageListSection,
+  speedDialSection,
 ]
