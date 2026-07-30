@@ -38,7 +38,14 @@ export function PairRow({ pair, sides }: { pair: Pair; sides: Array<"shadcn" | "
       data-pair-id={pair.id}
       data-states={(pair.states ?? ["default"]).join(",")}
       data-behaviors={(pair.behaviors ?? []).join(",")}
-      style={{ display: "flex", gap: 0, borderBottom: "1px solid rgba(128,128,128,0.2)" }}
+      style={{
+        display: "flex",
+        gap: 0,
+        borderBottom: "1px solid rgba(128,128,128,0.2)",
+        // Padding rather than height: the cells are stretch-aligned flex items, so their own boxes
+        // are sized by content and this only adds blank space beneath them. Neither component moves.
+        paddingBottom: pair.roomBelow,
+      }}
     >
       {sides.map((side) => (
         <PairCell key={side} pair={pair} side={side} />

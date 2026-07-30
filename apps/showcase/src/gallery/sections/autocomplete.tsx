@@ -167,6 +167,10 @@ export const autocompleteSection: Section = {
       id: "autocomplete-open",
       states: ["open", "anchored"],
       behaviors: ["escape-closes"],
+      // The panel is 92px tall and drops below this row. Without room reserved, its bottom-left
+      // corner - transparent, because of the border radius - landed on the next section's heading
+      // text on the shadcn side and on blank background on the MUI side. See Pair.roomBelow.
+      roomBelow: 112,
       shadcn: (
         <div style={wrapStyle}>
           <ShadcnComboboxOpenDemo />
