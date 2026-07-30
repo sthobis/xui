@@ -2866,11 +2866,11 @@ export const shadcnTheme = createTheme({
     //     pseudo-element by default, so this is added net-new below.
     //   Image: size-full object-cover -> MUI's own AvatarImg base style
     //     already sets width/height 100% and objectFit: 'cover' - byte
-    //     identical, no override needed. Root's own default `overflow:
-    //     hidden` (MUI) clips the image to the circle in place of the
-    //     shadcn Image's own `rounded-full` class - same visual result on
-    //     an image that exactly fills a rounded box, confirmed via the
-    //     parity screenshot rather than assumed.
+    //     identical, no override needed. The CLIPPING mechanism does need
+    //     an override: MUI leaves the image square and clips it with the
+    //     root's `overflow: hidden`, where shadcn rounds the image itself
+    //     and never clips the root. Those two were assumed equivalent here
+    //     and are not - see the root's own note below for the measurement.
     //   Fallback: bg-muted text-sm text-muted-foreground -> only reachable
     //     on the MUI side via the `.MuiAvatar-colorDefault` variant (fires
     //     whenever there is no loaded/loading image - confirmed by reading
@@ -2888,6 +2888,20 @@ export const shadcnTheme = createTheme({
           width: "2rem", // shadcn: size-8 (32px, default size - MUI's own default is 40px)
           height: "2rem",
           userSelect: "none", // shadcn: select-none
+          // shadcn's Avatar root carries no overflow-hidden - it rounds the image and the fallback
+          // themselves. MUI instead leaves both square and clips them with the root's own
+          // `overflow: hidden`. The two are NOT equivalent, though this block used to say they were:
+          // the circle's edge coverage comes out slightly different, and with the `after:` ring
+          // blending over that edge it showed up as 200 differing pixels around the circumference in
+          // dark mode (7 of them beyond antialiasing, worst channel 83). Matching shadcn's mechanism
+          // - round the child, do not clip the parent - takes it to a single pixel.
+          overflow: "visible", // shadcn: no overflow-hidden on the root
+          "& .MuiAvatar-img": {
+            borderRadius: "inherit", // shadcn AvatarImage: rounded-full
+          },
+          "& .MuiAvatar-fallback": {
+            borderRadius: "inherit", // shadcn AvatarFallback: rounded-full
+          },
           "&::after": {
             content: '""',
             position: "absolute",
@@ -3536,6 +3550,19 @@ export const shadcnTheme = createTheme({
           lineHeight: 1.75 / 1.25, // shadcn: text-xl line-height (calc(1.75/1.25))
           letterSpacing: "-0.025em", // shadcn: tracking-tight
         },
+        // body1 is the paragraph variant, and it was missing entirely - MUI's own default (1rem/1.5,
+        // so 24px) stood where shadcn's typography uses `leading-7`, 28px. The pixel suite never
+        // saw it: type-body reports 0 differing pixels either way, because the sample is a single
+        // line and the cell centres it, so a taller line box moves the box's edges without moving
+        // the glyphs. Found by the font-metrics sweep in e2e/behavior.spec.ts, which is the only
+        // check here that can see it - and it would have shown up the moment a paragraph wrapped to
+        // two lines, where the extra 4px per line is plainly visible.
+        body1: {
+          fontSize: "1rem", // shadcn: base paragraph size
+          fontWeight: 400, // shadcn: no font-weight class on <p>
+          lineHeight: 1.75, // shadcn: leading-7 (1.75rem at the 1rem base = 28px)
+          letterSpacing: "normal", // shadcn: no tracking class
+        },
         body2: ({ theme }) => ({
           fontSize: "0.875rem", // shadcn: text-sm
           fontWeight: 400, // shadcn: no font-weight class on the muted <p>
@@ -3882,10 +3909,19 @@ export const shadcnTheme = createTheme({
       styleOverrides: {
         root: ({ theme }) => ({
           fontSize: "0.875rem", // shadcn Button: text-sm
-          // Tailwind's text-sm sets a line-height as well as a size, and leaving it off let MUI's
-          // body2 default (1.43) stand: 14 * 1.43 = 20.016px against shadcn's flat 20px. Every box
-          // in the pair still measured identical, so the pixel diff saw only a 0.016px vertical
-          // shift of the label and icon - 257 stray pixels reported as a passing 0.23%.
+          // Tailwind's text-sm sets a line-height as well as a size, and leaving it off lets MUI's
+          // body2 default (1.43) stand: 14 * 1.43 = 20.016px against shadcn's flat 20px.
+          //
+          // This is a ground-truth correction that the PIXEL suite cannot see, and the distinction
+          // is worth keeping straight. Removing this line leaves MUI's label box 20.016px tall
+          // against shadcn's 20.000 and shifts it 0.016px up - and the parity diff still reports a
+          // clean 0 differing pixels, because 0.032 device pixels at this scale rounds away. An
+          // earlier version of this comment credited it with 257 stray pixels; that was the
+          // transform-based cell snap amplifying the offset, not the offset itself, and it went away
+          // when that snap moved to margins (see e2e/lib/states.ts).
+          //
+          // It ships because ground truth says 20px, not because a screenshot complained. The
+          // geometry sweep in e2e/behavior.spec.ts is what actually holds this line.
           lineHeight: "1.25rem", // shadcn: text-sm's paired line-height
           fontWeight: 500, // shadcn Button: font-medium
           borderRadius: RADIUS, // shadcn Button: rounded-lg (icon/default sizes carry no radius override)

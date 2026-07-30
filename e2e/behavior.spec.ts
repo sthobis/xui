@@ -380,3 +380,89 @@ test.describe("escape-closes", () => {
     }
   })
 })
+
+test.describe("text metrics", () => {
+  /**
+   * Compares the resolved FONT METRICS of every piece of rendered text between the two sides of
+   * each pair - size, line-height, weight, letter-spacing.
+   *
+   * This exists because the pixel suite provably cannot see small geometry errors. Worked example:
+   * MuiPaginationItem was missing the line-height that Tailwind's `text-sm` pairs with its size, so
+   * MUI resolved 20.016px where shadcn resolved 20px and the label sat 0.016px high. Removing that
+   * override and re-running the parity suite reports a clean 0 differing pixels - 0.032 device pixels
+   * at this scale rounds away - so nothing in the screenshot comparison holds that value. Here the
+   * same defect fails immediately and names the element.
+   *
+   * Correspondence is by rendered TEXT, not by DOM position. The two sides deliberately have
+   * different markup (that is the whole point of the project), so a structural walk cannot pair
+   * elements up - but a pair renders the same visible strings on both sides by definition, which
+   * makes the text itself a reliable join key. Only leaf text counts (elements whose own children
+   * account for none of it), and only strings appearing exactly once per side, so a repeated label is
+   * skipped rather than guessed at.
+   *
+   * METRICS, not box sizes. Comparing width/height was tried first and is unusable: the join pairs a
+   * bare text span on one side against a padded container on the other (shadcn's select value span,
+   * 61.734x20, against MUI's whole select display div, 101.734x36), so nearly every row was a false
+   * positive about padding rather than a real defect. Font metrics are immune to that - padding and
+   * structure do not change them - while still being exactly what a line-height or font-size mistake
+   * moves. Where a box size genuinely matters, the parity diff already covers it.
+   */
+  test("each pair resolves the same font metrics on both sides", async ({ page }) => {
+    const pairs: string[] = await page.evaluate(() =>
+      Array.from(document.querySelectorAll("[data-pair-id]")).map((el) => el.getAttribute("data-pair-id")!),
+    )
+    expect(pairs.length).toBeGreaterThan(0)
+
+    const offenders: string[] = []
+    for (const id of pairs) {
+      const row = page.locator(`[data-pair-id="${id}"]`)
+      await row.scrollIntoViewIfNeeded()
+      const found = await row.evaluate((rowEl) => {
+        const METRICS = ["fontSize", "lineHeight", "fontWeight", "letterSpacing"] as const
+        type Metrics = Record<string, string> & { __tag: string }
+        const collect = (side: string) => {
+          const cell = rowEl.querySelector(`[data-side="${side}"]`)
+          const seen = new Map<string, Metrics | null>()
+          if (!cell) return seen
+          for (const el of Array.from(cell.querySelectorAll<HTMLElement>("*"))) {
+            const own = (el.textContent ?? "").trim()
+            if (!own) continue
+            const childText = Array.from(el.children)
+              .map((c) => (c.textContent ?? "").trim())
+              .join("")
+            if (childText === own) continue // not a text leaf
+            const r = el.getBoundingClientRect()
+            if (r.width === 0 || r.height === 0) continue
+            if (seen.has(own)) {
+              seen.set(own, null) // ambiguous, skip on both sides
+              continue
+            }
+            const cs = getComputedStyle(el)
+            const m = { __tag: el.tagName } as Metrics
+            for (const k of METRICS) m[k] = cs[k]
+            seen.set(own, m)
+          }
+          return seen
+        }
+        const a = collect("shadcn")
+        const b = collect("mui")
+        const out: string[] = []
+        for (const [text, m] of a) {
+          const other = b.get(text)
+          if (!m || !other) continue
+          for (const k of METRICS) {
+            if (m[k] !== other[k]) {
+              out.push(`"${text.slice(0, 24)}" ${k}: shadcn ${m[k]} (${m.__tag}) vs mui ${other[k]} (${other.__tag})`)
+            }
+          }
+        }
+        return out
+      })
+      for (const f of found) offenders.push(`${id}: ${f}`)
+    }
+    expect(
+      offenders,
+      `these text runs resolve different font metrics on the two sides:\n${offenders.join("\n")}`,
+    ).toEqual([])
+  })
+})

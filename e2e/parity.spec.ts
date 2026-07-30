@@ -11,7 +11,7 @@ import {
   snapToPixelGrid,
   type PairState,
 } from "./lib/states"
-import { maxDeltaFor, thresholdFor } from "./thresholds"
+import { ruleFor } from "./thresholds"
 
 const RESULTS_DIR = "e2e/results"
 const rows: Array<{
@@ -131,8 +131,7 @@ test("all pairs match within threshold", async ({ page }, testInfo) => {
       // A pair with a maxDelta override is judged on the size of its worst per-channel error
       // instead of on how many pixels differ - see thresholds.ts maxDeltaOverrides. Both numbers
       // are always reported so a delta-judged pair's pixel count stays visible.
-      const maxDelta = maxDeltaFor(id, state)
-      const threshold = thresholdFor(id, state)
+      const rule = ruleFor(id, state)
       // A size difference is its own failure and is NEVER judged by a threshold. diffPngs pads the
       // smaller capture to the union with transparent pixels, so two differently-shaped captures
       // produce a percentage - and a percentage cannot distinguish "one side is a pixel taller"
@@ -142,16 +141,16 @@ test("all pairs match within threshold", async ({ page }, testInfo) => {
       // so in those terms rather than quoting a mismatch percentage.
       const { shadcn: sizeA, mui: sizeB } = result.sizes
       const sizeMismatch = sizeA.width !== sizeB.width || sizeA.height !== sizeB.height
-      const failed =
-        sizeMismatch ||
-        (maxDelta === undefined ? result.mismatchPct > threshold : result.maxChannelDelta > maxDelta)
+      const overPixels = result.mismatchedPixels > rule.maxPixels
+      const overDelta = result.maxChannelDelta > rule.maxDelta
+      const failed = sizeMismatch || overPixels || overDelta
       rows.push({
         pair: id,
         state,
         pct: result.mismatchPct,
         px: result.mismatchedPixels,
         delta: result.maxChannelDelta,
-        rule: maxDelta === undefined ? `≤ ${threshold}%` : `Δ ≤ ${maxDelta}`,
+        rule: rule.label,
       })
 
       const slug = `${testInfo.project.name}-${id}-${state}`
@@ -165,12 +164,15 @@ test("all pairs match within threshold", async ({ page }, testInfo) => {
         writeFileSync(`${RESULTS_DIR}/diffs/${slug}-diff.png`, PNG.sync.write(result.diff))
       }
       if (failed) {
+        const detail = `${result.mismatchedPixels}px differ, worst channel Δ${result.maxChannelDelta} (${result.mismatchPct.toFixed(2)}% of the capture); rule is ${rule.label}`
         failures.push(
           sizeMismatch
-            ? `${slug}: captures are different sizes - shadcn ${sizeA.width}x${sizeA.height}, mui ${sizeB.width}x${sizeB.height}. The two sides do not render the same geometry; the mismatch % below is padding noise, not a colour difference.`
-            : maxDelta === undefined
-              ? `${slug}: ${result.mismatchPct.toFixed(2)}% (${result.mismatchedPixels}px) > ${threshold}%`
-              : `${slug}: max channel delta ${result.maxChannelDelta} > ${maxDelta} (${result.mismatchedPixels}px, ${result.mismatchPct.toFixed(2)}%)`,
+            ? `${slug}: captures are different sizes - shadcn ${sizeA.width}x${sizeA.height}, mui ${sizeB.width}x${sizeB.height}. The two sides do not render the same geometry; the numbers below are padding noise, not a colour difference.`
+            : overPixels && overDelta
+              ? `${slug}: too many differing pixels AND too large a channel error - ${detail}`
+              : overPixels
+                ? `${slug}: too many differing pixels - ${detail}`
+                : `${slug}: channel error too large - ${detail}`,
         )
       }
     }

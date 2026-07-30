@@ -6,10 +6,18 @@ export interface DiffResult {
   totalPixels: number
   mismatchPct: number
   /**
-   * Largest absolute per-channel (R/G/B/A) difference across every pixel, 0-255. Independent of
-   * HOW MANY pixels differ, so it separates "a whole region is the wrong colour" (a style bug,
-   * large delta) from "a flat region landed on opposite sides of an 8-bit rounding boundary"
-   * (a rasterization artifact, delta of exactly 1). See thresholds.ts's maxDeltaOverrides.
+   * Largest absolute per-channel (R/G/B/A) difference, 0-255, across the pixels pixelmatch actually
+   * COUNTED - not across every pixel. Independent of how many differ, so it separates "a whole
+   * region is the wrong colour" (a style bug, large delta) from "a flat region landed on opposite
+   * sides of an 8-bit rounding boundary" (a rasterization artifact, delta of exactly 1). See
+   * thresholds.ts.
+   *
+   * Restricting it to counted pixels matters. Measured over EVERY pixel instead, this reported
+   * deltas of 82-99 for pairs with ZERO differing pixels - progress-circular, avatar-image,
+   * textfield-error - because the edge of a circle or a ring legitimately antialiases to very
+   * different samples on two independently rasterized copies, and pixelmatch deliberately excludes
+   * exactly those from its count. A delta drawn from pixels the diff has already dismissed
+   * describes the antialiasing, not the defect, and makes this number useless as a pass rule.
    */
   maxChannelDelta: number
   /**
@@ -50,14 +58,39 @@ export function diffPngs(aBuf: Buffer, bBuf: Buffer, pixelThreshold = 0): DiffRe
   const pa = pad(a, width, height)
   const pb = pad(b, width, height)
   const diff = new PNG({ width, height })
+  // Colours stated explicitly rather than left to pixelmatch's defaults, because the diff image is
+  // how we recover WHICH pixels were counted: pixelmatch paints counted differences with diffColor
+  // (or diffColorAlt, where b is darker than a) and antialiasing-classified ones with aaColor, and
+  // by default diffColorAlt falls back to diffColor. Pinning all three - and keeping alt distinct -
+  // makes the classification readable below, and makes a diff image show at a glance which
+  // direction each error went.
+  const DIFF_COLOR: [number, number, number] = [255, 0, 0]
+  const DIFF_COLOR_ALT: [number, number, number] = [0, 160, 255]
   const mismatchedPixels = pixelmatch(pa.data, pb.data, diff.data, width, height, {
     threshold: pixelThreshold,
+    diffColor: DIFF_COLOR,
+    diffColorAlt: DIFF_COLOR_ALT,
+    aaColor: [255, 255, 0],
   })
   const totalPixels = width * height
+  // Max channel delta over the COUNTED pixels only - see the field's own note. Reading the
+  // classification back out of the diff image keeps this in lockstep with pixelmatch's own
+  // antialiasing judgement instead of re-deriving it here and drifting from it.
   let maxChannelDelta = 0
-  for (let i = 0; i < pa.data.length; i += 1) {
-    const delta = Math.abs(pa.data[i] - pb.data[i])
-    if (delta > maxChannelDelta) maxChannelDelta = delta
+  for (let p = 0; p < width * height; p += 1) {
+    const i = p * 4
+    const isCounted =
+      (diff.data[i] === DIFF_COLOR[0] &&
+        diff.data[i + 1] === DIFF_COLOR[1] &&
+        diff.data[i + 2] === DIFF_COLOR[2]) ||
+      (diff.data[i] === DIFF_COLOR_ALT[0] &&
+        diff.data[i + 1] === DIFF_COLOR_ALT[1] &&
+        diff.data[i + 2] === DIFF_COLOR_ALT[2])
+    if (!isCounted) continue
+    for (let c = 0; c < 4; c += 1) {
+      const delta = Math.abs(pa.data[i + c] - pb.data[i + c])
+      if (delta > maxChannelDelta) maxChannelDelta = delta
+    }
   }
   return {
     mismatchedPixels,
