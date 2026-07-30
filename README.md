@@ -110,13 +110,13 @@ AppBar / Toolbar above is the first of these.
 - [x] Rating (no shadcn twin - read-only display)
 - [x] Stepper (no shadcn twin - horizontal, first step)
 - [x] Fab (no shadcn twin - composed from Button)
-- [ ] SpeedDial
+- [ ] SpeedDial - not themed on purpose; its surface comes from Fab, see the note in shadcn.ts
 - [x] BottomNavigation (no shadcn twin)
 - [x] Backdrop (shadcn Dialog/Sheet overlay)
 - [x] Modal (the primitive under Dialog/Drawer)
 - [x] Badge - dot only (shadcn AvatarBadge); the count pill has no shadcn twin
-- [ ] ImageList
-- [ ] TablePagination
+- [x] ImageList (no shadcn twin - standard variant)
+- [x] TablePagination (no shadcn twin - caption and actions)
 - [x] FormHelperText (shadcn FieldDescription / FieldError) + InputAdornment (via InputGroup)
 
 Anything not yet checked still renders, just with MUI's default look rather than the shadcn look.

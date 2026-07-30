@@ -5220,22 +5220,30 @@ export const shadcnTheme = createTheme({
     },
     MuiToolbar: {
       styleOverrides: {
+        // GOTCHA - scoped away from TablePagination's toolbar. Toolbar is not AppBar's alone: MUI
+        // builds TablePagination's row out of the same component, so an unscoped rule here reaches
+        // it too. Unscoped, the 16px gutter and 64px minimum below silently moved every
+        // TablePagination caption and button 2px off its twin, and the height with it. Same shape of
+        // leak as MuiList (Menu/Select/Autocomplete) and MuiBackdrop (Dialog/Drawer/Popover) - see
+        // their own notes.
         root: {
-          display: "flex",
-          alignItems: "center", // shadcn: items-center
-          gap: "0.5rem", // shadcn: gap-2
-          // shadcn's header is a flat h-16 with px-4 at every width. MUI ships a responsive ladder
-          // instead - 56px tall with 16px gutters below the sm breakpoint, 64px with 24px gutters
-          // above it - and both halves live inside a `@media (min-width:600px)` block. A plain
-          // declaration loses to a media query at equal specificity, so the sm values have to be
-          // restated inside the same query rather than just set once here.
-          minHeight: "4rem", // shadcn: h-16
-          paddingLeft: "1rem", // shadcn: px-4
-          paddingRight: "1rem",
-          "@media (min-width:600px)": {
-            minHeight: "4rem",
-            paddingLeft: "1rem",
+          "&:not(.MuiTablePagination-toolbar)": {
+            display: "flex",
+            alignItems: "center", // shadcn: items-center
+            gap: "0.5rem", // shadcn: gap-2
+            // shadcn's header is a flat h-16 with px-4 at every width. MUI ships a responsive ladder
+            // instead - 56px tall with 16px gutters below the sm breakpoint, 64px with 24px gutters
+            // above it - and both halves live inside a `@media (min-width:600px)` block. A plain
+            // declaration loses to a media query at equal specificity, so the sm values have to be
+            // restated inside the same query rather than just set once here.
+            minHeight: "4rem", // shadcn: h-16
+            paddingLeft: "1rem", // shadcn: px-4
             paddingRight: "1rem",
+            "@media (min-width:600px)": {
+              minHeight: "4rem",
+              paddingLeft: "1rem",
+              paddingRight: "1rem",
+            },
           },
         },
       },
@@ -5499,6 +5507,127 @@ export const shadcnTheme = createTheme({
         }),
       },
     },
+    // -----------------------------------------------------------------------
+
+    // ---- TablePagination (no shadcn twin) ----
+    //
+    // PROVENANCE: composed. shadcn has no such component, though its data-table docs show this row.
+    // The composition is `text-sm text-muted-foreground` captions and a ghost icon Button per
+    // direction, laid out `flex items-center justify-end gap-2`. Button is installed shadcn and is
+    // already themed; what is new here is the row itself.
+    //
+    // Note the toolbar keeps MUI's own 52px minimum height rather than taking a shadcn value: this
+    // row has no shadcn height to copy, and 52px is what MUI's dense toolbar already resolves to.
+    // The gallery twin states the same 52px explicitly so the pair is comparing like with like.
+    //
+    // SCOPE: caption plus actions, with the rows-per-page Select switched off in the pair. That
+    // control is a Select inside a toolbar with layout quirks no pair covers; the Select itself is
+    // themed and verified by the select-* pairs. The first/last-page buttons and disabled edges are
+    // likewise uncovered and get no treatment.
+    MuiTablePagination: {
+      styleOverrides: {
+        toolbar: {
+          // MUI insets the toolbar so its caption and actions sit away from a table's edge - 16px
+          // leading below the sm breakpoint, 24px above it, and 2px trailing throughout. shadcn's row
+          // has no padding (the gap does all the spacing), so these come off. The wide-viewport half
+          // lives inside a `@media (min-width:600px)` block, which beats a plain declaration at equal
+          // specificity, so it has to be restated inside the same query - the same trap as
+          // MuiToolbar's own gutters above. Zeroing only the plain values left the caption 6px off.
+          paddingLeft: 0,
+          paddingRight: 0,
+          "@media (min-width:600px)": {
+            paddingLeft: 0,
+            paddingRight: 0,
+          },
+          // shadcn: gap-2 on the row. MUI spaces the caption from the actions with a 20px margin on
+          // the actions block instead (removed below), so without a gap here the caption ends up
+          // flush against the first button.
+          gap: "0.5rem",
+        },
+        displayedRows: ({ theme }) => ({
+          fontSize: "0.875rem", // shadcn: text-sm
+          lineHeight: "1.25rem", // shadcn: text-sm's paired line-height (MUI's body2 gives 20.02px)
+          color: theme.vars.palette.text.secondary, // shadcn: text-muted-foreground
+        }),
+        selectLabel: ({ theme }) => ({
+          // Not exercised by a pair (the pair hides the rows-per-page control), but it is the same
+          // caption as displayedRows in every shadcn data-table example, and leaving it at MUI's
+          // body2 default would make the two captions in one row disagree. Stated for that reason
+          // and flagged as the one value in this block without a pair behind it.
+          fontSize: "0.875rem",
+          lineHeight: "1.25rem",
+          color: theme.vars.palette.text.secondary,
+        }),
+        actions: {
+          display: "flex", // shadcn: the row's own flex layout, not MUI's inline block
+          alignItems: "center",
+          gap: "0.5rem", // shadcn: gap-2
+          marginLeft: 0, // MUI adds 20px here; the toolbar gap already provides the spacing
+        },
+      },
+    },
+    // -----------------------------------------------------------------------
+
+    // ---- ImageList (no shadcn twin) ----
+    //
+    // PROVENANCE: composed. shadcn ships no image grid; the composition is `grid grid-cols-N gap-2`
+    // with `rounded-lg` tiles. Real utilities, assembled here.
+    //
+    // SCOPE: the standard variant. masonry/quilted/woven, ImageListItemBar and per-item row/col
+    // spans have no pair and get no treatment.
+    MuiImageList: {
+      defaultProps: {
+        // MUI's own default is 4px, and it reaches the grid through ownerState rather than a plain
+        // declaration - so this is set as a prop default instead of fought in styleOverrides.
+        gap: 8, // shadcn: gap-2
+      },
+      styleOverrides: {
+        root: {
+          // MUI makes the list scrollable; a shadcn grid does not, and an `overflow` other than
+          // visible also clips a tile's own rounded corners against the container.
+          overflow: "visible",
+          // ImageList renders a <ul>, and MUI zeroes its padding and list-style but NOT its margin -
+          // so the browser's default `margin: 1em 0` stood, and Tailwind's preflight was quietly
+          // cancelling it. Caught by the preflight suite: without Tailwind the grid sat 16px lower
+          // inside a cell 32px taller. This is precisely the dependency that suite exists to find,
+          // and the theme has to carry the reset itself.
+          margin: 0,
+        },
+      },
+    },
+    MuiImageListItem: {
+      styleOverrides: {
+        root: {
+          // shadcn: rounded-lg on the tile itself. Radius goes on the image rather than the item so
+          // it matches the twin exactly - an item-level radius would need `overflow: hidden` to
+          // clip the image, which rounds a different set of pixels at the corner.
+          "& img": {
+            borderRadius: RADIUS, // shadcn: rounded-lg
+          },
+        },
+      },
+    },
+    // -----------------------------------------------------------------------
+
+    // ---- SpeedDial: deliberately NOT themed, and this note is the deliverable ----
+    //
+    // A closed speed dial is a floating action button, and MuiFab above already gives it the shadcn
+    // surface - verified live: same 56px box, same bg-primary fill, same fully-round radius, same
+    // shadow-lg, same transparent border. Nothing further is needed for it to look right.
+    //
+    // What was tried and abandoned: a pair asserting that a closed speed dial is pixel-identical to a
+    // bare FAB. It is not, and cannot be made so without fighting the component. MUI's root is
+    // block-level and centres its button in whatever width it is given, and its actions container
+    // reserves 48px above the button even while hidden, because that padding is what positions the
+    // action stack once open. Shrinking the box to its content moved the button horizontally into
+    // place and then left it overflowing its own box vertically; zeroing the reserved padding moved
+    // the box and not the button. Each fix produced a new symptom somewhere else, which is the shape
+    // of a wrong approach rather than a missing declaration.
+    //
+    // So the open state gets no treatment either - a stack of smaller FABs with staggered transitions
+    // and per-action tooltips has no shadcn counterpart to be faithful to. A consumer who opens one
+    // sees themed FABs arranged by MUI. That is the honest outcome, and it is recorded here rather
+    // than papered over with a contrived twin that would have proved nothing beyond the Fab pair.
     // -----------------------------------------------------------------------
 
     // Per-component overrides are appended by later tasks, one banner each.

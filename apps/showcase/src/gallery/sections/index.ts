@@ -39,6 +39,8 @@ import { badgeDotSection } from "./badge-dot"
 import { ratingSection } from "./rating"
 import { bottomNavigationSection } from "./bottom-navigation"
 import { stepperSection } from "./stepper"
+import { tablePaginationSection } from "./table-pagination"
+import { imageListSection } from "./image-list"
 
 export const sections: Section[] = [
   buttonSection,
@@ -81,4 +83,6 @@ export const sections: Section[] = [
   ratingSection,
   bottomNavigationSection,
   stepperSection,
+  tablePaginationSection,
+  imageListSection,
 ]
