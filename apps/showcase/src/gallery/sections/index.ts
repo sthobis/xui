@@ -33,6 +33,9 @@ import { inputGroupSection } from "./input-group"
 import { autocompleteSection } from "./autocomplete"
 import { snackbarSection } from "./snackbar"
 import { appBarSection } from "./app-bar"
+import { formHelperSection } from "./form-helper"
+import { fabSection } from "./fab"
+import { badgeDotSection } from "./badge-dot"
 
 export const sections: Section[] = [
   buttonSection,
@@ -69,4 +72,7 @@ export const sections: Section[] = [
   inputGroupSection,
   snackbarSection,
   appBarSection,
+  formHelperSection,
+  fabSection,
+  badgeDotSection,
 ]

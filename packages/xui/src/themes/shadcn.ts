@@ -1127,17 +1127,25 @@ export const shadcnTheme = createTheme({
           marginTop: "0.5rem", // control-to-helper gap (this task's own choice, see banner)
           marginLeft: 0,
           marginRight: 0,
-          fontSize: "0.875rem", // shadcn FieldError: text-sm
-          // FieldError sets no explicit leading-* class, but Tailwind v4's text-sm utility
-          // itself bundles a paired line-height (1.25rem), not the Preflight html{line-height:1.5}
-          // fallback - measured via getComputedStyle: 20px, not 21px (1.5 * 14px).
-          lineHeight: "1.25rem", // shadcn: text-sm's paired line-height
-          fontWeight: 400, // shadcn FieldError: font-normal
-          // .Mui-error intentionally untouched: MUI's own default already
-          // colors it theme.vars.palette.error.main === destructive,
-          // matching shadcn's FieldError text-destructive for free. The
-          // non-error color is likewise left at MUI's own text.secondary
-          // default - no gallery pair exercises a non-error helper text.
+          fontSize: "0.875rem", // shadcn FieldDescription/FieldError: text-sm
+          textAlign: "left", // shadcn FieldDescription: text-left
+          // The two helper-text flavours have DIFFERENT line-heights in shadcn, and that is not a
+          // transcription slip. FieldDescription carries an explicit `leading-normal` (1.5, so 21px
+          // at 14px); FieldError carries no leading-* class at all, so Tailwind v4's text-sm brings
+          // its own paired 1.25rem (20px) instead. Both measured via getComputedStyle.
+          //
+          // This block used to set 1.25rem unconditionally, correctly derived from FieldError - and
+          // said so, noting that no gallery pair exercised a non-error helper text. The
+          // formhelper-default pair now does, and it caught the gap: the description ran a pixel
+          // tighter than shadcn's, which shifted the whole field and cost 4843 pixels.
+          lineHeight: 1.5, // shadcn FieldDescription: leading-normal
+          fontWeight: 400, // shadcn: font-normal
+          "&.Mui-error": {
+            lineHeight: "1.25rem", // shadcn FieldError: no leading class, so text-sm's own pairing
+          },
+          // Colour is intentionally untouched in both states: MUI's own defaults already resolve to
+          // text.secondary and error.main, which are shadcn's text-muted-foreground and
+          // text-destructive. Verified by both pairs rather than assumed.
         },
       },
     },
@@ -5230,6 +5238,82 @@ export const shadcnTheme = createTheme({
             paddingRight: "1rem",
           },
         },
+      },
+    },
+    // -----------------------------------------------------------------------
+
+    // ---- Fab (no shadcn twin) ----
+    //
+    // PROVENANCE: composed, like AppBar. shadcn ships no floating action button, so this is its
+    // Button made circular and lifted - `rounded-full`, a 56px box, `shadow-lg` - reusing the same
+    // bg-primary/text-primary-foreground/hover:bg-primary/80 recipe the MuiButton block already
+    // cites for `variant="contained" color="primary"`. The utilities are real; assembling them into
+    // a FAB is a decision taken here. See apps/showcase/src/gallery/sections/fab.tsx.
+    //
+    // SCOPE: the 56px default only. `size="small"`/`"medium"` and `variant="extended"` have no pair
+    // and get no treatment.
+    MuiFab: {
+      styleOverrides: {
+        root: {
+          width: "3.5rem", // shadcn: size-14
+          height: "3.5rem",
+          borderRadius: "9999px", // shadcn: rounded-full
+          // shadcn's Button carries `border border-transparent` and `bg-clip-padding`; both are
+          // load-bearing on a 56px border-box, since the border insets the icon by a pixel.
+          border: "1px solid transparent", // shadcn Button: border border-transparent
+          backgroundClip: "padding-box", // shadcn Button: bg-clip-padding
+          backgroundImage: "none", // kills MUI Paper's dark-mode elevation overlay - see the MuiMenu banner
+          boxShadow: [
+            "0 10px 15px -3px rgba(0, 0, 0, 0.1)", // shadcn: shadow-lg
+            "0 4px 6px -4px rgba(0, 0, 0, 0.1)", // shadcn: shadow-lg
+          ].join(", "),
+          "& svg": {
+            width: "1rem", // shadcn Button: [&_svg:not([class*='size-'])]:size-4
+            height: "1rem",
+          },
+        },
+        primary: ({ theme }) => ({
+          backgroundColor: theme.vars.palette.primary.main, // shadcn: bg-primary
+          color: theme.vars.palette.primary.contrastText, // shadcn: text-primary-foreground
+          "&:hover": {
+            backgroundColor: `color-mix(in oklab, ${theme.vars.palette.primary.main} 80%, transparent)`, // shadcn: hover:bg-primary/80
+            // shadcn's Button does not change its shadow on hover; MUI's Fab raises its elevation.
+            boxShadow: [
+              "0 10px 15px -3px rgba(0, 0, 0, 0.1)",
+              "0 4px 6px -4px rgba(0, 0, 0, 0.1)",
+            ].join(", "),
+          },
+        }),
+      },
+    },
+    // -----------------------------------------------------------------------
+
+    // ---- Badge, dot variant (shadcn AvatarBadge) ----
+    //
+    // Ground truth is avatar.tsx's AvatarBadge - installed shadcn source, so a normal extraction:
+    //     "absolute right-0 bottom-0 z-10 inline-flex items-center justify-center rounded-full
+    //      bg-primary text-primary-foreground bg-blend-color ring-2 ring-background select-none"
+    // with `group-data-[size=default]/avatar:size-2.5`, a 10px dot.
+    //
+    // SCOPE: the dot only. MUI's count badge (`badgeContent`) is a pill holding a number, and shadcn
+    // ships nothing of that shape - AvatarBadge holds an icon at most - so it gets no treatment.
+    MuiBadge: {
+      styleOverrides: {
+        dot: ({ theme }) => ({
+          width: "0.625rem", // shadcn: size-2.5 (10px)
+          height: "0.625rem",
+          minWidth: "0.625rem",
+          borderRadius: "9999px", // shadcn: rounded-full
+          backgroundColor: theme.vars.palette.primary.main, // shadcn: bg-primary
+          // shadcn: ring-2 ring-background. A ring is an outset box-shadow, not a border - it must
+          // not take part in the 10px box, or the dot shrinks to 6px of visible fill.
+          boxShadow: `0 0 0 2px ${theme.vars.palette.background.default}`,
+          // MUI hangs a corner badge half outside its anchor (`translate(50%, 50%)` for the
+          // bottom-right origin). shadcn's sits flush INSIDE the corner - `right-0 bottom-0`, no
+          // transform - so the overhang is removed. Measured: shadcn's dot occupies the avatar's
+          // last 10px on both axes, MUI's started 4px past its edge.
+          transform: "none",
+        }),
       },
     },
     // -----------------------------------------------------------------------

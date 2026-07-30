@@ -109,15 +109,15 @@ AppBar / Toolbar above is the first of these.
 
 - [ ] Rating
 - [ ] Stepper
-- [ ] Fab
+- [x] Fab (no shadcn twin - composed from Button)
 - [ ] SpeedDial
 - [ ] BottomNavigation
-- [ ] Backdrop
-- [ ] Modal
-- [ ] Badge (dot / count overlay)
+- [x] Backdrop (shadcn Dialog/Sheet overlay)
+- [x] Modal (the primitive under Dialog/Drawer)
+- [x] Badge - dot only (shadcn AvatarBadge); the count pill has no shadcn twin
 - [ ] ImageList
 - [ ] TablePagination
-- [ ] FormControl / FormLabel / FormHelperText / InputAdornment
+- [x] FormHelperText (shadcn FieldDescription / FieldError) + InputAdornment (via InputGroup)
 
 Anything not yet checked still renders, just with MUI's default look rather than the shadcn look.
 The showcase is the source of truth for exactly what is covered today.
