@@ -146,8 +146,26 @@ export async function normalizeOverlayPosition(target: Locator): Promise<void> {
  * really just every letter landing two thirds of a pixel over. Pairs that happened to line up
  * (togglegroup-basic, avatar-fallback, both at phase 0) were already clean.
  *
+ * MARGIN, not transform - this matters, and a transform here was wrong.
+ *
+ * A fractional transform does not re-lay-out anything; it offsets a layer that has ALREADY been
+ * rasterized at its old position. Text happens to survive that (Chrome re-rasterizes glyphs), but
+ * borders, rounded corners and SVG strokes keep their pre-transform raster, so nudging one side and
+ * not the other leaves them genuinely different. Measured directly on one cell, same element and
+ * same position throughout: adding `translateX(0.328px)` changed 117 pixels at a per-channel delta
+ * of 185, while `translateX(0px)`, `translateZ(0)` and `will-change: transform` all changed nothing
+ * that counted - so it is the fractional offset, not layer promotion, that does the damage.
+ *
+ * A margin shift moves the box through layout instead, so everything inside rasterizes naturally at
+ * the new position. Switching this one property took pagination-basic from 258 differing pixels at
+ * delta 245 to exactly 0, checkbox-with-label from 27 to 0, and breadcrumb-basic's worst channel
+ * from 47 to 0 - the transform had been masking real geometry the whole time it was "fixing" the
+ * text. (For the record, the earlier belief that pagination's residual was an unreachable
+ * absolute-position artifact was simply wrong: moving one cell by 1, 2, 100 and 272 whole pixels
+ * with its neighbour hidden changes nothing at all.)
+ *
  * Undone by resetState via `clearPixelSnap`, because unlike an overlay - which is destroyed when
- * it closes - a cell lives for the whole run, and a leftover transform would follow it into every
+ * it closes - a cell lives for the whole run, and a leftover offset would follow it into every
  * later state and measurement.
  */
 export async function snapToPixelGrid(target: Locator): Promise<void> {
@@ -157,7 +175,8 @@ export async function snapToPixelGrid(target: Locator): Promise<void> {
     const dx = Math.round(rect.left) - rect.left
     const dy = Math.round(rect.top) - rect.top
     if (dx === 0 && dy === 0) return
-    node.style.setProperty("transform", `translate(${dx}px, ${dy}px)`, "important")
+    if (dx !== 0) node.style.setProperty("margin-left", `${dx}px`, "important")
+    if (dy !== 0) node.style.setProperty("margin-top", `${dy}px`, "important")
     node.setAttribute("data-pixel-snapped", "")
   })
 }
@@ -166,7 +185,8 @@ export async function snapToPixelGrid(target: Locator): Promise<void> {
 export async function clearPixelSnap(page: Page): Promise<void> {
   await page.evaluate(() => {
     for (const el of document.querySelectorAll("[data-pixel-snapped]")) {
-      ;(el as HTMLElement).style.removeProperty("transform")
+      ;(el as HTMLElement).style.removeProperty("margin-left")
+      ;(el as HTMLElement).style.removeProperty("margin-top")
       el.removeAttribute("data-pixel-snapped")
     }
   })

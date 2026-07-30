@@ -19,22 +19,28 @@ const overrides: Record<string, number> = {}
 // KNOWN GAP - the default above is looser than the evidence supports, and this is deliberate
 // rather than settled.
 //
-// The report now prints the RAW mismatched-pixel count next to the percentage, because "0.00" is
-// rounded and was hiding the difference between an exact match and hundreds of stray pixels.
-// Running the suite with this default temporarily set to 0 shows ~24 rows (light) and ~31 (dark)
-// that pass today while differing by 1-275 pixels. Most are single-digit counts at small deltas,
-// but a few carry per-channel deltas of 150-245, which is a whole-pixel shift of a glyph or a
-// stroke, not antialiasing:
-//     pagination-basic default   257px  Δ245      textfield-multiline default  81px  Δ153
-//     autocomplete-open  open     16px  Δ235      togglegroup-basic   default   9px  Δ235
-// That class is exactly what this threshold is meant to catch, and at 0.5% it does not: the
-// pagination line-height bug fixed alongside this comment measured 0.23%, comfortably passing.
+// The report prints the RAW mismatched-pixel count next to the percentage, because "0.00" is
+// rounded and was hiding the difference between an exact match and hundreds of stray pixels. Run
+// the suite with this default temporarily set to 0 (or `PARITY_DUMP=1` to keep the captures) to see
+// the current list; as of this writing it is 19 rows in light and 29 in dark.
 //
-// Two of the three noise sources that used to justify a loose default are now gone - captures of
-// unequal size fail outright (see parity.spec.ts) and inline cells are snapped onto the pixel grid
-// before capture (see snapToPixelGrid), which alone took breadcrumb-basic from 283 stray pixels to
-// 0 and pagination-basic from 469 to 257. Tightening the default is the right next step, but it
-// needs each remaining residual diagnosed first and given either a fix or its own proven rule.
+// Every row carrying a per-channel delta above ~100 has now been chased down, and every one was a
+// real difference rather than antialiasing - four theme bugs and two harness bugs:
+//     pagination-basic     258px Δ245 -> 0    (missing text-sm line-height; then margin-vs-transform)
+//     textfield-multiline   81px Δ153 -> 1    (textarea did not fill its box)
+//     togglegroup-basic      9px Δ235 -> 0    (MUI's seam border left in place)
+//     autocomplete-open     16px Δ235 -> 0    (popup corner over the next section's heading)
+//     breadcrumb-basic     283px Δ123 -> 0    (sub-pixel phase; then margin-vs-transform)
+//     checkbox-with-label  150px Δ238 -> 0    (same two)
+// What remains is 1-268 pixels at deltas of 1-83, which is the profile of edge antialiasing rather
+// than of misplaced geometry. The largest, select-open:anchored at 268px Δ68, is the deliberately
+// un-normalized capture shape and has not been diagnosed.
+//
+// The noise sources that used to justify a loose default are gone: captures of unequal size fail
+// outright (parity.spec.ts), inline cells are snapped onto the pixel grid through layout rather than
+// through a transform (snapToPixelGrid), and popup pairs reserve room so their transparent corners
+// sit over uniform background (Pair.roomBelow). Tightening the default is now mostly a matter of
+// working through the small-delta tail; each row still needs a fix or its own proven rule first.
 // Lowering the number before then would just convert this into a wall of unexplained exceptions,
 // which is the failure mode the note above is about.
 
