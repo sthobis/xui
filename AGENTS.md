@@ -48,16 +48,28 @@ Ship only what a gallery pair actually covers.
 ## The parity harness is strict on purpose
 
 The pixelmatch per-pixel threshold is 0.
-Because both sides render in the same browser session, a genuine match is exactly 0.00%, not "close enough".
+Because both sides render in the same browser session, a genuine match differs by exactly zero pixels, not "close enough".
 A previous 0.1 threshold silently reported a 24%-different grey wash as a perfect match and hid two real bugs.
-Never raise `e2e/thresholds.ts` or re-loosen the pixelmatch threshold to make a pair pass.
-Fix the theme instead.
-If a pair truly cannot reach zero for a provable antialiasing reason, prove the geometry is byte-identical and record the exact residual rather than fudging.
 
-For a residual that is an 8-bit rounding artifact rather than an edge-antialiasing one, cap the error instead of the pixel count: add the pair to `maxDeltaOverrides` in `e2e/thresholds.ts` and it is judged on its largest per-channel difference (`Δ ≤ 1` means no channel anywhere may be off by more than one level).
-Reach for this rather than a bigger percentage.
-A percentage bounds how much of the cell may be wrong by any amount; a delta cap bounds how wrong any of it may be, and it does not drift when a layout change moves the pair to a different device-pixel offset.
-`slider-disabled` is the worked example: the same 1/255 artifact measured 0.56% before the gallery gained a sidebar, 1.51% after, and 0.00% in dark - a percentage was never the invariant the proof supported.
+A pair is judged on **two size-independent caps**, both of which must hold (`e2e/thresholds.ts`):
+
+- `DEFAULT_MAX_PIXELS` - how many pixels may differ at all.
+- `DEFAULT_MAX_DELTA` - how far off any channel of any of those pixels may be.
+
+Both are needed because they answer different questions.
+Moved geometry shows up in the count; a small shape in the wrong place shows up almost entirely in the channel error (a toggle-group seam border was 9 pixels at Δ235).
+Neither is a percentage, and that is deliberate: a percentage divides by the capture's area, so 47 differing pixels is 0.43% of the small tooltip capture and 0.01% of a large cell - one number that is simultaneously too tight for small pairs and far too loose for big ones.
+Every bug this suite ever missed was missed that way; the pagination line-height mistake measured 0.23% while being 258 wrong pixels.
+
+Never raise either cap to make a pair pass.
+Fix the theme instead.
+If a pair truly cannot reach zero for a provable rounding reason, prove the geometry is identical and add it to `maxDeltaOverrides`, which judges it on channel error alone and ignores the count.
+`slider-disabled` is the worked example: a 1/255 rail artifact spread over more than a thousand pixels, invisible, and stable at `Δ ≤ 1`.
+
+Two things the pixel diff structurally **cannot** see, so do not rely on it for them:
+
+- Captures of different sizes are diluted by padding into a small percentage, so a size difference is failed on its own terms instead (`DiffResult.sizes`).
+- Sub-pixel geometry. A missing `line-height` left a label box 20.016px tall against 20.000 and the diff still reported zero differing pixels, because 0.032 device pixels rounds away. The font-metrics sweep in `e2e/behavior.spec.ts` is what holds those values; it found a missing `body1` line-height (24px against shadcn's `leading-7` 28px) that had been shipping green.
 
 ## MUI traps you will hit
 
