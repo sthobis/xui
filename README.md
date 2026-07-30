@@ -94,7 +94,7 @@ The scope is `@mui/material` core; MUI X (DataGrid, Date Pickers, Tree View) is 
 - [x] Pagination
 - [x] Table
 - [x] List
-- [ ] AppBar / Toolbar
+- [x] AppBar / Toolbar (no shadcn twin - see note below)
 - [x] ButtonGroup
 - [x] ToggleButton / ToggleButtonGroup
 - [x] InputGroup (MUI InputAdornment)
@@ -103,6 +103,9 @@ The scope is `@mui/material` core; MUI X (DataGrid, Date Pickers, Tree View) is 
 ### Tier 3 - long tail and components with no direct shadcn equivalent
 
 Styled in shadcn's design language so they blend in.
+For these there is no installed component to extract from, so the twin in the gallery is composed from shadcn's own documented utilities and the parity number proves that MUI renders that composition exactly - not that the composition is what shadcn would ship.
+Each such block says so at the top.
+AppBar / Toolbar above is the first of these.
 
 - [ ] Rating
 - [ ] Stepper

@@ -3570,6 +3570,14 @@ export const shadcnTheme = createTheme({
           letterSpacing: "normal", // shadcn: no tracking class
           color: theme.vars.palette.text.secondary, // shadcn: text-muted-foreground
         }),
+        subtitle1: {
+          // The app-bar title face: text-base font-medium, with text-base's own paired line-height
+          // (1.5rem) rather than body1's leading-7. MUI's own subtitle1 is 1rem/1.75/400.
+          fontSize: "1rem", // shadcn: text-base
+          fontWeight: 500, // shadcn: font-medium
+          lineHeight: 1.5, // shadcn: text-base's paired line-height (1.5rem at 1rem)
+          letterSpacing: "normal", // shadcn: no tracking class
+        },
         subtitle2: {
           fontSize: "0.875rem", // shadcn: text-sm
           fontWeight: 500, // shadcn: font-medium
@@ -5152,6 +5160,75 @@ export const shadcnTheme = createTheme({
           gap: "0.125rem", // sonner: [data-content] gap:2px
           fontWeight: 500, // sonner: [data-title] font-weight:500
           lineHeight: 1.5, // sonner: [data-title] line-height:1.5
+        },
+      },
+    },
+    // -----------------------------------------------------------------------
+
+    // ---- AppBar / Toolbar (no shadcn twin) ----
+    //
+    // PROVENANCE: shadcn/ui ships no AppBar or Toolbar, so unlike every other block here these
+    // values are not extracted from an installed component. They come from shadcn's own header
+    // PATTERN, the one its dashboard blocks and docs site use:
+    //     <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
+    // plus `bg-background`. Each utility is cited individually below and each resolves against the
+    // installed Tailwind exactly like anywhere else - what is unverified is the CHOICE to compose
+    // them into a top bar, which is a design decision taken in this project. See the matching note
+    // in apps/showcase/src/gallery/sections/app-bar.tsx, and read appbar-basic's parity number as
+    // "MUI renders this composition exactly", not "this composition is what shadcn would ship".
+    //
+    // The reason it ships at all: untouched, MUI's AppBar is a saturated primary-coloured bar with
+    // a three-layer Material shadow, which is the most obviously off-brand surface a themed app can
+    // contain. README's tier 3 rule - components with no shadcn equivalent are "styled in shadcn's
+    // design language so they blend in" - is what sanctions fixing that.
+    //
+    // SCOPE: the default static bar only. `position="fixed"`/`"sticky"`, elevation above 0, the
+    // dense variant, and the non-default colour props are not covered by any pair and get no
+    // treatment.
+    MuiAppBar: {
+      defaultProps: {
+        // shadcn's header has no shadow at all, only a bottom border. Setting the default here
+        // rather than forcing `box-shadow: none` in styleOverrides keeps `elevation` meaningful for
+        // anyone who deliberately asks for one.
+        elevation: 0,
+      },
+      styleOverrides: {
+        root: ({ theme }) => ({
+          backgroundColor: theme.vars.palette.background.default, // shadcn: bg-background
+          color: theme.vars.palette.text.primary, // shadcn: ambient foreground (no text class)
+          backgroundImage: "none", // kills MUI Paper's dark-mode elevation overlay - see the MuiMenu banner
+          borderBottom: `1px solid ${theme.vars.palette.border}`, // shadcn: border-b
+          // MUI's AppBar picks its surface from a `color`-keyed variant class rather than from the
+          // root, and `color="primary"` is its default - so the surface above has to be restated at
+          // that variant's own specificity or the Material primary fill wins. colorDefault gets the
+          // same treatment so `color="default"` lands on the same surface rather than MUI's grey.
+          "&.MuiAppBar-colorPrimary, &.MuiAppBar-colorDefault": {
+            backgroundColor: theme.vars.palette.background.default,
+            color: theme.vars.palette.text.primary,
+            backgroundImage: "none",
+          },
+        }),
+      },
+    },
+    MuiToolbar: {
+      styleOverrides: {
+        root: {
+          display: "flex",
+          alignItems: "center", // shadcn: items-center
+          gap: "0.5rem", // shadcn: gap-2
+          // shadcn's header is a flat h-16 with px-4 at every width. MUI ships a responsive ladder
+          // instead - 56px tall with 16px gutters below the sm breakpoint, 64px with 24px gutters
+          // above it - and both halves live inside a `@media (min-width:600px)` block. A plain
+          // declaration loses to a media query at equal specificity, so the sm values have to be
+          // restated inside the same query rather than just set once here.
+          minHeight: "4rem", // shadcn: h-16
+          paddingLeft: "1rem", // shadcn: px-4
+          paddingRight: "1rem",
+          "@media (min-width:600px)": {
+            minHeight: "4rem",
+            paddingLeft: "1rem",
+            paddingRight: "1rem",
+          },
         },
       },
     },
