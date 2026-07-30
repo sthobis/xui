@@ -107,11 +107,11 @@ For these there is no installed component to extract from, so the twin in the ga
 Each such block says so at the top.
 AppBar / Toolbar above is the first of these.
 
-- [ ] Rating
-- [ ] Stepper
+- [x] Rating (no shadcn twin - read-only display)
+- [x] Stepper (no shadcn twin - horizontal, first step)
 - [x] Fab (no shadcn twin - composed from Button)
 - [ ] SpeedDial
-- [ ] BottomNavigation
+- [x] BottomNavigation (no shadcn twin)
 - [x] Backdrop (shadcn Dialog/Sheet overlay)
 - [x] Modal (the primitive under Dialog/Drawer)
 - [x] Badge - dot only (shadcn AvatarBadge); the count pill has no shadcn twin

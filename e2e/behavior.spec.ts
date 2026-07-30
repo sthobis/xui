@@ -439,7 +439,16 @@ test.describe("text metrics", () => {
             }
             const cs = getComputedStyle(el)
             const m = { __tag: el.tagName } as Metrics
-            for (const k of METRICS) m[k] = cs[k]
+            for (const k of METRICS) {
+              // line-height is inert on SVG text: an SVG <text> is positioned by its baseline
+              // attributes, not by a line box, so the property resolves to something (18px on MUI's
+              // step counter against 16px on the HTML twin) without affecting a single pixel.
+              // Comparing it would only invite a theme declaration that changes nothing, which is
+              // exactly the kind of unbacked value this project refuses to ship. font-size and weight
+              // DO drive SVG text, so they stay in.
+              if (k === "lineHeight" && el instanceof SVGElement) continue
+              m[k] = cs[k]
+            }
             seen.set(own, m)
           }
           return seen
@@ -451,6 +460,9 @@ test.describe("text metrics", () => {
           const other = b.get(text)
           if (!m || !other) continue
           for (const k of METRICS) {
+            // A metric omitted on either side (see the SVG line-height note above) is not compared -
+            // omitted means "does not apply here", not "differs".
+            if (m[k] === undefined || other[k] === undefined) continue
             if (m[k] !== other[k]) {
               out.push(`"${text.slice(0, 24)}" ${k}: shadcn ${m[k]} (${m.__tag}) vs mui ${other[k]} (${other.__tag})`)
             }

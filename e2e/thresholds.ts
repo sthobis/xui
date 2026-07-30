@@ -44,14 +44,20 @@ const DEFAULT_MAX_DELTA = 40
  * harness bug), and both times the loose number hid a real defect for two suites running.
  */
 
-// Per-pair(+state) pixel-count allowances. Keys are either a bare pair id or "pairId:state".
-// Empty on purpose - every pair currently meets the default.
-const maxPixelOverrides: Record<string, number> = {}
+// THE TWO CAPS OVERRIDE INDEPENDENTLY. A pair that needs more room on one axis keeps the default on
+// the other, so an exception never silently widens both. Keys are either a bare pair id or
+// "pairId:state".
 
-// A pair listed here is judged ONLY by its largest per-channel difference; its pixel count is
-// ignored. Use this - not a bigger count - when a residual is provably a rounding artifact spread
-// over a wide area: capping the delta bounds the visible error directly, and unlike a count it does
-// not move when a layout change shifts the pair to a different device-pixel offset.
+// Per-pair(+state) pixel-count allowances.
+const maxPixelOverrides: Record<string, number> = {
+  // slider-disabled: judged on channel error alone, so its count is unbounded - see the note in
+  // maxDeltaOverrides below. The artifact is a 1/255 rail rounding step spread over more than a
+  // thousand pixels, which is exactly the shape a count cannot describe.
+  "slider-disabled": Number.POSITIVE_INFINITY,
+}
+
+// Per-pair(+state) channel-error allowances. Use this when a residual is provably NOT misplaced
+// geometry - prove the boxes, colours and fonts match first, and record the proof here.
 const maxDeltaOverrides: Record<string, number> = {
   // slider-disabled: every value on both sides is byte-identical (rail/range/thumb background,
   // border radius, opacity, and getBoundingClientRect all match exactly; only the DOM shape
@@ -73,13 +79,25 @@ const maxDeltaOverrides: Record<string, number> = {
   // neighbour hidden changes nothing at all. The 1/255 rounding boundary is real; the
   // absolute-position explanation for it was not, and it should not be cited elsewhere.
   "slider-disabled": 1,
+
+  // stepper-horizontal: MUI draws a step's counter as an SVG - a <circle> plus a <text> centred with
+  // `dominant-baseline: central` - while the composed twin uses ordinary HTML text centred in a flex
+  // box. Everything measurable about them matches: both counters are 24px at the same relative
+  // offsets (384px apart on both sides, to the pixel), same background, same fill, same 12px Geist
+  // at weight 400. What differs is where the two text engines land the glyph inside that box, and
+  // only for the two INACTIVE digits - the active one, white on a filled circle, matches exactly.
+  //
+  // Nudging it was tried and every direction was worse: `dominant-baseline: middle` took it from 26
+  // pixels to 186, and translating the text by ±0.5px or +0.25px to 109-113. 26 is the floor.
+  //
+  // The count cap is deliberately left at the default, so this allows a slightly wrong-looking glyph
+  // edge but still fails the moment anything MOVES.
+  "stepper-horizontal": 60,
 }
 
 export interface ParityRule {
   maxPixels: number
   maxDelta: number
-  /** True when the pair is judged by delta alone (maxDeltaOverrides), so the count is not applied. */
-  deltaOnly: boolean
   /** Human-readable form for the report's `rule` column. */
   label: string
 }
@@ -93,20 +111,8 @@ function scoped<T>(map: Record<string, T>, pairId: string, state?: string): T | 
 }
 
 export function ruleFor(pairId: string, state?: string): ParityRule {
-  const deltaOverride = scoped(maxDeltaOverrides, pairId, state)
-  if (deltaOverride !== undefined) {
-    return {
-      maxPixels: Number.POSITIVE_INFINITY,
-      maxDelta: deltaOverride,
-      deltaOnly: true,
-      label: `Δ ≤ ${deltaOverride}`,
-    }
-  }
   const maxPixels = scoped(maxPixelOverrides, pairId, state) ?? DEFAULT_MAX_PIXELS
-  return {
-    maxPixels,
-    maxDelta: DEFAULT_MAX_DELTA,
-    deltaOnly: false,
-    label: `≤ ${maxPixels}px, Δ ≤ ${DEFAULT_MAX_DELTA}`,
-  }
+  const maxDelta = scoped(maxDeltaOverrides, pairId, state) ?? DEFAULT_MAX_DELTA
+  const pixelPart = maxPixels === Number.POSITIVE_INFINITY ? "any px" : `≤ ${maxPixels}px`
+  return { maxPixels, maxDelta, label: `${pixelPart}, Δ ≤ ${maxDelta}` }
 }

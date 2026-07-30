@@ -5318,6 +5318,189 @@ export const shadcnTheme = createTheme({
     },
     // -----------------------------------------------------------------------
 
+    // ---- Rating (no shadcn twin) ----
+    //
+    // PROVENANCE: composed. shadcn ships no rating control. The composition is lucide's Star at
+    // `size-4`, filled stars `text-primary fill-current`, empty ones `text-muted-foreground`, spaced
+    // `gap-0.5` - real utilities, assembled here. See the note in the gallery section.
+    //
+    // MUI sizes a Rating's icons from the ROOT's font-size rather than from the icon, which is why
+    // the size lands here and not on the icon slots. Its own default is 1.5rem.
+    //
+    // SCOPE: read-only display at whole-number values. Hover preview, `precision` below 1 and the
+    // `size` ladder have no pair and get no treatment.
+    MuiRating: {
+      styleOverrides: {
+        root: {
+          fontSize: "1rem", // shadcn: size-4, via MUI's font-size-driven icon sizing
+          gap: "0.125rem", // shadcn: gap-0.5
+          // MUI's font-size-driven sizing only reaches an icon that asks for it - its own star is an
+          // SvgIcon at `font-size: inherit`. A lucide icon ships literal width="24" height="24"
+          // attributes instead and ignores font-size entirely, so it has to be sized directly. On the
+          // shadcn side `size-4` does exactly this, as CSS beating the same attributes.
+          "& svg": {
+            width: "1rem", // shadcn: size-4
+            height: "1rem",
+          },
+        },
+        iconFilled: ({ theme }) => ({
+          color: theme.vars.palette.primary.main, // shadcn: text-primary (MUI's own is a Material amber)
+          // shadcn: fill-current. lucide paths ship `fill: none` and stroke themselves with
+          // currentColor, so a filled star needs the fill turned on explicitly - colour alone
+          // leaves an outline.
+          "& svg": { fill: "currentColor" },
+        }),
+        iconEmpty: ({ theme }) => ({
+          color: theme.vars.palette.text.secondary, // shadcn: text-muted-foreground
+        }),
+      },
+    },
+    // -----------------------------------------------------------------------
+
+    // ---- BottomNavigation (no shadcn twin) ----
+    //
+    // PROVENANCE: composed. shadcn ships no bottom bar, so this reuses the surface language of its
+    // header pattern flipped to the bottom edge - `border-t bg-background` - with items laid out
+    // `flex-1 flex-col items-center gap-1 text-xs`, the selected one `text-foreground` and the rest
+    // `text-muted-foreground`. Real utilities, assembled here. See the gallery section's note.
+    //
+    // SCOPE: the resting bar with one item selected. `showLabels={false}` and the selection
+    // animation have no pair and get no treatment.
+    MuiBottomNavigation: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          height: "3.5rem", // shadcn: h-14 (MUI's own default is the same 56px, restated for intent)
+          backgroundColor: theme.vars.palette.background.default, // shadcn: bg-background
+          backgroundImage: "none", // kills MUI Paper's dark-mode elevation overlay - see the MuiMenu banner
+          borderTop: `1px solid ${theme.vars.palette.border}`, // shadcn: border-t
+          // MUI centres the row; shadcn's items are `flex-1` and fill it instead. With three items
+          // the two happen to agree, but they diverge the moment a bar is not full, so this states
+          // the shadcn behaviour rather than relying on the coincidence.
+          justifyContent: "normal",
+        }),
+      },
+    },
+    MuiBottomNavigationAction: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          gap: "0.25rem", // shadcn: gap-1
+          padding: 0, // shadcn: no padding on the item; the gap does the spacing
+          minWidth: 0, // MUI clamps items to 80-168px; shadcn's flex-1 items have no such bounds
+          maxWidth: "none",
+          color: theme.vars.palette.text.secondary, // shadcn: text-muted-foreground
+          "& svg": {
+            width: "1rem", // shadcn: size-4
+            height: "1rem",
+          },
+          "&.Mui-selected": {
+            color: theme.vars.palette.text.primary, // shadcn: text-foreground (MUI's own is primary.main)
+          },
+        }),
+        label: {
+          fontSize: "0.75rem", // shadcn: text-xs
+          lineHeight: "1rem", // shadcn: text-xs's paired line-height
+          // MUI grows the label a step when its item is selected (0.75rem -> 0.875rem). shadcn's
+          // text-xs does not change with selection, so the selected size is restated to match the
+          // resting one - without this the selected item's label is visibly larger than its
+          // neighbours.
+          "&.Mui-selected": {
+            fontSize: "0.75rem",
+            lineHeight: "1rem",
+          },
+        },
+      },
+    },
+    // -----------------------------------------------------------------------
+
+    // ---- Stepper (no shadcn twin) ----
+    //
+    // PROVENANCE: composed. shadcn ships no stepper. The composition is a `size-6 rounded-full
+    // text-xs` counter - `bg-primary text-primary-foreground` on the current step, `bg-muted
+    // text-muted-foreground` elsewhere - beside a `text-sm` label, with `h-px bg-border` connectors
+    // taking up the slack. Real utilities, assembled here.
+    //
+    // The LAYOUT, though, is MUI's own and is deliberately kept: steps size to their content and the
+    // connectors flex to fill. One 8px gap on the root does all the spacing, which is why the Step's
+    // and connector's own paddings and margins are zeroed rather than matched.
+    //
+    // MUI draws its step counter as an SVG - a <circle> filled with `currentColor` and a <text>
+    // inside - not as a div. That is convenient here: an r=12 circle in a 24x24 box IS a 24px
+    // `rounded-full`, so colouring it via `color` gives the same result as `bg-*` on a span, with no
+    // need to replace the icon from the gallery.
+    //
+    // SCOPE: horizontal, on the first step, so every counter shows a number. MUI swaps in its own
+    // check glyph for completed steps and matching that would mean handing it a custom icon
+    // component; completed steps, the vertical orientation and error/disabled steps have no pair and
+    // get no treatment.
+    MuiStepper: {
+      styleOverrides: {
+        root: {
+          gap: "0.5rem", // shadcn: gap-2 on the row, which spaces steps from connectors
+        },
+      },
+    },
+    MuiStep: {
+      styleOverrides: {
+        root: {
+          // MUI insets the first and last step by 8px. The row's own gap already provides every gap
+          // that should exist, and shadcn's composition has no outer inset, so these come off.
+          paddingLeft: 0,
+          paddingRight: 0,
+        },
+      },
+    },
+    MuiStepConnector: {
+      styleOverrides: {
+        root: {
+          marginLeft: 0, // the root gap owns the spacing
+          marginRight: 0,
+        },
+        line: ({ theme }) => ({
+          borderTopWidth: "1px", // shadcn: h-px
+          borderColor: theme.vars.palette.border, // shadcn: bg-border
+        }),
+      },
+    },
+    MuiStepLabel: {
+      styleOverrides: {
+        root: {
+          gap: "0.5rem", // shadcn: gap-2 between counter and label
+        },
+        iconContainer: {
+          paddingRight: 0, // the gap above replaces MUI's own 8px
+        },
+        label: ({ theme }) => ({
+          fontSize: "0.875rem", // shadcn: text-sm
+          lineHeight: "1.25rem", // shadcn: text-sm's paired line-height
+          color: theme.vars.palette.text.secondary, // shadcn: text-muted-foreground
+          "&.Mui-active": {
+            color: theme.vars.palette.text.primary, // shadcn: text-foreground
+            fontWeight: 500, // shadcn: font-medium
+          },
+        }),
+      },
+    },
+    MuiStepIcon: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          width: "1.5rem", // shadcn: size-6
+          height: "1.5rem",
+          color: theme.vars.palette.muted.main, // shadcn: bg-muted (the <circle> fills with currentColor)
+          "&.Mui-active": {
+            color: theme.vars.palette.primary.main, // shadcn: bg-primary
+          },
+        }),
+        text: ({ theme }) => ({
+          fontSize: "0.75rem", // shadcn: text-xs
+          fill: theme.vars.palette.text.secondary, // shadcn: text-muted-foreground
+          ".Mui-active &": {
+            fill: theme.vars.palette.primary.contrastText, // shadcn: text-primary-foreground
+          },
+        }),
+      },
+    },
+    // -----------------------------------------------------------------------
+
     // Per-component overrides are appended by later tasks, one banner each.
   },
 })
