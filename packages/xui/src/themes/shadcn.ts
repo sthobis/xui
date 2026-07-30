@@ -321,9 +321,27 @@ function textFieldBoxBase(theme: ThemeWithVars, ownerState: { multiline?: boolea
 
 function textFieldBoxStates(theme: ThemeWithVars, ownerState: { multiline?: boolean }) {
   return {
-    "&.Mui-focused": {
+    // The RING is gated on real :focus-visible, not on MUI's `.Mui-focused` class.
+    //
+    // shadcn's only focus rule is `focus-visible:border-ring focus-visible:ring-3`, which a mouse
+    // click does not match. MUI sets `.Mui-focused` from a plain onFocus handler, so it matches ANY
+    // focus - and keying the ring off it made a themed control grow a ring on click where the real
+    // shadcn control shows nothing. That was measured, not theorised: select-open's `anchored`
+    // capture (the one state that reaches the control by CLICKING it) had the MUI trigger's left
+    // border at 161 against shadcn's 229 - the ring colour instead of border-input - for 268 stray
+    // pixels. Every other focus state in the suite is driven by keyboard Tab, where the two agree,
+    // which is why this went unnoticed and why the old note here claimed they were equivalent.
+    //
+    // `:has(:focus-visible)` rather than `&:focus-visible`: the focusable element is the inner
+    // input (or, for Select, the inner display div), never this root.
+    "&:has(:focus-visible)": {
       borderColor: theme.vars.palette.ring, // shadcn: focus-visible:border-ring
       boxShadow: `0 0 0 3px color-mix(in oklab, ${theme.vars.palette.ring} 50%, transparent)`, // shadcn: focus-visible:ring-3 ring-ring/50
+    },
+    "&.Mui-focused": {
+      // Background only - shadcn never changes an input's background on focus, and MUI's own
+      // focused background applies on any focus, so this neutralizer stays keyed to `.Mui-focused`.
+      //
       // MuiFilledInput's own base style sets `&.Mui-focused { backgroundColor: <FilledInput.bg> }`
       // at 2-class specificity (`.MuiFilledInput-root.Mui-focused`), which beats the plain
       // (1-class, unconditional) backgroundColor: "transparent" that textFieldBoxBase sets on
@@ -1040,20 +1058,20 @@ export const shadcnTheme = createTheme({
     // type as shadcn's) resolves identically to shadcn's single-element box
     // at the same content-box dimensions.
     //
-    // Focus ring mapping: the harness's "focus" state is always synthesized
-    // via helper-button+keyboard-Tab (e2e/lib/states.ts:focusVisible), which
-    // matches real :focus-visible on the shadcn side. MUI's InputBase marks
-    // focus with a `.Mui-focused` class from a plain onFocus/onBlur handler
-    // (any focus, not gated to keyboard) rather than a `:focus-visible`
-    // pseudo-class - but since the harness never exercises "focus via mouse
-    // click" as a distinct state, `.Mui-focused` is present at exactly the
-    // moments `:focus-visible` would be on the shadcn side, so keying the
-    // ring off `.Mui-focused` reproduces the same before/after screenshots.
-    // `.Mui-error` is declared after `.Mui-focused` below (both are
-    // single-class same-specificity selectors on the root) so an
-    // errored+focused field keeps the destructive ring, matching Tailwind's
-    // class order in input.tsx/textarea.tsx (aria-invalid: is written after
-    // focus-visible:, so it wins the same tie in the real component too).
+    // Focus ring mapping: the ring keys off real `:focus-visible` (via
+    // `:has()`, since the focusable element is the inner input, not the
+    // root) - see textFieldBoxStates above for the measurement that forced
+    // this. It used to key off MUI's `.Mui-focused` class, justified by the
+    // harness only ever synthesising focus with keyboard Tab, where the two
+    // agree. They do not agree on a mouse click: `.Mui-focused` comes from a
+    // plain onFocus handler and matches any focus, so a themed control grew
+    // a ring where the real shadcn control - whose only rule is
+    // `focus-visible:border-ring` - shows nothing.
+    // `.Mui-error` is declared after the focus rule below and at the same
+    // specificity, so an errored+focused field keeps the destructive ring,
+    // matching Tailwind's class order in input.tsx/textarea.tsx
+    // (aria-invalid: is written after focus-visible:, so it wins the same
+    // tie in the real component too).
     //
     // Variant scope: this project's approved design deliberately flattens ALL THREE
     // MUI TextField variants (outlined/filled/standard) to the SAME shadcn Input/Textarea
