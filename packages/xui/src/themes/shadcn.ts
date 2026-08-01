@@ -5236,11 +5236,17 @@ export const shadcnTheme = createTheme({
             // above it - and both halves live inside a `@media (min-width:600px)` block. A plain
             // declaration loses to a media query at equal specificity, so the sm values have to be
             // restated inside the same query rather than just set once here.
-            minHeight: "4rem", // shadcn: h-16
+            // shadcn's h-16 and border-b are on ONE border-box element, so its header is 64px tall
+            // INCLUDING the border. MUI splits them - the border belongs to the AppBar surface, the
+            // height to the Toolbar - so a flat 4rem here made the bar 65px. The pixel diff never saw
+            // it: the cell centres its content, and the resulting half-pixel offset put the border
+            // and every glyph back on the same device rows. The painted-geometry sweep in
+            // e2e/behavior.spec.ts is what caught it.
+            minHeight: "calc(4rem - 1px)", // shadcn: h-16, less the AppBar's own border-b
             paddingLeft: "1rem", // shadcn: px-4
             paddingRight: "1rem",
             "@media (min-width:600px)": {
-              minHeight: "4rem",
+              minHeight: "calc(4rem - 1px)",
               paddingLeft: "1rem",
               paddingRight: "1rem",
             },

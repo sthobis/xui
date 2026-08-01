@@ -478,3 +478,136 @@ test.describe("text metrics", () => {
     ).toEqual([])
   })
 })
+
+test.describe("painted geometry", () => {
+  /**
+   * Compares the set of PAINTED RECTANGLES between the two sides of each pair - every box that puts
+   * ink on the screen, with no reliance on it containing text.
+   *
+   * This closes the gap the font-metrics sweep above leaves open. That one joins elements by their
+   * rendered text, so anything without text is invisible to it: a divider, a slider rail, a switch
+   * track, an icon, an avatar. Any of those could change size and no non-pixel check would notice -
+   * and the pixel diff is exactly the thing that cannot see a sub-pixel change.
+   *
+   * Correspondence is by VALUE, not identity: collect each side's painted boxes relative to its own
+   * cell origin, sort them, and compare the two lists. The two sides deliberately have different
+   * markup, so nothing can be paired up structurally - but if they render the same design they must
+   * put ink in the same places, whatever elements happen to produce it. That property survives the
+   * structural differences this project is built on: shadcn draws an input's border on the <input>
+   * itself while MUI draws it on a wrapper, and both yield one rectangle at the same place; Radix
+   * nests a slider's Range inside its Track where MUI puts rail and track side by side, and both
+   * yield the same two rectangles.
+   *
+   * An element counts as painted when it has a visible background, a visible border, or is an image
+   * or icon. Layout wrappers contribute nothing, which is what keeps MUI's deeper markup from
+   * registering as extra boxes - and a transparent border (MUI's button-group seam) correctly counts
+   * as no border at all.
+   */
+  // Pairs whose painted boxes differ BY DESIGN, with the reason. Adding to this list means claiming
+  // the difference is intended and pixel-neutral - the parity diff still has to agree.
+  const BY_DESIGN = new Set([
+    // buttongroup-basic: the two libraries build the shared seam differently and neither is wrong.
+    // shadcn drops the left border off every non-first child, so each of those buttons is 1px
+    // narrower and the seam is the previous button's right border. MUI keeps the border, makes the
+    // earlier button's right border transparent, and pulls the next button 1px left to overlap. The
+    // outer edges and the seam land on identical pixels either way - which the parity diff confirms
+    // at 0 differing pixels in light - but the intermediate boxes are a pixel apart. See the
+    // MuiButtonGroup banner in the theme.
+    "buttongroup-basic",
+  ])
+
+  test("each pair paints the same rectangles on both sides", async ({ page }) => {
+    const pairs: string[] = (
+      await page.evaluate(() =>
+        Array.from(document.querySelectorAll("[data-pair-id]")).map((el) => el.getAttribute("data-pair-id")!),
+      )
+    ).filter((id) => !BY_DESIGN.has(id))
+    expect(pairs.length).toBeGreaterThan(0)
+
+    const offenders: string[] = []
+    for (const id of pairs) {
+      const row = page.locator(`[data-pair-id="${id}"]`)
+      await row.scrollIntoViewIfNeeded()
+      const found = await row.evaluate((rowEl) => {
+        const transparent = (c: string) => c === "transparent" || /^(rgba?|oklab|oklch|color)\(.*[,/]\s*0\s*\)$/.test(c)
+
+        const collect = (side: string): string[] => {
+          const cell = rowEl.querySelector(`[data-side="${side}"]`)
+          if (!cell) return []
+          const base = cell.getBoundingClientRect()
+          const boxes: string[] = []
+          for (const el of Array.from(cell.querySelectorAll<HTMLElement>("*"))) {
+            const cs = getComputedStyle(el)
+            if (cs.visibility === "hidden" || cs.display === "none" || cs.opacity === "0") continue
+            // Anything mid-animation has a time-dependent box: the spinner's ring is a rotating
+            // square, and a rotated square's axis-aligned bounds grow and shrink as it turns
+            // (measured 21.86 against a resting 16). Motion is the `animates` check's job; this one
+            // only judges things that hold still.
+            //
+            // Checked up the ANCESTOR chain, not just on the element: the two spinners animate at
+            // different levels - shadcn rotates the icon itself, MUI rotates the root and scales the
+            // svg inside it - so testing the element alone excluded one side and kept the other.
+            let animated = false
+            for (let n: HTMLElement | null = el; n && n !== cell; n = n.parentElement) {
+              if (getComputedStyle(n).animationName !== "none") {
+                animated = true
+                break
+              }
+            }
+            if (animated) continue
+            const r = el.getBoundingClientRect()
+            if (r.width === 0 || r.height === 0) continue
+
+            const hasBg = !transparent(cs.backgroundColor) || cs.backgroundImage !== "none"
+            const hasBorder = (["Top", "Right", "Bottom", "Left"] as const).some(
+              (s) =>
+                parseFloat(cs[`border${s}Width` as "borderTopWidth"]) > 0 &&
+                !transparent(cs[`border${s}Color` as "borderTopColor"]),
+            )
+            const isGraphic = el.tagName === "IMG" || el instanceof SVGSVGElement
+            if (!hasBg && !hasBorder && !isGraphic) continue
+
+            // One decimal place. Sub-pixel layout rounding differs harmlessly between two ways of
+            // reaching the same size - an image list tile is 69.33 tall as a grid item and 69.34 as
+            // an aspect-ratio box - while every real defect this has found is a whole pixel or more.
+            boxes.push(
+              [
+                (r.x - base.x).toFixed(1),
+                (r.y - base.y).toFixed(1),
+                r.width.toFixed(1),
+                r.height.toFixed(1),
+              ].join(","),
+            )
+          }
+          return boxes.sort()
+        }
+
+        const a = collect("shadcn")
+        const b = collect("mui")
+        if (a.length === b.length && a.every((v, i) => v === b[i])) return []
+
+        // Report only the boxes that are NOT common to both, so a difference reads as "this
+        // rectangle is on one side and not the other" rather than as two long lists.
+        const countOf = (list: string[]) =>
+          list.reduce((m, v) => m.set(v, (m.get(v) ?? 0) + 1), new Map<string, number>())
+        const ca = countOf(a)
+        const cb = countOf(b)
+        const out: string[] = []
+        for (const [box, n] of ca) {
+          const extra = n - (cb.get(box) ?? 0)
+          if (extra > 0) out.push(`shadcn only (x${extra}): ${box}`)
+        }
+        for (const [box, n] of cb) {
+          const extra = n - (ca.get(box) ?? 0)
+          if (extra > 0) out.push(`mui only (x${extra}): ${box}`)
+        }
+        return out
+      })
+      for (const f of found) offenders.push(`${id}: ${f}`)
+    }
+    expect(
+      offenders,
+      `these painted rectangles (x,y,w,h relative to the cell) exist on one side only:\n${offenders.join("\n")}`,
+    ).toEqual([])
+  })
+})
