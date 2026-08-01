@@ -5269,8 +5269,19 @@ export const shadcnTheme = createTheme({
     MuiFab: {
       styleOverrides: {
         root: {
-          width: "3.5rem", // shadcn: size-14
-          height: "3.5rem",
+          // SIZE IS SCOPED. MUI's Fab ladder is 40/48/56, and setting width/height on the root
+          // unconditionally does not "leave the other sizes untreated" - it actively breaks them,
+          // forcing every Fab to 56px. Found via SpeedDial, whose action buttons are `size="small"`
+          // and were rendering the same size as the trigger they sit under.
+          "&:not(.MuiFab-sizeSmall):not(.MuiFab-sizeMedium)": {
+            width: "3.5rem", // shadcn: size-14
+            height: "3.5rem",
+          },
+          // The small size is what a SpeedDial's actions use, so the speeddial-open pair covers it.
+          "&.MuiFab-sizeSmall": {
+            width: "2.5rem", // shadcn: size-10
+            height: "2.5rem",
+          },
           borderRadius: "9999px", // shadcn: rounded-full
           // shadcn's Button carries `border border-transparent` and `bg-clip-padding`; both are
           // load-bearing on a 56px border-box, since the border insets the icon by a pixel.
@@ -5651,6 +5662,41 @@ export const shadcnTheme = createTheme({
             padding: 0,
           },
         },
+      },
+    },
+    // ---- SpeedDialAction (the open speed dial's secondary buttons) ----
+    //
+    // PROVENANCE: composed, like the speed dial itself. A secondary action reads as shadcn's OUTLINE
+    // button made circular - a border, the ambient foreground, and less lift than the filled trigger
+    // above it. MUI's own default is borderless with a muted icon and the same elevation as the
+    // trigger, which flattens the hierarchy between them.
+    //
+    // Size comes from MuiFab's `sizeSmall` rule (40px), since SpeedDialAction renders a small Fab.
+    MuiSpeedDialAction: {
+      styleOverrides: {
+        // These mirror MuiButton's `variant="outlined"` block, including its dark-scheme deltas -
+        // the whole recipe, not the light half. Copying only the light values left the dark actions
+        // filled with the page background against shadcn's `dark:bg-input/30`, and bordered with
+        // `border` against its `dark:border-input`: two solid discs of difference.
+        fab: ({ theme }) => ({
+          backgroundColor: theme.vars.palette.background.default, // shadcn outline: bg-background
+          color: theme.vars.palette.text.primary, // shadcn outline: ambient foreground
+          border: `1px solid ${theme.vars.palette.border}`, // shadcn outline: border-border
+          boxShadow: [
+            "0 4px 6px -1px rgba(0, 0, 0, 0.1)", // shadcn: shadow-md - a step below the trigger's shadow-lg
+            "0 2px 4px -2px rgba(0, 0, 0, 0.1)",
+          ].join(", "),
+          "&:hover": {
+            backgroundColor: theme.vars.palette.muted.main, // shadcn outline: hover:bg-muted
+          },
+          ...theme.applyStyles("dark", {
+            backgroundColor: `color-mix(in oklab, ${theme.vars.palette.input} 30%, transparent)`, // shadcn: dark:bg-input/30
+            borderColor: theme.vars.palette.input, // shadcn: dark:border-input
+            "&:hover": {
+              backgroundColor: `color-mix(in oklab, ${theme.vars.palette.input} 50%, transparent)`, // shadcn: dark:hover:bg-input/50
+            },
+          }),
+        }),
       },
     },
     // -----------------------------------------------------------------------
