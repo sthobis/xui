@@ -7,5 +7,7 @@ import { inputSection } from "./input"
 import { checkboxSection } from "./checkbox"
 import { switchSection } from "./switch"
 import { radioSection } from "./radio"
+import { badgeSection } from "./badge"
+import { bannerSection } from "./banner"
 
-export const sections: Section[] = [buttonSection, textSection, labelSection, linkSection, inputSection, checkboxSection, switchSection, radioSection]
+export const sections: Section[] = [buttonSection, textSection, labelSection, linkSection, inputSection, checkboxSection, switchSection, radioSection, badgeSection, bannerSection]

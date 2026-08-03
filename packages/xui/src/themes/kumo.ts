@@ -93,6 +93,12 @@ declare module "@mui/material/styles" {
     danger: string
     dangerTint: string
     textDanger: string
+    // badge fills (Badge's colour variants name these directly)
+    badgeBlue: string
+    badgeGreen: string
+    badgeOrange: string
+    badgeNeutral: string
+    badgeRed: string
   }
   interface Palette {
     kumo: KumoPalette
@@ -120,6 +126,18 @@ declare module "@mui/material/Button" {
     // `h-5 px-1.5 text-xs` button - has nowhere to land, so the theme adds it as a real size
     // rather than asking every call site to restate the dimensions.
     xsmall: true
+  }
+}
+
+declare module "@mui/material/Chip" {
+  interface ChipPropsColorOverrides {
+    // kumo: Badge's colour variants. Named for the hue exactly as Kumo names them, rather than
+    // remapped onto MUI's primary/secondary, because that is the vocabulary its ground truth uses.
+    blue: true
+    green: true
+    orange: true
+    neutral: true
+    red: true
   }
 }
 
@@ -193,6 +211,12 @@ const light = {
   danger: "oklch(63.7% 0.237 25.331)", // kumo: --color-kumo-danger
   dangerTint: "oklch(93.6% 0.032 17.7 / 0.42)", // kumo: --color-kumo-danger-tint
   textDanger: "oklch(50.5% 0.213 27.518)", // kumo: --text-color-kumo-danger
+  // --- badge fills (Badge names these directly; they are NOT the status indicator colours) ---
+  badgeBlue: "oklch(0.546 0.245 262.881)", // kumo: --color-kumo-badge-blue
+  badgeGreen: "oklch(0.596 0.145 163.225)", // kumo: --color-kumo-badge-green
+  badgeOrange: "oklch(0.815 0.197 76)", // kumo: --color-kumo-badge-orange
+  badgeNeutral: "oklch(0.556 0 0)", // kumo: --color-kumo-badge-neutral
+  badgeRed: "oklch(0.577 0.245 27.325)", // kumo: --color-kumo-badge-red
 }
 
 const dark: typeof light = {
@@ -242,6 +266,12 @@ const dark: typeof light = {
   danger: "oklch(57.7% 0.245 27.325)", // kumo: --color-kumo-danger (dark)
   dangerTint: "oklch(42.9% 0.176 28.7 / 0.17)", // kumo: --color-kumo-danger-tint (dark)
   textDanger: "oklch(70.4% 0.191 22.216)", // kumo: --text-color-kumo-danger (dark)
+  // --- badge fills ---
+  badgeBlue: "oklch(0.488 0.243 264.376)", // kumo: --color-kumo-badge-blue (dark)
+  badgeGreen: "oklch(0.508 0.118 165.612)", // kumo: --color-kumo-badge-green (dark)
+  badgeOrange: "oklch(0.815 0.197 76)", // kumo: --color-kumo-badge-orange (dark, same as light)
+  badgeNeutral: "oklch(0.439 0 0)", // kumo: --color-kumo-badge-neutral (dark)
+  badgeRed: "oklch(0.505 0.213 27.518)", // kumo: --color-kumo-badge-red (dark)
 }
 
 // ---------------------------------------------------------------------------
@@ -1209,6 +1239,110 @@ export const kumoTheme = createTheme({
           // repaints it to a 38% black, which then compounds with the opacity.
           "&.Mui-disabled": { color: theme.vars.palette.kumo.textDefault },
         }),
+      },
+    },
+
+    // ---- Badge ----
+    //
+    // kumo: dist/chunks/badge-e16yhhe9xibra5k7.js
+    //   base     inline-flex w-fit flex-none shrink-0 items-center justify-self-start rounded-full
+    //            px-2 py-0.5 text-xs font-medium whitespace-nowrap
+    //   blue     bg-kumo-badge-blue text-white        green   bg-kumo-badge-green text-white
+    //   orange   bg-kumo-badge-orange text-black      neutral bg-kumo-badge-neutral text-white
+    //   red      bg-kumo-badge-red text-white         outline border border-kumo-fill
+    //                                                         bg-transparent text-kumo-default
+    //
+    // Note orange is the one variant with BLACK text - its badge token is a light amber that white
+    // would disappear into.
+    MuiChip: {
+      styleOverrides: {
+        root: ({ theme, ownerState }) => {
+          const k = theme.vars.palette.kumo
+          const fills: Record<string, { bg: string; fg: string }> = {
+            blue: { bg: k.badgeBlue, fg: "#ffffff" },
+            green: { bg: k.badgeGreen, fg: "#ffffff" },
+            orange: { bg: k.badgeOrange, fg: "#000000" }, // kumo: text-black, not white
+            neutral: { bg: k.badgeNeutral, fg: "#ffffff" },
+            red: { bg: k.badgeRed, fg: "#ffffff" },
+          }
+          const fill = fills[ownerState.color as string]
+          return {
+            height: "auto", // kumo sizes the pill from its padding, not a fixed height
+            width: "fit-content", // kumo: w-fit
+            flex: "none", // kumo: flex-none
+            flexShrink: 0, // kumo: shrink-0
+            justifySelf: "start", // kumo: justify-self-start
+            alignItems: "center", // kumo: items-center
+            borderRadius: "9999px", // kumo: rounded-full
+            padding: "2px 8px", // kumo: px-2 py-0.5
+            ...TEXT_XS, // kumo: text-xs
+            fontWeight: 500, // kumo: font-medium
+            letterSpacing: "normal",
+            whiteSpace: "nowrap" as const, // kumo: whitespace-nowrap
+            border: 0,
+            ...(fill
+              ? { backgroundColor: fill.bg, color: fill.fg }
+              : {
+                  // kumo: the `outline` variant - a border rather than a fill
+                  backgroundColor: "transparent", // kumo: bg-transparent
+                  color: k.textDefault, // kumo: text-kumo-default
+                  border: `1px solid ${k.fill}`, // kumo: border border-kumo-fill
+                }),
+          }
+        },
+        label: {
+          // The pill's padding lives on the root, as it does in Kumo; MUI puts its own on the label.
+          padding: 0,
+          overflow: "visible" as const,
+        },
+      },
+    },
+
+    // ---- Banner ----
+    //
+    // kumo: dist/chunks/banner-cu2mip76zfx0gf27.js
+    //   base        flex w-full
+    //   size base   items-start gap-3 rounded-lg px-4 py-3 text-base
+    //   default     bg-kumo-info-tint text-kumo-info
+    //   alert       bg-kumo-warning-tint text-kumo-warning
+    //   error       bg-kumo-danger-tint text-kumo-danger
+    //
+    // Each variant is a tint fill with the matching TEXT token on top - the darker readable one,
+    // not the indicator colour - so the mapping reuses the same textInfo/textWarning/textDanger
+    // pairs Text's own variants use.
+    MuiAlert: {
+      defaultProps: {
+        // kumo: Banner renders an icon only when one is passed. MUI renders a severity icon by
+        // default, so the default is turned off here rather than at every call site.
+        icon: false,
+      },
+      styleOverrides: {
+        root: ({ theme, ownerState }) => {
+          const k = theme.vars.palette.kumo
+          const tints: Record<string, { bg: string; fg: string }> = {
+            info: { bg: k.infoTint, fg: k.textInfo }, // kumo: variant `default`
+            warning: { bg: k.warningTint, fg: k.textWarning }, // kumo: variant `alert`
+            error: { bg: k.dangerTint, fg: k.textDanger }, // kumo: variant `error`
+          }
+          const t = tints[ownerState.severity ?? "info"] ?? tints.info
+          return {
+            display: "flex", // kumo: flex
+            width: "100%", // kumo: w-full
+            alignItems: "flex-start", // kumo: items-start
+            gap: "12px", // kumo: gap-3
+            borderRadius: "8px", // kumo: rounded-lg
+            padding: "12px 16px", // kumo: px-4 py-3
+            ...TEXT_BASE, // kumo: text-base
+            fontWeight: 400,
+            letterSpacing: "normal",
+            backgroundColor: t.bg,
+            color: t.fg,
+          }
+        },
+        message: {
+          // MUI pads its message block; Kumo's row is spaced by the container's gap alone.
+          padding: 0,
+        },
       },
     },
 

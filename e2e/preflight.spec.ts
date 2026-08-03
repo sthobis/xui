@@ -41,6 +41,15 @@ const maxDeltaOverrides: Record<string, number> = {
   //
   // 38 pixels, worst channel Δ8, all of them on the four corner curves.
   "switch-checked": 8,
+
+  // badge-outline: ONE pixel, Δ4, on the pill's border curve.
+  //
+  // The same phenomenon this file's header already records for the input-box family (one pixel at
+  // Δ2 where a border corner resolves a step differently), just a touch larger because `outline` is
+  // the only Badge variant with a real 1px border and it is drawn on a `rounded-full` pill, so the
+  // curve is far tighter than an 8px radius. Every filled Badge variant - same box, same padding,
+  // same type, no border - is at Δ0 across the two pages, which is what isolates it to the border.
+  "badge-outline": 4,
 }
 
 /**
