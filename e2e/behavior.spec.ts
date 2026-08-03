@@ -24,6 +24,20 @@ test.beforeEach(async ({ page }, testInfo) => {
   await page.waitForLoadState("networkidle")
 })
 
+/**
+ * Each of these checks is opt-in per pair, so a gallery that has not yet grown a component of that
+ * shape has nothing to exercise - the kumo gallery has no portalled overlay and no editable control
+ * until its Tier 2 components land. That is a legitimately empty sweep, not a failure.
+ *
+ * The guard these calls replaced (`expect(count).toBeGreaterThan(0)`) existed to stop a test
+ * quietly proving nothing, and that is still worth having: skipping is REPORTED by Playwright,
+ * where a silent pass would not be, and the shadcn project still runs every one of them for real.
+ */
+function skipIfNothingToCheck(count: number, what: string) {
+  const { theme } = targetOf(test.info().project.name)
+  test.skip(count === 0, `the ${theme} gallery has no ${what} pairs yet`)
+}
+
 type BehaviorPair = { id: string; behaviors: string[] }
 
 async function discover(page: Page): Promise<BehaviorPair[]> {
@@ -76,7 +90,7 @@ async function sampleAnimationSignature(cell: Locator): Promise<{ first: string;
 test.describe("animates", () => {
   test("each tagged pair's animated element changes over time on both sides", async ({ page }) => {
     const pairs = (await discover(page)).filter((p) => p.behaviors.includes("animates"))
-    expect(pairs.length, "no pairs tagged with the animates behavior").toBeGreaterThan(0)
+    skipIfNothingToCheck(pairs.length, "animates")
 
     for (const { id } of pairs) {
       const row = page.locator(`[data-pair-id="${id}"]`)
@@ -144,7 +158,7 @@ test.describe("overlay-matches", () => {
   // not in the picture. Sabotaging the drawer's shadow left the pair at 0.00% before this.
   test("each tagged pair's scrim and panel chrome match on both sides", async ({ page }) => {
     const pairs = (await discover(page)).filter((p) => p.behaviors.includes("overlay-matches"))
-    expect(pairs.length, "no pairs tagged with the overlay-matches behavior").toBeGreaterThan(0)
+    skipIfNothingToCheck(pairs.length, "overlay-matches")
 
     for (const { id } of pairs) {
       const row = page.locator(`[data-pair-id="${id}"]`)
@@ -199,7 +213,7 @@ test.describe("item-hover-highlights", () => {
   // background across the two sides, which is the thing that differed.
   test("each tagged pair's overlay items highlight the same way on hover", async ({ page }) => {
     const pairs = (await discover(page)).filter((p) => p.behaviors.includes("item-hover-highlights"))
-    expect(pairs.length, "no pairs tagged with the item-hover-highlights behavior").toBeGreaterThan(0)
+    skipIfNothingToCheck(pairs.length, "item-hover-highlights")
 
     for (const { id } of pairs) {
       const row = page.locator(`[data-pair-id="${id}"]`)
@@ -281,7 +295,7 @@ test.describe("accepts input", () => {
       }
     }
 
-    expect(checked, "no editable controls found in the gallery").toBeGreaterThan(0)
+    skipIfNothingToCheck(checked, "an editable control")
     expect(offenders, `these controls ignored typed input:\n${offenders.join("\n")}`).toEqual([])
   })
 })
@@ -330,7 +344,7 @@ test.describe("no ripple", () => {
 test.describe("hover-opens", () => {
   test("each tagged pair's overlay opens on hover alone, no click", async ({ page }) => {
     const pairs = (await discover(page)).filter((p) => p.behaviors.includes("hover-opens"))
-    expect(pairs.length, "no pairs tagged with the hover-opens behavior").toBeGreaterThan(0)
+    skipIfNothingToCheck(pairs.length, "hover-opens")
 
     for (const { id } of pairs) {
       const row = page.locator(`[data-pair-id="${id}"]`)
@@ -352,7 +366,7 @@ test.describe("hover-opens", () => {
 test.describe("escape-closes", () => {
   test("each tagged pair's open overlay detaches on Escape", async ({ page }) => {
     const pairs = (await discover(page)).filter((p) => p.behaviors.includes("escape-closes"))
-    expect(pairs.length, "no pairs tagged with the escape-closes behavior").toBeGreaterThan(0)
+    skipIfNothingToCheck(pairs.length, "escape-closes")
 
     for (const { id } of pairs) {
       const row = page.locator(`[data-pair-id="${id}"]`)

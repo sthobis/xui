@@ -32,6 +32,8 @@ export default defineConfig({
   projects: [
     { name: "shadcn-light", use: { colorScheme: "light" } },
     { name: "shadcn-dark", use: { colorScheme: "light" } },
+    { name: "kumo-light", use: { colorScheme: "light" } },
+    { name: "kumo-dark", use: { colorScheme: "light" } },
   ],
   webServer: {
     command: `pnpm --filter showcase dev --port ${PORT} --strictPort`,

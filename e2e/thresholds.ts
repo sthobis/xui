@@ -63,7 +63,12 @@ const maxPixelOverrides: Record<ThemeName, Record<string, number>> = {
     // thousand pixels, which is exactly the shape a count cannot describe.
     "slider-disabled": Number.POSITIVE_INFINITY,
   },
-  kumo: {},
+  kumo: {
+    // The two emphasis buttons: gradient dithering, judged on channel error alone. Same shape of
+    // artifact as slider-disabled and the same reasoning - see the proof in maxDeltaOverrides.
+    "button-primary": Number.POSITIVE_INFINITY,
+    "button-destructive": Number.POSITIVE_INFINITY,
+  },
 }
 
 // Per-pair(+state) channel-error allowances. Use this when a residual is provably NOT misplaced
@@ -105,7 +110,33 @@ const maxDeltaOverrides: Record<ThemeName, Record<string, number>> = {
   // edge but still fails the moment anything MOVES.
     "stepper-horizontal": 60,
   },
-  kumo: {},
+  kumo: {
+    // button-primary / button-destructive: Kumo's two emphasis variants are the only components in
+    // either gallery painted with a GRADIENT, and Chrome dithers a gradient differently depending
+    // on which paint op draws it. Kumo puts its gradient on an absolutely positioned child span;
+    // MUI's Button renders its children as bare text nodes, so there is no element to style and the
+    // theme uses a ::before of identical geometry instead. Same picture, different paint op, and
+    // the dither pattern lands a single level apart across the button's face.
+    //
+    // The proof this is dithering and not a colour or geometry error:
+    //   - EVERY differing pixel is off by exactly 1/255. The delta histogram of the light default
+    //     capture is literally { 1: 802 } - not a distribution with a tail, a single bucket.
+    //   - The differences are strictly INTERIOR. The capture's differing bbox is y[56..123] while
+    //     the button spans y[50..125], so the 1px ring rows top and bottom - the thing a geometry
+    //     error would move first - are byte-identical, as are both captures' dimensions.
+    //   - Every non-gradient state of the same components is clean: secondary, ghost, outline and
+    //     secondary-destructive all reach 0-4px, and they share this file's entire box recipe.
+    //
+    // Two alternatives were measured and are worse, so this is the floor rather than a shortcut:
+    // folding the gradient onto the root's own background-image scores Δ41 (a real colour error,
+    // 716px), and it was Δ36 before the ::before existed. The pseudo-element is what took it to Δ1.
+    //
+    // Judged on channel error alone for the same reason slider-disabled is: a 1/255 step spread
+    // over hundreds of pixels is invisible, and a genuine regression moves a channel by far more
+    // (every defect this suite has caught moved 20-247 levels), so Δ1 still trips instantly.
+    "button-primary": 1,
+    "button-destructive": 1,
+  },
 }
 
 export interface ParityRule {

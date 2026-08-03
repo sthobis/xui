@@ -390,6 +390,159 @@ function schemePalette(t: typeof light) {
 // `Theme & CssVarsTheme` (vars required), not the plain (vars-optional) `Theme` export.
 export type KumoThemeWithVars = Theme & CssVarsTheme
 
+// ---------------------------------------------------------------------------
+// Button
+//
+// Ground truth: dist/chunks/button-eikucjpgqbsn5m5m.js (the real source; dist/components/button.js
+// is a 200-byte re-export). Its class strings, verbatim:
+//
+//   base:  group flex w-max shrink-0 items-center font-medium select-none
+//          border-0 shadow-xs
+//          focus:ring-kumo-focus/50 focus:outline-none focus-visible:ring-2
+//          focus-visible:ring-kumo-brand
+//          cursor-pointer disabled:cursor-not-allowed disabled:text-kumo-subtle
+//   size:  xs   h-5   gap-1   rounded-sm px-1.5 text-xs
+//          sm   h-6.5 gap-1   rounded-md px-2   text-xs
+//          base h-9   gap-1.5 rounded-lg px-3   text-base
+//          lg   h-10  gap-2   rounded-lg px-4   text-base
+//   shape: square  items-center justify-center p-0
+//          circle  items-center justify-center p-0 rounded-full
+//   compactSize (square/circle only): xs size-3.5  sm size-6.5  base size-9  lg size-10
+//   variant:
+//     primary      relative overflow-hidden bg-(--kumo-button-emphasis-bg) !text-white
+//                  ring ring-(--kumo-button-emphasis-ring) disabled:opacity-50
+//     secondary    bg-kumo-base !text-kumo-default ring ring-kumo-line
+//                  not-disabled:hover:bg-kumo-tint disabled:bg-kumo-base/50
+//                  disabled:!text-kumo-default/70
+//     ghost        text-kumo-default hover:bg-kumo-tint shadow-none bg-inherit
+//     destructive  (identical to primary; only the emphasis token differs)
+//     secondary-destructive
+//                  bg-kumo-base !text-kumo-danger ring ring-kumo-line
+//                  not-disabled:hover:ring-kumo-danger/30 disabled:bg-kumo-base/50
+//     outline      bg-transparent text-kumo-default ring ring-kumo-line transition-colors
+//                  not-disabled:hover:text-kumo-strong not-disabled:hover:ring-kumo-focus/25
+//
+// and the root's own className adds `disabled && "cursor-not-allowed opacity-50"`, so EVERY
+// disabled button is dimmed on top of whatever its variant does.
+//
+// GOTCHA 1 - the border is not a border. Kumo sets `border-0` and draws its outline with Tailwind's
+// `ring`, which is a box-shadow layer, so the outline sits OUTSIDE the border box and adds nothing
+// to layout. MUI's `outlined` variant uses a real 1px border, which would make every themed button
+// 2px wider and taller than its twin. Every variant here therefore pins borderWidth to 0 and
+// composes the ring into boxShadow instead.
+//
+// GOTCHA 2 - primary and destructive are not flat fills. Kumo renders an extra absolutely
+// positioned span inside the button carrying a vertical gradient plus an inset highlight
+// (`absolute inset-0 rounded-[inherit] bg-linear-to-b from-(--...-gradient-start)
+// to-(--...-gradient-end) shadow-[inset_0_1px_0_0_var(--...-emphasis-bg)]`). MUI's Button has no
+// such element and its children are bare text nodes, so there is nothing to wrap. Since the span is
+// `inset: 0` on a border-width-0 box, its padding box IS the root's border box - which makes the
+// span exactly equivalent to a background-image and an inset shadow on the root itself. That is how
+// it is reproduced below: no pseudo-element, no wrapper, and nothing for the text to sit under.
+// ---------------------------------------------------------------------------
+
+/** kumo: Tailwind's `shadow-xs`, which the button's base classes apply to every variant but ghost. */
+const SHADOW_XS = "0 1px 2px 0 rgb(0 0 0 / 0.05)"
+
+type KumoButtonSize = "xsmall" | "small" | "medium" | "large"
+
+/** kumo: the four size rows of KUMO_BUTTON_VARIANTS.size, resolved against Kumo's own type scale. */
+const BUTTON_SIZES: Record<KumoButtonSize, { height: string; padX: string; radius: string; gap: string; text: { fontSize: string; lineHeight: number }; compact: string }> = {
+  // MUI has no `xs`, so the theme adds one (see the ButtonPropsSizeOverrides augmentation above).
+  xsmall: { height: "20px", padX: "6px", radius: "4px", gap: "4px", text: TEXT_XS, compact: "14px" }, // kumo: h-5 px-1.5 rounded-sm gap-1 text-xs / size-3.5
+  small: { height: "26px", padX: "8px", radius: "6px", gap: "4px", text: TEXT_XS, compact: "26px" }, // kumo: h-6.5 px-2 rounded-md gap-1 text-xs / size-6.5
+  medium: { height: "36px", padX: "12px", radius: "8px", gap: "6px", text: TEXT_BASE, compact: "36px" }, // kumo: h-9 px-3 rounded-lg gap-1.5 text-base / size-9
+  large: { height: "40px", padX: "16px", radius: "8px", gap: "8px", text: TEXT_BASE, compact: "40px" }, // kumo: h-10 px-4 rounded-lg gap-2 text-base / size-10
+}
+
+/**
+ * kumo: getEmphasisStyle() in the button chunk, which sets four custom properties from one token.
+ * Transcribed as the color-mix expressions Kumo writes, in the space it writes them (oklch).
+ */
+function emphasis(token: string) {
+  return {
+    bg: `color-mix(in oklch, ${token}, white 30%)`, // kumo: --kumo-button-emphasis-bg
+    ring: `color-mix(in oklch, ${token}, black 10%)`, // kumo: --kumo-button-emphasis-ring
+    gradientStart: `color-mix(in oklch, ${token}, white 15%)`, // kumo: --kumo-button-emphasis-gradient-start
+    gradientEnd: token, // kumo: --kumo-button-emphasis-gradient-end
+  }
+}
+
+/** The shared geometry every Kumo button has, whatever its variant. */
+function buttonBase(size: KumoButtonSize) {
+  const s = BUTTON_SIZES[size]
+  return {
+    display: "flex", // kumo: flex (MUI's own default is inline-flex)
+    width: "max-content", // kumo: w-max
+    minWidth: 0, // MUI defaults to a 64px minWidth; Kumo has none, so a short label would be padded out
+    flexShrink: 0, // kumo: shrink-0
+    alignItems: "center", // kumo: items-center
+    justifyContent: "normal", // kumo: base has no justify-* (only the square/circle shapes add one)
+    boxSizing: "border-box" as const,
+    height: s.height,
+    padding: `0 ${s.padX}`, // kumo: px-* only; there is no py-* class, the height plus centering does it
+    gap: s.gap,
+    borderRadius: s.radius,
+    border: 0, // kumo: border-0 - the visible outline is a `ring`, i.e. a box-shadow (see GOTCHA 1)
+    fontSize: s.text.fontSize,
+    lineHeight: s.text.lineHeight,
+    fontWeight: 500, // kumo: font-medium
+    textTransform: "none" as const,
+    letterSpacing: "normal",
+    userSelect: "none" as const, // kumo: select-none
+    cursor: "pointer", // kumo: cursor-pointer
+    "&.Mui-disabled": {
+      cursor: "not-allowed", // kumo: disabled:cursor-not-allowed
+      opacity: 0.5, // kumo: the root className's own `disabled && "opacity-50"`, applied to every variant
+      pointerEvents: "auto" as const, // ...which MUI would otherwise suppress, hiding the cursor above
+      // MUI's `outlined` variant grows a REAL 1px border once disabled, at a specificity the root's
+      // own `border: 0` does not reach. Kumo's outline is a ring (a box-shadow) in every state, so
+      // the border must be restated here or a disabled button is 2px wider and taller than its twin
+      // - measured at exactly that, 84.19px against 82.19px.
+      border: 0,
+    },
+    // MUI spaces its icons with margins on the icon wrapper; Kumo uses the flex `gap` set above, so
+    // the margins have to go or every iconed button is wider than its twin.
+    "& .MuiButton-startIcon, & .MuiButton-endIcon": {
+      margin: 0,
+    },
+    // Kumo renders a Phosphor icon at its default `1em`, where MUI forces 20px on the first child.
+    "& .MuiButton-startIcon > *:nth-of-type(1), & .MuiButton-endIcon > *:nth-of-type(1)": {
+      fontSize: "inherit",
+    },
+  }
+}
+
+/** kumo: `ring` is a 1px box-shadow layer, stacked in front of the base `shadow-xs`. */
+function ringWith(color: string, width = 1) {
+  return `0 0 0 ${width}px ${color}, ${SHADOW_XS}`
+}
+
+/**
+ * MUI TRAP - `disableElevation` erases the ring on hover, active and focus-visible.
+ *
+ * The prop is switched on because Kumo's shadow is a flat `shadow-xs`, not a Material elevation.
+ * But MUI implements it as `.MuiButton-disableElevation { box-shadow: none; &:hover, &:active,
+ * &.Mui-focusVisible { box-shadow: none } }`, and Kumo's outline IS a box-shadow (the `ring`) - so
+ * every interactive state silently lost its 1px outline while the default state looked perfect.
+ *
+ * It is invisible in a computed-style probe that hovers the element directly, because that reads
+ * the value the root rule sets; the class rule only wins during the real capture. What exposed it
+ * was sampling the captured pixels: at the button's top edge the Kumo side painted the ring colour
+ * (4,94,222) where the MUI side still painted page background (251,251,251) - a 2-device-pixel band
+ * top and bottom, Δ247.
+ *
+ * Every variant therefore restates its shadow on all three states. Kumo itself has no `:active`
+ * styling at all, so the active shadow is simply the hover shadow (a press is also a hover).
+ */
+function shadowStates(resting: string, hovered = resting, focused = resting) {
+  return {
+    "&:hover": { boxShadow: hovered },
+    "&:active": { boxShadow: hovered },
+    "&.Mui-focusVisible": { boxShadow: focused },
+  }
+}
+
 export const kumoTheme = createTheme({
   cssVariables: {
     // kumo: `<html data-mode="dark">` is Kumo's own convention (its tokens resolve through CSS
@@ -441,6 +594,247 @@ export const kumoTheme = createTheme({
         // context at higher priority than theme defaults - so without this it hands the ripple back
         // to every child.
         disableRipple: true,
+      },
+    },
+
+    // ---- Button ---- (see the banner above for the extracted class strings and the two gotchas)
+    MuiButton: {
+      defaultProps: {
+        // Kumo's shadow is the flat `shadow-xs` on every variant; MUI's elevation would stack its
+        // own Material shadow on top of it.
+        disableElevation: true,
+      },
+      styleOverrides: {
+        root: ({ theme, ownerState }) => {
+          const size = (ownerState.size ?? "medium") as KumoButtonSize
+          const k = theme.vars.palette.kumo
+          const base = buttonBase(size)
+
+          // MUI's variant+color pair selects the Kumo variant. contained -> the two emphasis
+          // variants, outlined -> the two ring-on-surface variants (plus `outline` via
+          // color="inherit"), text -> ghost.
+          const isEmphasis = ownerState.variant === "contained"
+          const isDestructive = ownerState.color === "error"
+
+          if (isEmphasis) {
+            const e = emphasis(isDestructive ? k.danger : k.brand)
+            return {
+              ...base,
+              position: "relative", // kumo: relative
+              overflow: "hidden", // kumo: overflow-hidden
+              // Own stacking context, so the gradient layer below can sit at z-index -1: above this
+              // root's background but still behind the label. Without it, a negative z-index would
+              // escape past the background entirely and the gradient would never be seen.
+              isolation: "isolate",
+              color: "#ffffff", // kumo: !text-white (both emphasis variants, in both schemes)
+              backgroundColor: e.bg, // kumo: bg-(--kumo-button-emphasis-bg)
+              boxShadow: ringWith(e.ring), // kumo: ring ring-(--kumo-button-emphasis-ring) + shadow-xs
+              // Kumo's gradient span, reproduced as a pseudo-element of the same geometry.
+              //
+              // This deliberately is NOT folded into the root's own background-image, which is
+              // algebraically the same picture but does not RASTERIZE the same: Chrome dithers a
+              // gradient differently when it paints one as an element's own background than when it
+              // paints it onto a separate box, and the difference showed up as 450 dithered pixels
+              // at Δ36 banded across the button face. Matching Kumo's structure matches its
+              // dithering.
+              "&::before": {
+                content: '""',
+                position: "absolute",
+                inset: 0, // kumo: absolute inset-0
+                zIndex: -1,
+                borderRadius: "inherit", // kumo: rounded-[inherit]
+                backgroundImage: `linear-gradient(${e.gradientStart} 0%, ${e.gradientEnd} 100%)`, // kumo: bg-linear-to-b from-* to-*
+                boxShadow: `inset 0 1px 0 0 ${e.bg}`, // kumo: shadow-[inset_0_1px_0_0_var(--kumo-button-emphasis-bg)]
+              },
+              "&:hover::before, &:active::before": {
+                // kumo: group-hover:from-(--kumo-button-emphasis-bg) - only the gradient's TOP stop
+                // moves on hover; the bottom stop stays on the raw token.
+                backgroundImage: `linear-gradient(${e.bg} 0%, ${e.gradientEnd} 100%)`,
+              },
+              // kumo: the variant's own focus-visible:ring-(--kumo-button-emphasis-ring) keeps the
+              // emphasis ring colour, while the base's focus-visible:ring-2 widens it to 2px.
+              ...shadowStates(ringWith(e.ring), ringWith(e.ring), ringWith(e.ring, 2)),
+              "&:focus-visible": {
+                boxShadow: ringWith(e.ring, 2),
+                outline: "none", // kumo: focus:outline-none
+              },
+              "&.Mui-disabled": {
+                ...base["&.Mui-disabled"],
+                color: "#ffffff",
+                backgroundColor: e.bg,
+                boxShadow: ringWith(e.ring),
+              },
+            }
+          }
+
+          if (ownerState.variant === "text") {
+            // kumo: ghost - the only variant with no ring and no shadow at all.
+            return {
+              ...base,
+              color: k.textDefault, // kumo: text-kumo-default
+              backgroundColor: "transparent", // kumo: bg-inherit over a transparent page surface
+              boxShadow: "none", // kumo: shadow-none
+              ...shadowStates("none"),
+              "&:hover": {
+                backgroundColor: k.tint, // kumo: hover:bg-kumo-tint
+                boxShadow: "none",
+              },
+              "&:active": { backgroundColor: k.tint, boxShadow: "none" },
+              "&:focus-visible": {
+                // kumo: focus-visible:ring-2 focus-visible:ring-kumo-brand. No shadow-xs underneath
+                // here, unlike every other variant - ghost's own `shadow-none` clears it.
+                boxShadow: `0 0 0 2px ${k.brand}`,
+                outline: "none", // kumo: focus:outline-none
+              },
+              "&.Mui-disabled": {
+                ...base["&.Mui-disabled"],
+                color: k.textSubtle, // kumo: disabled:text-kumo-subtle (ghost adds no override of its own)
+                backgroundColor: "transparent",
+                boxShadow: "none",
+              },
+            }
+          }
+
+          // The three ring-on-surface variants. `outline` is distinguished from `secondary` by
+          // color="inherit": both carry ring-kumo-line, but outline's fill is transparent where
+          // secondary's is the kumo-base surface, and only outline moves its TEXT colour on hover.
+          const isOutline = ownerState.color === "inherit"
+          const text = isDestructive ? k.textDanger : k.textDefault // kumo: !text-kumo-danger / !text-kumo-default
+
+          // kumo: focus:ring-kumo-focus/50 - PLAIN :focus, which a mouse press also matches, so
+          // this is what a PRESSED button shows. Missing it painted a 230-grey ring where Kumo
+          // paints a 131-grey one (Δ95). The emphasis variants are exempt: they restate
+          // focus:ring-(--kumo-button-emphasis-ring).
+          const focusRule = {
+            "&:focus": { boxShadow: ringWith(`color-mix(in oklab, ${k.focus} 50%, transparent)`) },
+          }
+          // Whether that ring survives a press is Kumo's specificity, not a choice made here:
+          // `not-disabled:hover:ring-*` compiles to a selector carrying :not(:disabled) as well as
+          // :hover, so it OUTRANKS the base `focus:ring-*`. `outline` and `secondary-destructive`
+          // have such a hover ring and keep it while pressed; plain `secondary` only changes its
+          // background on hover, so there the focus ring wins.
+          //
+          // That precedence is expressed by ORDER rather than by a more specific selector. Writing
+          // it as `&:focus:not(:hover)` also works for the press, but two pseudo-classes then
+          // outrank `&:focus-visible` below and the keyboard ring disappears - measured at Δ246 on
+          // both variants. Equal specificity plus deliberate ordering keeps all three states right.
+          const ringMovesOnHover = isOutline || isDestructive
+
+          return {
+            ...base,
+            color: text,
+            backgroundColor: isOutline ? "transparent" : k.base, // kumo: bg-transparent / bg-kumo-base
+            boxShadow: ringWith(k.line), // kumo: ring ring-kumo-line
+            ...(ringMovesOnHover ? focusRule : {}),
+            ...(isOutline
+              ? (() => {
+                  // kumo: not-disabled:hover:ring-kumo-focus/25
+                  const hoverRing = ringWith(`color-mix(in oklab, ${k.focus} 25%, transparent)`)
+                  const hover = {
+                    color: k.textStrong, // kumo: not-disabled:hover:text-kumo-strong
+                    backgroundColor: "transparent",
+                    boxShadow: hoverRing,
+                  }
+                  return {
+                    transition: "color 150ms, box-shadow 150ms", // kumo: transition-colors
+                    ...shadowStates(ringWith(k.line), hoverRing),
+                    "&:hover": hover,
+                    "&:active": hover,
+                  }
+                })()
+              : isDestructive
+                ? (() => {
+                    // kumo: not-disabled:hover:ring-kumo-danger/30
+                    const hoverRing = ringWith(`color-mix(in oklab, ${k.danger} 30%, transparent)`)
+                    const hover = {
+                      color: text, // kumo: not-disabled:hover:!text-kumo-danger (restated, so unchanged)
+                      backgroundColor: k.base, // kumo: secondary-destructive has no hover background
+                      boxShadow: hoverRing,
+                    }
+                    return { ...shadowStates(ringWith(k.line), hoverRing), "&:hover": hover, "&:active": hover }
+                  })()
+                : (() => {
+                    const hover = {
+                      backgroundColor: k.tint, // kumo: not-disabled:hover:bg-kumo-tint
+                      boxShadow: ringWith(k.line),
+                    }
+                    return { ...shadowStates(ringWith(k.line)), "&:hover": hover, "&:active": hover }
+                  })()),
+            ...(ringMovesOnHover ? {} : focusRule),
+            "&:focus-visible": {
+              // kumo: focus-visible:ring-2 focus-visible:ring-kumo-brand. The ring WIDENS and
+              // recolours, but `shadow-xs` from the base classes stays underneath it - dropping it
+              // is invisible against a light page and worth Δ1 over ~170px against a dark one.
+              boxShadow: ringWith(k.brand, 2),
+              outline: "none", // kumo: focus:outline-none
+            },
+            "&.Mui-disabled": {
+              ...base["&.Mui-disabled"],
+              // kumo: disabled:!text-kumo-default/70 and disabled:!text-kumo-danger/70 on the two
+              // secondary variants; `outline` has neither, so it falls back to the base's
+              // disabled:text-kumo-subtle.
+              color: isOutline ? k.textSubtle : `color-mix(in oklab, ${text} 70%, transparent)`,
+              // kumo: disabled:bg-kumo-base/50 (again, only the two secondary variants)
+              backgroundColor: isOutline ? "transparent" : `color-mix(in oklab, ${k.base} 50%, transparent)`,
+              boxShadow: ringWith(k.line),
+            },
+          }
+        },
+      },
+    },
+
+    // ---- IconButton ----
+    //
+    // Kumo has no separate icon-button component: it is Button with `shape="square"` (or "circle"),
+    // which swaps the horizontal padding for a fixed square from KUMO_BUTTON_VARIANTS.compactSize
+    // and centres the content. MUI's idiomatic surface for that is IconButton, so the square is
+    // rebuilt here rather than asking the gallery to pass layout props.
+    MuiIconButton: {
+      styleOverrides: {
+        root: ({ theme, ownerState }) => {
+          const size = (ownerState.size ?? "medium") as KumoButtonSize
+          const s = BUTTON_SIZES[size]
+          const k = theme.vars.palette.kumo
+          return {
+            ...buttonBase(size),
+            width: s.compact, // kumo: compactSize size-*
+            height: s.compact,
+            padding: 0, // kumo: shape square/circle set p-0
+            justifyContent: "center", // kumo: justify-center
+            borderRadius: s.radius, // kumo: square keeps the size's own radius (circle would be rounded-full)
+            color: k.textDefault, // kumo: secondary's !text-kumo-default, the default variant
+            backgroundColor: k.base, // kumo: bg-kumo-base
+            boxShadow: ringWith(k.line), // kumo: ring ring-kumo-line
+            // IconButton has no disableElevation prop, but it applies its own background overlays
+            // on hover/active, so the shadow is restated for the same reason - see shadowStates.
+            ...shadowStates(ringWith(k.line), ringWith(k.line), ringWith(k.brand, 2)),
+            "&:hover": {
+              backgroundColor: k.tint, // kumo: not-disabled:hover:bg-kumo-tint
+              boxShadow: ringWith(k.line),
+            },
+            "&:active": {
+              backgroundColor: k.tint,
+              boxShadow: ringWith(k.line),
+            },
+            // kumo: focus:ring-kumo-focus/50 - see the matching note on MuiButton above; a press
+            // focuses the button, so this is what a pressed icon button actually shows.
+            "&:focus": {
+              boxShadow: ringWith(`color-mix(in oklab, ${k.focus} 50%, transparent)`),
+            },
+            "&:focus-visible": {
+              boxShadow: ringWith(k.brand, 2), // kumo: focus-visible:ring-2 ring-kumo-brand, over shadow-xs
+              outline: "none",
+            },
+            "&.Mui-disabled": {
+              cursor: "not-allowed",
+              opacity: 0.5,
+              pointerEvents: "auto" as const,
+              color: `color-mix(in oklab, ${k.textDefault} 70%, transparent)`,
+              backgroundColor: `color-mix(in oklab, ${k.base} 50%, transparent)`,
+              boxShadow: ringWith(k.line),
+            },
+          }
+        },
       },
     },
   },
