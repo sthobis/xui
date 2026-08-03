@@ -1,5 +1,6 @@
 import { expect, test, type Locator, type Page } from "@playwright/test"
 import { openContentLocator, resetState } from "./lib/states"
+import { GALLERY_PAGE, targetOf } from "./lib/themes"
 
 // Non-pixel behavior checks. The pixel harness (parity.spec.ts) only ever screenshots frozen
 // frames of default/hover/focus/open/active/anchored states, so it structurally cannot see
@@ -12,12 +13,14 @@ import { openContentLocator, resetState } from "./lib/states"
 
 test.beforeEach(async ({ page }, testInfo) => {
   // Same convention as preflight.spec.ts: these checks (animation motion, hover/Escape trigger
-  // semantics) are style-mode-independent - running them twice under both the "light" and "dark"
+  // semantics) are style-mode-independent - running them twice under both the light and dark
   // Playwright projects would just re-test the same JS behavior against the same (light) UI,
   // since dark mode is toggled by an in-app button this spec never clicks, not by the project's
-  // colorScheme setting.
-  test.skip(testInfo.project.name === "dark", "mode covered by parity suite; behavior checks are mode-independent")
-  await page.goto("/")
+  // colorScheme setting. The THEME half of the project name does matter, though: each theme has
+  // its own gallery page with its own pairs.
+  const { theme, mode } = targetOf(testInfo.project.name)
+  test.skip(mode === "dark", "mode covered by parity suite; behavior checks are mode-independent")
+  await page.goto(GALLERY_PAGE[theme])
   await page.waitForLoadState("networkidle")
 })
 

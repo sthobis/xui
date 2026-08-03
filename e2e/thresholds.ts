@@ -1,3 +1,5 @@
+import type { ThemeName } from "./lib/themes"
+
 /**
  * The pass rule for a parity pair.
  *
@@ -47,18 +49,27 @@ const DEFAULT_MAX_DELTA = 40
 // THE TWO CAPS OVERRIDE INDEPENDENTLY. A pair that needs more room on one axis keeps the default on
 // the other, so an exception never silently widens both. Keys are either a bare pair id or
 // "pairId:state".
+//
+// Overrides are scoped PER THEME. Pair ids are only unique within a theme's own gallery (both
+// galleries have a `button-*` family), and an exception is always a proof about one specific pair
+// of implementations - shadcn's Radix slider against MUI's, say. Letting one theme's allowance
+// leak onto a same-named pair in another theme would silently hand it a pass it never earned.
 
 // Per-pair(+state) pixel-count allowances.
-const maxPixelOverrides: Record<string, number> = {
-  // slider-disabled: judged on channel error alone, so its count is unbounded - see the note in
-  // maxDeltaOverrides below. The artifact is a 1/255 rail rounding step spread over more than a
-  // thousand pixels, which is exactly the shape a count cannot describe.
-  "slider-disabled": Number.POSITIVE_INFINITY,
+const maxPixelOverrides: Record<ThemeName, Record<string, number>> = {
+  shadcn: {
+    // slider-disabled: judged on channel error alone, so its count is unbounded - see the note in
+    // maxDeltaOverrides below. The artifact is a 1/255 rail rounding step spread over more than a
+    // thousand pixels, which is exactly the shape a count cannot describe.
+    "slider-disabled": Number.POSITIVE_INFINITY,
+  },
+  kumo: {},
 }
 
 // Per-pair(+state) channel-error allowances. Use this when a residual is provably NOT misplaced
 // geometry - prove the boxes, colours and fonts match first, and record the proof here.
-const maxDeltaOverrides: Record<string, number> = {
+const maxDeltaOverrides: Record<ThemeName, Record<string, number>> = {
+  shadcn: {
   // slider-disabled: every value on both sides is byte-identical (rail/range/thumb background,
   // border radius, opacity, and getBoundingClientRect all match exactly; only the DOM shape
   // differs - Radix nests Track > Range where MUI puts rail + track as siblings). The rail's
@@ -92,7 +103,9 @@ const maxDeltaOverrides: Record<string, number> = {
   //
   // The count cap is deliberately left at the default, so this allows a slightly wrong-looking glyph
   // edge but still fails the moment anything MOVES.
-  "stepper-horizontal": 60,
+    "stepper-horizontal": 60,
+  },
+  kumo: {},
 }
 
 export interface ParityRule {
@@ -110,9 +123,9 @@ function scoped<T>(map: Record<string, T>, pairId: string, state?: string): T | 
   return map[pairId]
 }
 
-export function ruleFor(pairId: string, state?: string): ParityRule {
-  const maxPixels = scoped(maxPixelOverrides, pairId, state) ?? DEFAULT_MAX_PIXELS
-  const maxDelta = scoped(maxDeltaOverrides, pairId, state) ?? DEFAULT_MAX_DELTA
+export function ruleFor(theme: ThemeName, pairId: string, state?: string): ParityRule {
+  const maxPixels = scoped(maxPixelOverrides[theme], pairId, state) ?? DEFAULT_MAX_PIXELS
+  const maxDelta = scoped(maxDeltaOverrides[theme], pairId, state) ?? DEFAULT_MAX_DELTA
   const pixelPart = maxPixels === Number.POSITIVE_INFINITY ? "any px" : `≤ ${maxPixels}px`
   return { maxPixels, maxDelta, label: `${pixelPart}, Δ ≤ ${maxDelta}` }
 }

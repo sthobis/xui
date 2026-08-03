@@ -1,6 +1,7 @@
 import { expect, test, type Locator, type Page } from "@playwright/test"
 import { diffPngs } from "./lib/compare"
 import { snapToPixelGrid } from "./lib/states"
+import { GALLERY_PAGE, PURE_PAGE, targetOf } from "./lib/themes"
 
 /**
  * The most any channel of any pixel may differ between the two pages.
@@ -50,8 +51,9 @@ async function captureCell(page: Page, cell: Locator, id: string): Promise<Buffe
 }
 
 test("mui renders identically with and without tailwind", async ({ page }) => {
-  test.skip(test.info().project.name === "dark", "mode covered by parity suite; preflight is mode-independent")
-  await page.goto("/")
+  const { theme, mode } = targetOf(test.info().project.name)
+  test.skip(mode === "dark", "mode covered by parity suite; preflight is mode-independent")
+  await page.goto(GALLERY_PAGE[theme])
   await page.waitForLoadState("networkidle")
   const ids: string[] = await page.evaluate(() =>
     Array.from(document.querySelectorAll("[data-pair-id]")).map((el) => el.getAttribute("data-pair-id")!),
@@ -63,7 +65,7 @@ test("mui renders identically with and without tailwind", async ({ page }) => {
     withTailwind.set(id, await captureCell(page, cell, id))
   }
 
-  await page.goto("/pure.html")
+  await page.goto(PURE_PAGE[theme])
   await page.waitForLoadState("networkidle")
   const failures: string[] = []
   for (const id of ids) {

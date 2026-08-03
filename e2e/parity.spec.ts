@@ -11,6 +11,7 @@ import {
   snapToPixelGrid,
   type PairState,
 } from "./lib/states"
+import { activateDark, GALLERY_PAGE, targetOf } from "./lib/themes"
 import { ruleFor } from "./thresholds"
 
 const RESULTS_DIR = "e2e/results"
@@ -73,17 +74,15 @@ async function captureState(page: Page, cell: Locator, state: PairState, pairId:
 }
 
 test.beforeEach(async ({ page }, testInfo) => {
-  await page.goto("/")
+  const { theme, mode } = targetOf(testInfo.project.name)
+  await page.goto(GALLERY_PAGE[theme])
   await page.waitForLoadState("networkidle")
-  if (testInfo.project.name === "dark") {
-    await page.getByTestId("mode-toggle").click()
-    await expect(page.locator("html")).toHaveClass(/dark/)
-    await page.waitForTimeout(300)
-  }
+  if (mode === "dark") await activateDark(page, theme)
 })
 
 test("all pairs match within threshold", async ({ page }, testInfo) => {
   testInfo.setTimeout(240_000)
+  const { theme } = targetOf(testInfo.project.name)
 
   // Iteration speedup: `PARITY_PAIR=slider` (comma-separated id prefixes) restricts the run to
   // matching pairs, so a single-component check takes ~seconds instead of the whole suite. A
@@ -131,7 +130,7 @@ test("all pairs match within threshold", async ({ page }, testInfo) => {
       // A pair with a maxDelta override is judged on the size of its worst per-channel error
       // instead of on how many pixels differ - see thresholds.ts maxDeltaOverrides. Both numbers
       // are always reported so a delta-judged pair's pixel count stays visible.
-      const rule = ruleFor(id, state)
+      const rule = ruleFor(theme, id, state)
       // A size difference is its own failure and is NEVER judged by a threshold. diffPngs pads the
       // smaller capture to the union with transparent pixels, so two differently-shaped captures
       // produce a percentage - and a percentage cannot distinguish "one side is a pixel taller"

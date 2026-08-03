@@ -27,9 +27,11 @@ export default defineConfig({
     viewport: { width: 1440, height: 1000 },
     deviceScaleFactor: 2,
   },
+  // `<theme>-<mode>`, parsed by e2e/lib/themes.ts. The mode half never sets the OS colorScheme:
+  // every theme's dark mode is driven by the in-app toggle, so both halves stay "light" here.
   projects: [
-    { name: "light", use: { colorScheme: "light" } },
-    { name: "dark", use: { colorScheme: "light" } }, // mode is set via the app toggle, not the OS scheme
+    { name: "shadcn-light", use: { colorScheme: "light" } },
+    { name: "shadcn-dark", use: { colorScheme: "light" } },
   ],
   webServer: {
     command: `pnpm --filter showcase dev --port ${PORT} --strictPort`,
