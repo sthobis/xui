@@ -611,3 +611,70 @@ test.describe("painted geometry", () => {
     ).toEqual([])
   })
 })
+
+test.describe("filters-on-type", () => {
+  /**
+   * Types into a combobox and checks that both sides narrow their list to the same options.
+   *
+   * Filtering is behaviour, not appearance: the pixel harness opens a list and screenshots it, so it
+   * sees a static set of options and can never tell whether typing narrows them - or whether the two
+   * sides narrow them the SAME way. Two libraries can both "filter" and still disagree (prefix versus
+   * substring, case sensitivity, diacritics), which would look correct in every screenshot.
+   *
+   * The query is derived from the options actually rendered rather than hard-coded, so the check
+   * cannot drift out of sync with the gallery: it opens the list, takes a slice from the middle of one
+   * option's label, types that, and compares. It also asserts the result is a PROPER subset of the
+   * full list, so a side that ignores the query entirely fails rather than trivially matching.
+   */
+  test("each tagged pair narrows to the same options on both sides", async ({ page }) => {
+    const pairs = (await discover(page)).filter((p) => p.behaviors.includes("filters-on-type"))
+    expect(pairs.length, "no pairs tagged with the filters-on-type behavior").toBeGreaterThan(0)
+
+    for (const { id } of pairs) {
+      const row = page.locator(`[data-pair-id="${id}"]`)
+      await row.scrollIntoViewIfNeeded()
+
+      const seen: Record<string, { all: string[]; filtered: string[]; query: string }> = {}
+      for (const side of ["shadcn", "mui"] as const) {
+        const cell = row.locator(`[data-side="${side}"]`)
+        const input = cell.locator("[data-target]").first()
+        await input.click()
+        const list = openContentLocator(page, cell, id)
+        await expect(list, `${id} (${side}): list did not open`).toBeVisible({ timeout: 5000 })
+
+        const optionsOf = () => list.locator('[role="option"]').allInnerTexts()
+        const all = (await optionsOf()).map((s) => s.trim())
+        expect(all.length, `${id} (${side}): opened list has no options to filter`).toBeGreaterThan(1)
+
+        // A slice from the MIDDLE of a label, so a prefix-only matcher fails rather than passing by
+        // accident - which is exactly the kind of disagreement this check exists to surface.
+        const source = all[Math.floor(all.length / 2)]
+        const query = source.slice(1, 4).toLowerCase()
+
+        await input.fill(query)
+        await page.waitForTimeout(300)
+        const filtered = (await optionsOf()).map((s) => s.trim())
+
+        seen[side] = { all, filtered, query }
+        await input.fill("")
+        await resetState(page)
+      }
+
+      expect(
+        seen.mui.query,
+        `${id}: the two sides rendered different options, so they were typed different queries ` +
+          `(shadcn ${JSON.stringify(seen.shadcn.all)}, mui ${JSON.stringify(seen.mui.all)})`,
+      ).toEqual(seen.shadcn.query)
+      expect(
+        seen.shadcn.filtered.length,
+        `${id}: typing "${seen.shadcn.query}" did not narrow shadcn's list at all ` +
+          `(${JSON.stringify(seen.shadcn.filtered)}) - nothing is being filtered`,
+      ).toBeLessThan(seen.shadcn.all.length)
+      expect(
+        seen.mui.filtered,
+        `${id}: the two sides filtered "${seen.mui.query}" differently\n` +
+          `  shadcn: ${JSON.stringify(seen.shadcn.filtered)}\n  mui:    ${JSON.stringify(seen.mui.filtered)}`,
+      ).toEqual(seen.shadcn.filtered)
+    }
+  })
+})

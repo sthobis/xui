@@ -5161,6 +5161,49 @@ export const shadcnTheme = createTheme({
           // sonner: overflow-wrap:anywhere on the toast root.
           overflowWrap: "anywhere",
         }),
+        // sonner: [data-button], the toast's action. An inverted pill, not shadcn's Button:
+        //     border-radius:4px; padding-left:8px; padding-right:8px; height:24px; font-size:12px;
+        //     color:var(--normal-bg); background:var(--normal-text); margin-left:auto;
+        //     margin-right:0; border:none; font-weight:500; display:flex; align-items:center;
+        //     flex-shrink:0
+        // Note the colours are INVERTED against the toast - the button's fill is the toast's text
+        // colour and vice versa - which is why this cannot just reuse the themed Button.
+        //
+        // Styled contextually, scoped to the action slot, so it reaches whatever button a consumer
+        // puts there without touching MuiButton anywhere else. sonner's [data-cancel] and
+        // [data-close-button] have no pair and get no treatment.
+        action: ({ theme }) => ({
+          display: "flex",
+          alignItems: "center",
+          marginLeft: "auto", // sonner: --toast-button-margin-start
+          marginRight: 0, // sonner: --toast-button-margin-end (MUI's own is -8px)
+          paddingLeft: 0, // MUI insets the action by 16px; sonner does not
+          "& .MuiButton-root": {
+            minWidth: 0, // MUI floors a Button at 64px wide; sonner's pill is content-sized
+            height: "1.5rem", // sonner: height:24px
+            padding: "0 0.5rem", // sonner: padding-left/right:8px
+            borderRadius: "0.25rem", // sonner: border-radius:4px (NOT shadcn's radius scale)
+            border: "none", // sonner: border:none
+            fontSize: "0.75rem", // sonner: font-size:12px
+            fontWeight: 500, // sonner: font-weight:500
+            // sonner's [data-button] declares neither of these, so both inherit from the toast -
+            // which matters because MUI's Button brings its own. Left alone it rendered in Geist
+            // against sonner's system stack (a 1.3px difference in the label's width) and at a
+            // line-height of 1 against the toast's inherited 1.5.
+            fontFamily: "inherit", // sonner: none declared - inherits the toaster's own stack
+            lineHeight: "inherit", // sonner: none declared - inherits the toast's 1.5
+            letterSpacing: "normal",
+            textTransform: "none",
+            flexShrink: 0, // sonner: flex-shrink:0
+            backgroundColor: theme.vars.palette.popover.contrastText, // sonner: background:var(--normal-text)
+            color: theme.vars.palette.popover.main, // sonner: color:var(--normal-bg)
+            "&:hover": {
+              // sonner changes nothing on hover - only opacity/box-shadow transitions are declared,
+              // and neither has a hover rule - so the fill is restated to beat MUI's own.
+              backgroundColor: theme.vars.palette.popover.contrastText,
+            },
+          },
+        }),
         message: {
           padding: 0, // MUI ships `padding: 8px 0`; sonner's [data-content] has none
           display: "flex", // sonner: [data-content] display:flex
@@ -5574,6 +5617,52 @@ export const shadcnTheme = createTheme({
           fontSize: "0.875rem",
           lineHeight: "1.25rem",
           color: theme.vars.palette.text.secondary,
+        }),
+        // The rows-per-page control. Its inner `select` already picks up the themed MuiSelect padding
+        // (the select-* pairs own that), but MUI draws the BOX here rather than on the InputBase
+        // root, so the trigger arrived borderless, 36px tall and carrying a 32px right margin.
+        input: ({ theme }) => ({
+          margin: 0, // MUI: `0 32px 0 8px`; the toolbar gap is what spaces this row
+          height: "2rem", // shadcn SelectTrigger: h-8
+          border: `1px solid ${theme.vars.palette.border}`, // shadcn SelectTrigger: border-input
+          borderRadius: RADIUS, // shadcn SelectTrigger: rounded-lg
+          backgroundColor: "transparent", // shadcn SelectTrigger: bg-transparent
+          ...theme.applyStyles("dark", {
+            backgroundColor: `color-mix(in oklab, ${theme.vars.palette.input} 30%, transparent)`, // shadcn: dark:bg-input/30
+            borderColor: theme.vars.palette.input, // shadcn: dark:border-input, NOT border-border
+          }),
+          // Reached as a DESCENDANT of this slot rather than through MuiTablePagination's own
+          // `select` slot: that key emits nothing that lands on the element - setting padding
+          // through it changed nothing at all - so the value div has to be addressed from a selector
+          // this block owns. `&&` doubles this slot's class so the result out-specifies the themed
+          // MuiSelect's own `&&`-doubled rule, which otherwise ties and wins on source order.
+          "&& .MuiSelect-select": {
+            // MUI floors the value at 16px wide. shadcn's trigger is purely content-sized, so a
+            // single-digit page size sat 7px wider and pushed the label along with it.
+            //
+            // `!important` reluctantly, and only after looking for the alternative. The rest of this
+            // rule lands - an outline set here for a probe rendered - so it is this one declaration
+            // being beaten, and by something that no readable stylesheet contains: a scan of every
+            // sheet for a matching min-width rule found nothing, and the element carries no inline
+            // style. That pattern says cascade LAYER rather than specificity, which no amount of
+            // extra classes can out-rank. Raising specificity was tried three ways first (the
+            // component's own `select` slot, a plain descendant, an `&&`-doubled descendant) and
+            // none moved it. Verified: with this, the trigger measures 50.77x32 at the same offset
+            // as shadcn's, to the hundredth of a pixel.
+            minWidth: "0 !important",
+            // The themed MuiSelect's 8px vertical padding suits a standalone trigger, whose root has
+            // none. Here the root IS the 32px box, so that padding made the value 36px tall inside
+            // it. Stretching to the box and centring gets the same look without the overflow.
+            paddingTop: 0,
+            paddingBottom: 0,
+            alignSelf: "stretch",
+            display: "flex",
+            alignItems: "center",
+            // MUI's InputBase leaves the value at 1.4375em, so it resolved to 20.125px against
+            // shadcn's flat 20. The pixel diff cannot see an eighth of a pixel - it reports zero
+            // differing pixels either way - so this is held by the font-metrics sweep instead.
+            lineHeight: "1.25rem", // shadcn: text-sm's paired line-height
+          },
         }),
         actions: {
           display: "flex", // shadcn: the row's own flex layout, not MUI's inline block

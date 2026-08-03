@@ -5,7 +5,7 @@ import type { ReactNode } from "react"
 export type PairState = "default" | "hover" | "focus" | "open" | "active" | "anchored"
 
 /** Non-pixel behaviors asserted by e2e/behavior.spec.ts (declarative discovery via `data-behaviors`). */
-export type PairBehavior = "animates" | "hover-opens" | "escape-closes" | "overlay-matches" | "item-hover-highlights"
+export type PairBehavior = "animates" | "hover-opens" | "escape-closes" | "overlay-matches" | "item-hover-highlights" | "filters-on-type"
 
 export interface Pair {
   id: string

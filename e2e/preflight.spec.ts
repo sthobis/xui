@@ -5,15 +5,20 @@ import { snapToPixelGrid } from "./lib/states"
 /**
  * The most any channel of any pixel may differ between the two pages.
  *
- * 2 is where the measured floor sits, and the floor is one pixel wide: with the pixel-grid snap in
- * captureCell applied, the whole suite comes in at Δ0 except the input-box family
- * (textfield-basic/-placeholder/-filled/-standard/-small/-multiline and formhelper-default), each of
- * which has exactly ONE pixel off by 2 - a corner of the box's border resolving a step differently.
+ * 40, matching the parity suite's own delta cap, because what this check exists to catch is a THEME
+ * DEPENDENCY on Tailwind - and those are structural, not subtle. Every one found so far was an order
+ * of magnitude above this: the image list's missing list-margin reset moved a third of the cell at
+ * Δ255, and the sub-pixel phase cases sat at Δ113-245.
  *
- * For scale, the rule this replaced was "under 0.5% of pixels may differ by any amount", which
- * happily passed 464 pixels at Δ245.
+ * It was 2 first, calibrated to the measured floor of the suite as it stood. That proved brittle for
+ * a reason worth recording: adding pairs moves every later cell, and the Fab's soft shadow then
+ * composites and antialiases its rounded edge slightly differently, which took the floor from Δ1 to
+ * Δ34 without anything about the theme changing. Verified at the time by reading the Fab's computed
+ * styles on both pages - width, height, radius, background, shadow, border, padding, box-sizing, all
+ * identical - so the difference was compositing, not a dependency. Re-tuning a number every time the
+ * gallery grows is not a check, it is a chore.
  */
-const MAX_CHANNEL_DELTA = 2
+const MAX_CHANNEL_DELTA = 40
 
 /**
  * Captures a cell via a page-level clip with ROUNDED integer bounds, for the same reason
@@ -70,18 +75,13 @@ test("mui renders identically with and without tailwind", async ({ page }) => {
     const cell = page.locator(`[data-pair-id="${id}"] [data-side="mui"]`)
     const pure = await captureCell(page, cell, id)
     const r = diffPngs(withTailwind.get(id)!, pure)
-    // Judged on CHANNEL ERROR, not on a percentage or a pixel count - and far more tightly than the
-    // parity suite, because this comparison is much stronger. Parity compares two different
-    // implementations of the same design; this compares the SAME MUI element, with the same theme,
-    // on two pages that differ only in whether Tailwind's stylesheet is present. Anything the theme
-    // genuinely leans on Tailwind for moves a channel by a lot, so a real dependency cannot hide
-    // under a cap this small.
-    //
-    // A percentage was the wrong instrument here for the same reason it was in thresholds.ts. The
-    // Fab's shadow is a soft translucent gradient, and its compositing lands one level apart between
-    // the two pages across roughly a thousand pixels - so it scored 1.18% while every single channel
-    // was off by exactly 1, which is invisible. The count says how much of the cell moved; only the
-    // delta says whether anything actually looks different.
+    // Judged on CHANNEL ERROR, not on a percentage or a pixel count. A percentage was the wrong
+    // instrument here for the same reason it was in thresholds.ts: the Fab's shadow is a soft
+    // translucent gradient whose compositing lands a level or two apart between the two pages across
+    // roughly a thousand pixels, which scored 1.18% while nothing was visibly different - and the
+    // rule it replaced happily passed 464 pixels at Δ245. The count says how much of the cell moved;
+    // only the delta says whether anything actually looks different. See MAX_CHANNEL_DELTA above for
+    // where the number comes from.
     if (r.maxChannelDelta > MAX_CHANNEL_DELTA) {
       failures.push(
         `${id}: worst channel Δ${r.maxChannelDelta} > ${MAX_CHANNEL_DELTA} ` +

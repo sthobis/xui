@@ -94,12 +94,17 @@ function ShadcnComboboxOpenDemo() {
     >
       <ComboboxInput data-target onClick={onOpen} />
       <ComboboxContent data-portal-target="autocomplete-open">
+        {/* Render-prop form, not a hand-mapped list. Base UI filters `items` against what has been
+            typed and hands the survivors to this callback; mapping OPTIONS directly - the earlier
+            version here - renders every option unconditionally, so the twin looked right while
+            silently not filtering at all. Caught by the filters-on-type check, which is the only
+            thing in the suite that types. */}
         <ComboboxList>
-          {OPTIONS.map((option) => (
+          {(option: string) => (
             <ComboboxItem key={option} value={option}>
               {option}
             </ComboboxItem>
-          ))}
+          )}
         </ComboboxList>
       </ComboboxContent>
     </Combobox>
@@ -166,7 +171,7 @@ export const autocompleteSection: Section = {
     {
       id: "autocomplete-open",
       states: ["open", "anchored"],
-      behaviors: ["escape-closes"],
+      behaviors: ["escape-closes", "filters-on-type"],
       // The panel is 92px tall and drops below this row. Without room reserved, its bottom-left
       // corner - transparent, because of the border radius - landed on the next section's heading
       // text on the shadcn side and on blank background on the MUI side. See Pair.roomBelow.
