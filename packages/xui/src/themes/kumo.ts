@@ -844,6 +844,122 @@ export const kumoTheme = createTheme({
       },
     },
 
+    // ---- Input / InputArea ----
+    //
+    // Ground truth: dist/chunks/input-o3mtvvtqf69j5k10.js (and input-dwl9oy1f1ufah0bx.js for the
+    // textarea). Kumo's Input IS the <input>: one element carrying box, ring, padding and text.
+    //
+    //   base     border-0 bg-kumo-control text-kumo-default ring ring-kumo-line
+    //            outline-none focus:outline-none kumo-input-placeholder
+    //   size     base -> h-9 rounded-lg px-3 text-base   (the same size row Button uses)
+    //   default  focus:ring-kumo-focus/50 focus:ring-[1.5px]
+    //   error    !ring-kumo-danger focus:ring-kumo-danger/50 focus:ring-[1.5px]
+    //   InputArea adds `h-auto py-2` over exactly that.
+    //
+    // Two differences from Button worth stating, because copying Button's block would get both
+    // wrong: an input has NO `shadow-xs` under its ring, and its focus ring is 1.5px rather than
+    // the button's 2px - and it is keyed on plain `:focus`, not `:focus-visible`, so clicking into
+    // a field rings it just as tabbing does.
+    MuiOutlinedInput: {
+      styleOverrides: {
+        // Kumo draws its outline as a ring on the box itself; there is no notch or legend.
+        notchedOutline: { display: "none" },
+        root: ({ theme, ownerState }) => {
+          const k = theme.vars.palette.kumo
+          return {
+            boxSizing: "border-box" as const,
+            ...TEXT_BASE, // kumo: text-base
+            fontWeight: 400,
+            letterSpacing: "normal",
+            color: k.textDefault, // kumo: text-kumo-default
+            backgroundColor: k.control, // kumo: bg-kumo-control
+            borderRadius: "8px", // kumo: rounded-lg
+            border: 0, // kumo: border-0
+            padding: 0, // the padding belongs to the control itself, as it does in Kumo
+            // kumo: ring ring-kumo-line - and NO shadow-xs, unlike every Button variant.
+            boxShadow: `0 0 0 1px ${k.line}`,
+            ...(ownerState.multiline
+              ? { height: "auto" } // kumo: InputArea's h-auto
+              : { height: "36px" }), // kumo: h-9
+            // kumo: focus:ring-[1.5px] focus:ring-kumo-focus/50. Plain :focus on the control, so
+            // `:has(:focus)` rather than MUI's `.Mui-focused` (which also fires for programmatic
+            // focus) and rather than :focus-visible (which a click would not match).
+            "&:has(:focus)": {
+              boxShadow: `0 0 0 1.5px color-mix(in oklab, ${k.focus} 50%, transparent)`,
+            },
+            "&.Mui-error": {
+              boxShadow: `0 0 0 1px ${k.danger}`, // kumo: !ring-kumo-danger
+              "&:has(:focus)": {
+                // kumo: `focus:ring-kumo-danger/50 focus:ring-[1.5px]` - but the `!` on the resting
+                // `!ring-kumo-danger` makes that colour !important, so it BEATS the /50 tint while
+                // the width still widens. A focused error ring is therefore solid danger at 1.5px,
+                // not a 50% wash of it. Taking the class list at face value renders a visibly paler
+                // outline (Δ103).
+                boxShadow: `0 0 0 1.5px ${k.danger}`,
+              },
+            },
+            "&.Mui-disabled": {
+              // Kumo's own `disabled:text-kumo-disabled` names a token the package does not define,
+              // so it resolves to nothing and a disabled field keeps its normal colours. Restated
+              // here because MUI otherwise greys both the text and the outline.
+              color: k.textDefault,
+              backgroundColor: k.control,
+              boxShadow: `0 0 0 1px ${k.line}`,
+            },
+          }
+        },
+        input: ({ theme, ownerState }) => ({
+          padding: ownerState.multiline ? "8px 12px" : "0 12px", // kumo: px-3, plus py-2 on InputArea
+          height: ownerState.multiline ? "auto" : "100%",
+          boxSizing: "border-box" as const,
+          // Kumo's InputArea is a plain <textarea>, so it keeps the UA's vertical resize grip. MUI
+          // sets `resize: none` on its own, which erased the grip - Δ153 over the ~40 corner pixels
+          // it occupies.
+          ...(ownerState.multiline && { resize: "vertical" as const }),
+          "&::placeholder": {
+            // kumo: the `kumo-input-placeholder` class
+            color: theme.vars.palette.kumo.textPlaceholder,
+            opacity: 1, // MUI dims its placeholder with opacity; Kumo sets a colour outright
+          },
+          "&.Mui-disabled": {
+            WebkitTextFillColor: theme.vars.palette.kumo.textDefault, // MUI greys disabled text via this
+          },
+        }),
+      },
+    },
+
+    // ---- Field ----
+    //
+    // kumo: dist/chunks/field-dxe9ne8fqy5whws2.js wraps a control that has a label, description or
+    // error in `grid gap-2`, with the message rendered as
+    // `text-sm leading-snug text-kumo-danger col-span-full`. MUI builds the same composition out of
+    // FormControl + FormHelperText, so those two carry it.
+    MuiFormControl: {
+      styleOverrides: {
+        root: {
+          gap: "8px", // kumo: Field's gap-2
+          margin: 0,
+        },
+      },
+    },
+    MuiFormHelperText: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          // MUI spaces its helper text with a 3px top margin; Kumo's grid gap does that job, so the
+          // margin has to go or the message sits 3px too low.
+          margin: 0,
+          ...TEXT_SM, // kumo: text-sm
+          lineHeight: 1.375, // kumo: leading-snug
+          fontWeight: 400,
+          letterSpacing: "normal",
+          color: theme.vars.palette.kumo.textSubtle, // kumo: a description is text-kumo-subtle
+          "&.Mui-error": {
+            color: theme.vars.palette.kumo.textDanger, // kumo: an error message is text-kumo-danger
+          },
+        }),
+      },
+    },
+
     // ---- Label ----
     //
     // kumo: `m-0 text-base font-medium text-kumo-default` plus `inline-flex items-center gap-1`.
@@ -861,6 +977,7 @@ export const kumoTheme = createTheme({
           fontWeight: 500, // kumo: font-medium
           letterSpacing: "normal",
           color: theme.vars.palette.kumo.textDefault, // kumo: text-kumo-default
+          userSelect: "none" as const, // kumo: Field's label adds select-none
           // MUI recolours a label once its field is focused or errored; Kumo's Label has no such
           // rule, so the colour is pinned across both.
           "&.Mui-focused, &.Mui-error": {
