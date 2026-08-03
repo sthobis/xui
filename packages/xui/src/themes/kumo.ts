@@ -1385,6 +1385,34 @@ export const kumoTheme = createTheme({
       },
     },
 
+    // ---- LayerCard ----
+    //
+    // kumo: dist/chunks/layer-card-nah241sxhj6i7i03.js
+    //   LAYER_CARD_SURFACE_CLASSES = "overflow-hidden rounded-lg bg-kumo-base shadow-xs
+    //                                 ring ring-kumo-line"
+    //
+    // The same ring-over-shadow-xs recipe Button's secondary variant uses, on a surface with no
+    // padding of its own. Scoped to MuiCard rather than MuiPaper on purpose: Paper is also the
+    // guts of Menu, Dialog, Popover and every other overlay, and styling it here would give all of
+    // them a card's ring before any of those components has a pair proving what they should look
+    // like.
+    MuiCard: {
+      defaultProps: {
+        // Kumo's surface shadow is the flat shadow-xs, not a Material elevation.
+        elevation: 0,
+      },
+      styleOverrides: {
+        root: ({ theme }) => ({
+          overflow: "hidden", // kumo: overflow-hidden
+          borderRadius: "8px", // kumo: rounded-lg
+          backgroundColor: theme.vars.palette.kumo.base, // kumo: bg-kumo-base
+          backgroundImage: "none", // MUI overlays a lightness gradient on an elevated dark Paper
+          border: 0,
+          boxShadow: ringWith(theme.vars.palette.kumo.line), // kumo: ring ring-kumo-line + shadow-xs
+        }),
+      },
+    },
+
     // ---- Field ----
     //
     // kumo: dist/chunks/field-dxe9ne8fqy5whws2.js wraps a control that has a label, description or
