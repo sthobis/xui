@@ -1,7 +1,7 @@
 import type { CSSProperties } from "react"
 import type { Pair, Section, Side } from "./types"
 import { GallerySidebar, SIDEBAR_WIDTH, sectionId } from "./Sidebar"
-import { ThemePanel, THEME_PANEL_WIDTH } from "./ThemePanel"
+import { ThemePanel, THEME_PANEL_WIDTH, type ThemeSource } from "./ThemePanel"
 
 const cellStyle: CSSProperties = {
   display: "flex",
@@ -81,7 +81,7 @@ export function SectionBlock({
   )
 }
 
-export function renderSections(sections: Section[], sides: Side[], refLabel: string) {
+export function renderSections(sections: Section[], sides: Side[], refLabel: string, themeSource: ThemeSource) {
   return (
     <>
       <GallerySidebar sections={sections} />
@@ -99,7 +99,7 @@ export function renderSections(sections: Section[], sides: Side[], refLabel: str
           <SectionBlock key={s.title} section={s} sides={sides} refLabel={refLabel} />
         ))}
       </main>
-      <ThemePanel />
+      <ThemePanel source={themeSource.source} fileName={themeSource.fileName} />
     </>
   )
 }

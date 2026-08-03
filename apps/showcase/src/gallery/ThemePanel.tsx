@@ -1,13 +1,22 @@
 import { useMemo, useState, type CSSProperties } from "react"
-// The theme file is the deliverable, so the panel shows the real thing rather than a copy that
-// could drift. Imported straight from the package source as text - the workspace has no build step
-// between the two, so what is on screen is byte-for-byte what `packages/xui` exports.
-import themeSource from "../../../../packages/xui/src/themes/shadcn.ts?raw"
 import { stripComments } from "./stripComments"
 
 export const THEME_PANEL_WIDTH = 380
 
-const FILE_NAME = "shadcn.ts"
+/**
+ * The theme file each gallery page shows, passed in by that page rather than imported here.
+ *
+ * The theme file is the deliverable, so the panel shows the real thing rather than a copy that
+ * could drift: each page imports its own `packages/xui/src/themes/<name>.ts?raw`, and the
+ * workspace has no build step between the two, so what is on screen is byte-for-byte what
+ * `packages/xui` exports.
+ */
+export interface ThemeSource {
+  /** Raw file text, before comment stripping. */
+  source: string
+  /** File name shown in the header and used for the download. */
+  fileName: string
+}
 
 const panelStyle: CSSProperties = {
   position: "fixed",
@@ -67,8 +76,8 @@ const buttonStyle: CSSProperties = {
  * different positions. Deliberately NOT built from MUI or shadcn components: everything inside a
  * gallery page that is not a pair would otherwise show up in the parity sweep.
  */
-export function ThemePanel() {
-  const source = useMemo(() => stripComments(themeSource), [])
+export function ThemePanel({ source: rawSource, fileName }: ThemeSource) {
+  const source = useMemo(() => stripComments(rawSource), [rawSource])
   const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">("idle")
 
   async function handleCopy() {
@@ -97,7 +106,7 @@ export function ThemePanel() {
     const url = URL.createObjectURL(new Blob([source], { type: "text/plain" }))
     const link = document.createElement("a")
     link.href = url
-    link.download = FILE_NAME
+    link.download = fileName
     link.click()
     URL.revokeObjectURL(url)
   }
@@ -105,7 +114,7 @@ export function ThemePanel() {
   return (
     <aside style={panelStyle} aria-label="Theme source">
       <p style={headerStyle}>
-        {FILE_NAME} ({source.split("\n").length} lines)
+        {fileName} ({source.split("\n").length} lines)
       </p>
       <pre style={codeStyle}>{source}</pre>
       <div style={footerStyle}>

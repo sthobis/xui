@@ -16,9 +16,15 @@ export default defineConfig(({ command }) => ({
   },
   build: {
     rollupOptions: {
+      // One entry per theme, plus its Tailwind-free preflight twin. Each page compiles its own
+      // independent CSS graph, which is the point: the two design systems' Tailwind themes, base
+      // layers and fonts must never load together, or a 0-threshold pixel harness would be
+      // measuring whichever one won the cascade.
       input: {
         main: path.resolve(__dirname, "index.html"),
         pure: path.resolve(__dirname, "pure.html"),
+        kumo: path.resolve(__dirname, "kumo.html"),
+        kumoPure: path.resolve(__dirname, "kumo-pure.html"),
       },
     },
   },

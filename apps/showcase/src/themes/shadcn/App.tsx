@@ -3,6 +3,7 @@ import { sections } from "./sections"
 import { renderSections } from "../../gallery/PairGrid"
 import { ModeToggle } from "../../ModeToggle"
 import { Toaster } from "@/components/ui/sonner"
+import themeSource from "../../../../../packages/xui/src/themes/shadcn.ts?raw"
 
 export default function App() {
   // shadcn's sonner.tsx reads next-themes, which defaults to "system" and would follow the OS
@@ -14,7 +15,7 @@ export default function App() {
   return (
     <>
       <ModeToggle />
-      {renderSections(sections, ["ref", "mui"], "shadcn")}
+      {renderSections(sections, ["ref", "mui"], "shadcn", { source: themeSource, fileName: "shadcn.ts" })}
       <Toaster theme={mode === "dark" ? "dark" : "light"} />
     </>
   )
