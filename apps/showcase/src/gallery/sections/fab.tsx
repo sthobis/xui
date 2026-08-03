@@ -19,7 +19,7 @@ export const fabSection: Section = {
     {
       id: "fab-primary",
       states: ["default", "hover"],
-      shadcn: (
+      ref: (
         <div style={wrapStyle}>
           {/* size-14 is 3.5rem = 56px, MUI's default Fab. shadow-lg is Tailwind's own scale. */}
           <Button data-target size="icon" className="size-14 rounded-full shadow-lg" aria-label="Add">

@@ -129,7 +129,7 @@ export const snackbarSection: Section = {
       id: PAIR_ID,
       states: ["open"],
       behaviors: ["escape-closes"],
-      shadcn: <ShadcnToastDemo />,
+      ref: <ShadcnToastDemo />,
       mui: <MuiSnackbarDemo />,
     },
   ],

@@ -112,7 +112,7 @@ export const tooltipSection: Section = {
       id: "tooltip-open",
       states: ["open", "anchored"],
       behaviors: ["hover-opens", "escape-closes"],
-      shadcn: <ShadcnTooltipOpenDemo />,
+      ref: <ShadcnTooltipOpenDemo />,
       mui: <MuiTooltipOpenDemo />,
     },
   ],

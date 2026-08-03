@@ -27,7 +27,7 @@ export const cardSection: Section = {
   pairs: [
     {
       id: "card-basic",
-      shadcn: (
+      ref: (
         <Card style={wrapStyle}>
           <CardHeader>
             <CardTitle>Notifications</CardTitle>

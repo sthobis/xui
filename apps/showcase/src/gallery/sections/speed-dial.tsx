@@ -22,7 +22,7 @@ export const speedDialSection: Section = {
   pairs: [
     {
       id: "speeddial-closed",
-      shadcn: (
+      ref: (
         <div style={wrapStyle}>
           <Button size="icon" className="size-14 rounded-full shadow-lg" aria-label="Actions">
             <Plus />

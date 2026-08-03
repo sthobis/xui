@@ -10,7 +10,7 @@ export const dividerSection: Section = {
   pairs: [
     {
       id: "divider-horizontal",
-      shadcn: (
+      ref: (
         <div style={horizontalWrapStyle}>
           <Separator />
         </div>
@@ -23,7 +23,7 @@ export const dividerSection: Section = {
     },
     {
       id: "divider-vertical",
-      shadcn: (
+      ref: (
         <div style={verticalWrapStyle}>
           <Separator orientation="vertical" />
         </div>

@@ -110,7 +110,7 @@ export const menuSection: Section = {
       id: "menu-open",
       states: ["open", "anchored"],
       behaviors: ["escape-closes", "item-hover-highlights"],
-      shadcn: (
+      ref: (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button data-target variant="outline" style={{ width: TRIGGER_WIDTH }}>

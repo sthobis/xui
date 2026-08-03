@@ -12,22 +12,22 @@ export const chipSection: Section = {
   pairs: [
     {
       id: "chip-default",
-      shadcn: <Badge>Badge</Badge>,
+      ref: <Badge>Badge</Badge>,
       mui: <MuiChip label="Badge" color="primary" />,
     },
     {
       id: "chip-secondary",
-      shadcn: <Badge variant="secondary">Secondary</Badge>,
+      ref: <Badge variant="secondary">Secondary</Badge>,
       mui: <MuiChip label="Secondary" color="secondary" />,
     },
     {
       id: "chip-destructive",
-      shadcn: <Badge variant="destructive">Destructive</Badge>,
+      ref: <Badge variant="destructive">Destructive</Badge>,
       mui: <MuiChip label="Destructive" color="error" />,
     },
     {
       id: "chip-outline",
-      shadcn: <Badge variant="outline">Outline</Badge>,
+      ref: <Badge variant="outline">Outline</Badge>,
       mui: <MuiChip label="Outline" variant="outlined" />,
     },
   ],

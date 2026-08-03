@@ -12,7 +12,7 @@ export const toggleSection: Section = {
     {
       id: "toggle-off",
       states: withHoverFocus,
-      shadcn: (
+      ref: (
         <Toggle data-target aria-label="Toggle">
           Toggle
         </Toggle>
@@ -26,7 +26,7 @@ export const toggleSection: Section = {
     {
       id: "toggle-on",
       states: withHoverFocus,
-      shadcn: (
+      ref: (
         // shadcn's Toggle (radix-ui Toggle.Root) is uncontrolled by default - `defaultPressed`
         // renders it already in the "on" (data-state="on") shape without needing a click, which
         // the harness's default/hover/focus states never trigger anyway (only "open"/"anchored"
@@ -43,7 +43,7 @@ export const toggleSection: Section = {
     },
     {
       id: "togglegroup-basic",
-      shadcn: (
+      ref: (
         <ToggleGroup type="single" defaultValue="b">
           <ToggleGroupItem value="a" aria-label="A">
             A

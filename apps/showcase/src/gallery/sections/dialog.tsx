@@ -95,7 +95,7 @@ export const dialogSection: Section = {
       id: "dialog-open",
       states: ["open"],
       behaviors: ["escape-closes", "overlay-matches"],
-      shadcn: (
+      ref: (
         <Dialog>
           <DialogTrigger asChild>
             <Button data-target variant="outline" style={{ width: TRIGGER_WIDTH }}>

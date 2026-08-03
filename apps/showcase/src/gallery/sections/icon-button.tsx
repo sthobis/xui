@@ -9,7 +9,7 @@ export const iconButtonSection: Section = {
     {
       id: "iconbutton-default",
       states: ["default", "hover", "active"],
-      shadcn: (
+      ref: (
         <Button data-target variant="ghost" size="icon" aria-label="More options">
           <Ellipsis />
         </Button>
@@ -22,7 +22,7 @@ export const iconButtonSection: Section = {
     },
     {
       id: "iconbutton-small",
-      shadcn: (
+      ref: (
         <Button data-target variant="ghost" size="icon-sm" aria-label="More options">
           <Ellipsis />
         </Button>
@@ -35,7 +35,7 @@ export const iconButtonSection: Section = {
     },
     {
       id: "iconbutton-large",
-      shadcn: (
+      ref: (
         <Button data-target variant="ghost" size="icon-lg" aria-label="More options">
           <Ellipsis />
         </Button>
@@ -48,7 +48,7 @@ export const iconButtonSection: Section = {
     },
     {
       id: "iconbutton-disabled",
-      shadcn: (
+      ref: (
         <Button data-target variant="ghost" size="icon" disabled aria-label="More options">
           <Ellipsis />
         </Button>

@@ -116,18 +116,18 @@ test("all pairs match within threshold", async ({ page }, testInfo) => {
     const row = page.locator(`[data-pair-id="${id}"]`)
     await row.scrollIntoViewIfNeeded()
     for (const state of states) {
-      const shadcnCell = row.locator('[data-side="shadcn"]')
+      const refCell = row.locator('[data-side="ref"]')
       const muiCell = row.locator('[data-side="mui"]')
 
-      await applyState(page, shadcnCell, state, id)
-      const shadcnShot = await captureState(page, shadcnCell, state, id)
+      await applyState(page, refCell, state, id)
+      const refShot = await captureState(page, refCell, state, id)
       await resetState(page)
 
       await applyState(page, muiCell, state, id)
       const muiShot = await captureState(page, muiCell, state, id)
       await resetState(page)
 
-      const result = diffPngs(shadcnShot, muiShot)
+      const result = diffPngs(refShot, muiShot)
       // A pair with a maxDelta override is judged on the size of its worst per-channel error
       // instead of on how many pixels differ - see thresholds.ts maxDeltaOverrides. Both numbers
       // are always reported so a delta-judged pair's pixel count stays visible.
@@ -139,7 +139,7 @@ test("all pairs match within threshold", async ({ page }, testInfo) => {
       // same size in the same browser, so unequal captures always mean a real geometry difference
       // (or a capture bug); either way the number underneath is meaningless and the run should say
       // so in those terms rather than quoting a mismatch percentage.
-      const { shadcn: sizeA, mui: sizeB } = result.sizes
+      const { ref: sizeA, mui: sizeB } = result.sizes
       const sizeMismatch = sizeA.width !== sizeB.width || sizeA.height !== sizeB.height
       const overPixels = result.mismatchedPixels > rule.maxPixels
       const overDelta = result.maxChannelDelta > rule.maxDelta
@@ -159,7 +159,7 @@ test("all pairs match within threshold", async ({ page }, testInfo) => {
       // pixel count in the report - and diagnosing one used to mean temporarily editing
       // thresholds.ts to force a failure, which is both fiddly and easy to commit by accident.
       if (failed || process.env.PARITY_DUMP) {
-        writeFileSync(`${RESULTS_DIR}/diffs/${slug}-shadcn.png`, shadcnShot)
+        writeFileSync(`${RESULTS_DIR}/diffs/${slug}-ref.png`, refShot)
         writeFileSync(`${RESULTS_DIR}/diffs/${slug}-mui.png`, muiShot)
         writeFileSync(`${RESULTS_DIR}/diffs/${slug}-diff.png`, PNG.sync.write(result.diff))
       }
@@ -167,7 +167,7 @@ test("all pairs match within threshold", async ({ page }, testInfo) => {
         const detail = `${result.mismatchedPixels}px differ, worst channel Δ${result.maxChannelDelta} (${result.mismatchPct.toFixed(2)}% of the capture); rule is ${rule.label}`
         failures.push(
           sizeMismatch
-            ? `${slug}: captures are different sizes - shadcn ${sizeA.width}x${sizeA.height}, mui ${sizeB.width}x${sizeB.height}. The two sides do not render the same geometry; the numbers below are padding noise, not a colour difference.`
+            ? `${slug}: captures are different sizes - ref ${sizeA.width}x${sizeA.height}, mui ${sizeB.width}x${sizeB.height}. The two sides do not render the same geometry; the numbers below are padding noise, not a colour difference.`
             : overPixels && overDelta
               ? `${slug}: too many differing pixels AND too large a channel error - ${detail}`
               : overPixels

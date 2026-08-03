@@ -20,13 +20,13 @@ export const checkboxSection: Section = {
     {
       id: "checkbox-unchecked",
       states: withHoverFocus,
-      shadcn: <Checkbox data-target aria-label="Unchecked" />,
+      ref: <Checkbox data-target aria-label="Unchecked" />,
       mui: <MuiCheckbox aria-label="Unchecked" slotProps={{ input: dataTargetInput }} />,
     },
     {
       id: "checkbox-checked",
       states: withHoverFocus,
-      shadcn: <Checkbox data-target defaultChecked aria-label="Checked" />,
+      ref: <Checkbox data-target defaultChecked aria-label="Checked" />,
       mui: (
         <MuiCheckbox
           defaultChecked
@@ -37,7 +37,7 @@ export const checkboxSection: Section = {
     },
     {
       id: "checkbox-indeterminate",
-      shadcn: <Checkbox data-target defaultChecked="indeterminate" aria-label="Indeterminate" />,
+      ref: <Checkbox data-target defaultChecked="indeterminate" aria-label="Indeterminate" />,
       mui: (
         <MuiCheckbox
           indeterminate
@@ -48,12 +48,12 @@ export const checkboxSection: Section = {
     },
     {
       id: "checkbox-disabled",
-      shadcn: <Checkbox data-target disabled aria-label="Disabled" />,
+      ref: <Checkbox data-target disabled aria-label="Disabled" />,
       mui: <MuiCheckbox disabled aria-label="Disabled" slotProps={{ input: dataTargetInput }} />,
     },
     {
       id: "checkbox-with-label",
-      shadcn: (
+      ref: (
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <Checkbox data-target id="checkbox-with-label-shadcn" />
           <Label htmlFor="checkbox-with-label-shadcn">Accept terms and conditions</Label>

@@ -21,7 +21,7 @@ export const textFieldSection: Section = {
     {
       id: "textfield-basic",
       states: withFocus,
-      shadcn: (
+      ref: (
         <div style={stackStyle}>
           <Label htmlFor="tf-basic-shadcn">Email</Label>
           <Input data-target id="tf-basic-shadcn" />
@@ -35,7 +35,7 @@ export const textFieldSection: Section = {
     },
     {
       id: "textfield-placeholder",
-      shadcn: (
+      ref: (
         <div style={stackStyle}>
           <Label htmlFor="tf-placeholder-shadcn">Email</Label>
           <Input data-target id="tf-placeholder-shadcn" placeholder="you@example.com" />
@@ -54,7 +54,7 @@ export const textFieldSection: Section = {
     },
     {
       id: "textfield-disabled",
-      shadcn: (
+      ref: (
         <div style={stackStyle}>
           <Label htmlFor="tf-disabled-shadcn">Email</Label>
           <Input data-target id="tf-disabled-shadcn" disabled />
@@ -74,7 +74,7 @@ export const textFieldSection: Section = {
     {
       id: "textfield-error",
       states: withFocus,
-      shadcn: (
+      ref: (
         <div style={stackStyle}>
           <Label htmlFor="tf-error-shadcn">Email</Label>
           <Input data-target id="tf-error-shadcn" aria-invalid />
@@ -95,7 +95,7 @@ export const textFieldSection: Section = {
     },
     {
       id: "textfield-multiline",
-      shadcn: (
+      ref: (
         <div style={stackStyle}>
           <Label htmlFor="tf-multiline-shadcn">Bio</Label>
           <Textarea data-target id="tf-multiline-shadcn" placeholder="Tell us about yourself" />
@@ -120,7 +120,7 @@ export const textFieldSection: Section = {
       // identical Label+Input twin used by textfield-basic; the mui side is a plain
       // variant="filled" field with no compensating props, so the theme does all the work.
       states: withFocus,
-      shadcn: (
+      ref: (
         <div style={stackStyle}>
           <Label htmlFor="tf-filled-shadcn">Email</Label>
           <Input data-target id="tf-filled-shadcn" />
@@ -141,7 +141,7 @@ export const textFieldSection: Section = {
       id: "textfield-standard",
       // Same flattening as textfield-filled above, for variant="standard".
       states: withFocus,
-      shadcn: (
+      ref: (
         <div style={stackStyle}>
           <Label htmlFor="tf-standard-shadcn">Email</Label>
           <Input data-target id="tf-standard-shadcn" />
@@ -163,7 +163,7 @@ export const textFieldSection: Section = {
       // shadcn ships one Input size (h-8, no small/default/large ladder like Button) - the
       // shadcn side is identical to textfield-basic; this pair proves MUI's size="small"
       // collapses to the same box rather than MUI's own native smaller-small look.
-      shadcn: (
+      ref: (
         <div style={stackStyle}>
           <Label htmlFor="tf-small-shadcn">Email</Label>
           <Input data-target id="tf-small-shadcn" />

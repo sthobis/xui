@@ -84,7 +84,7 @@ export const popoverSection: Section = {
       id: "popover-open",
       states: ["open", "anchored"],
       behaviors: ["escape-closes"],
-      shadcn: (
+      ref: (
         // GOTCHA - `modal` matters, and it is a choice of comparable configuration rather than a
         // tweak to make the pair pass. Radix's Popover is NON-modal by default: it leaves the page
         // interactive, so the trigger keeps its hover fill while the panel is open. MUI's Popover

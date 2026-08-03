@@ -47,7 +47,7 @@ export const appBarSection: Section = {
   pairs: [
     {
       id: "appbar-basic",
-      shadcn: (
+      ref: (
         <div style={wrapStyle}>
           <header className="flex h-16 shrink-0 items-center gap-2 border-b bg-background px-4">
             <Button variant="ghost" size="icon" aria-label="Toggle sidebar">

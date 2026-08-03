@@ -25,7 +25,7 @@ export const inputGroupSection: Section = {
       // margin, where MUI's InputAdornment uses a fixed 8px margin and a height hack.
       id: "inputgroup-start-icon",
       states: ["default", "focus"],
-      shadcn: (
+      ref: (
         <div style={wrapStyle}>
           <InputGroup>
             <InputGroupAddon align="inline-start">
@@ -61,7 +61,7 @@ export const inputGroupSection: Section = {
       // IconButton (see the theme's InputGroup banner).
       id: "inputgroup-end-button",
       states: ["default", "focus"],
-      shadcn: (
+      ref: (
         <div style={wrapStyle}>
           <InputGroup>
             <InputGroupInput data-target defaultValue={VALUE} />

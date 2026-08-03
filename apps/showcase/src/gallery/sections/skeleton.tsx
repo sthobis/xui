@@ -13,12 +13,12 @@ export const skeletonSection: Section = {
   pairs: [
     {
       id: "skeleton-line",
-      shadcn: <Skeleton className="h-4 w-[120px]" />,
+      ref: <Skeleton className="h-4 w-[120px]" />,
       mui: <MuiSkeleton variant="rectangular" width={120} height={16} />,
     },
     {
       id: "skeleton-circle",
-      shadcn: <Skeleton className="size-10 rounded-full" />,
+      ref: <Skeleton className="size-10 rounded-full" />,
       mui: <MuiSkeleton variant="circular" width={40} height={40} />,
     },
   ],

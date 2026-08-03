@@ -26,7 +26,7 @@ export const accordionSection: Section = {
     {
       id: "accordion-collapsed",
       states: ["default", "hover", "focus"],
-      shadcn: (
+      ref: (
         <Accordion type="single" collapsible style={groupStyle}>
           <AccordionItem value="one">
             <AccordionTrigger data-target>Shipping</AccordionTrigger>
@@ -57,7 +57,7 @@ export const accordionSection: Section = {
       // covers the open panel, the swapped chevron, and the trigger's expanded metrics.
       id: "accordion-expanded",
       states: ["default", "hover", "focus"],
-      shadcn: (
+      ref: (
         <Accordion type="single" collapsible defaultValue="one" style={groupStyle}>
           <AccordionItem value="one">
             <AccordionTrigger data-target>Shipping</AccordionTrigger>
@@ -88,7 +88,7 @@ export const accordionSection: Section = {
       // (whose own `disabled` prop dims the panel too and paints a disabled background).
       id: "accordion-disabled",
       states: ["default"],
-      shadcn: (
+      ref: (
         <Accordion type="single" collapsible style={groupStyle}>
           <AccordionItem value="one">
             <AccordionTrigger data-target disabled>

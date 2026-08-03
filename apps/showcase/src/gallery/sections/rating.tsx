@@ -24,7 +24,7 @@ export const ratingSection: Section = {
   pairs: [
     {
       id: "rating-readonly",
-      shadcn: (
+      ref: (
         <div style={wrapStyle}>
           {/* inline-flex, not flex: MUI's Rating is inline-level, and since this twin is composed
               here anyway, matching that is more honest than making the theme force MUI's Rating to

@@ -26,7 +26,7 @@ export const sliderSection: Section = {
     {
       id: "slider-default",
       states: withHoverFocus,
-      shadcn: (
+      ref: (
         <div style={sliderWrapStyle}>
           <Slider data-target defaultValue={[50]} aria-label="Volume" />
         </div>
@@ -39,7 +39,7 @@ export const sliderSection: Section = {
     },
     {
       id: "slider-disabled",
-      shadcn: (
+      ref: (
         <div style={sliderWrapStyle}>
           <Slider data-target defaultValue={[50]} disabled aria-label="Disabled" />
         </div>

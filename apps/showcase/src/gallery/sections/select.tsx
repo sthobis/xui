@@ -189,7 +189,7 @@ export const selectSection: Section = {
     {
       id: "select-closed",
       states: ["default", "hover", "focus"],
-      shadcn: (
+      ref: (
         <Select defaultValue={SELECTED}>
           <SelectTrigger data-target>
             <SelectValue />
@@ -210,7 +210,7 @@ export const selectSection: Section = {
     },
     {
       id: "select-disabled",
-      shadcn: (
+      ref: (
         <Select defaultValue={SELECTED} disabled>
           <SelectTrigger data-target>
             <SelectValue />
@@ -234,7 +234,7 @@ export const selectSection: Section = {
       id: "select-open",
       states: ["open", "anchored"],
       behaviors: ["escape-closes", "item-hover-highlights"],
-      shadcn: (
+      ref: (
         <Select defaultValue={SELECTED}>
           <SelectTrigger data-target style={{ width: TRIGGER_WIDTH }}>
             <SelectValue />

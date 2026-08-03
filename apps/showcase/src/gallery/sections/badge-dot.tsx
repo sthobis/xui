@@ -26,7 +26,7 @@ export const badgeDotSection: Section = {
   pairs: [
     {
       id: "badgedot-avatar",
-      shadcn: (
+      ref: (
         <div style={wrapStyle}>
           <Avatar>
             <AvatarFallback>{INITIALS}</AvatarFallback>

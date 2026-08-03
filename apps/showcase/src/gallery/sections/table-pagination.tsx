@@ -22,7 +22,7 @@ export const tablePaginationSection: Section = {
   pairs: [
     {
       id: "tablepagination-basic",
-      shadcn: (
+      ref: (
         <div style={wrapStyle}>
           <div className="flex h-13 items-center justify-end gap-2">
             <span className="text-sm text-muted-foreground">{CAPTION}</span>

@@ -23,7 +23,7 @@ export const progressSection: Section = {
   pairs: [
     {
       id: "progress-linear",
-      shadcn: (
+      ref: (
         <div style={trackWrapStyle}>
           <Progress value={60} />
         </div>
@@ -37,7 +37,7 @@ export const progressSection: Section = {
     {
       id: "progress-circular",
       behaviors: ["animates"],
-      shadcn: <Spinner />,
+      ref: <Spinner />,
       mui: (
         // Indeterminate (the default) so this actually SPINS like shadcn's Spinner. The theme
         // pins MUI's rotate to shadcn's 1s linear and freezes the dash to Loader2Icon's fixed

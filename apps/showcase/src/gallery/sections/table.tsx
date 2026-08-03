@@ -27,7 +27,7 @@ export const tableSection: Section = {
       // a body row is where it reads against the header row's bottom border above it.
       id: "table-basic",
       states: ["default", "hover"],
-      shadcn: (
+      ref: (
         <div style={wrapStyle}>
           <Table>
             <TableHeader>
@@ -79,7 +79,7 @@ export const tableSection: Section = {
       // resolves to .Mui-selected. Covers the one row background the hover state does not.
       id: "table-selected",
       states: ["default", "hover"],
-      shadcn: (
+      ref: (
         <div style={wrapStyle}>
           <Table>
             <TableBody>

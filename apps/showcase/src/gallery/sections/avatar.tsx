@@ -13,7 +13,7 @@ export const avatarSection: Section = {
   pairs: [
     {
       id: "avatar-image",
-      shadcn: (
+      ref: (
         <Avatar>
           <AvatarImage src={AVATAR_IMAGE_SRC} alt="Avatar" />
           <AvatarFallback>CN</AvatarFallback>
@@ -23,7 +23,7 @@ export const avatarSection: Section = {
     },
     {
       id: "avatar-fallback",
-      shadcn: (
+      ref: (
         <Avatar>
           <AvatarFallback>CN</AvatarFallback>
         </Avatar>

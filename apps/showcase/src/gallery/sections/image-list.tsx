@@ -26,7 +26,7 @@ export const imageListSection: Section = {
   pairs: [
     {
       id: "imagelist-standard",
-      shadcn: (
+      ref: (
         <div style={wrapStyle}>
           <div className="grid grid-cols-3 gap-2">
             {TILES.map((fill) => (

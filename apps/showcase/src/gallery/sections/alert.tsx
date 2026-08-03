@@ -17,7 +17,7 @@ export const alertSection: Section = {
   pairs: [
     {
       id: "alert-default",
-      shadcn: (
+      ref: (
         <Alert style={wrapStyle}>
           <Terminal />
           <AlertTitle>Heads up!</AlertTitle>
@@ -33,7 +33,7 @@ export const alertSection: Section = {
     },
     {
       id: "alert-destructive",
-      shadcn: (
+      ref: (
         <Alert variant="destructive" style={wrapStyle}>
           <CircleAlert />
           <AlertTitle>Error</AlertTitle>

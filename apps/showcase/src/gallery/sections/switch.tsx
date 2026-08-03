@@ -23,23 +23,23 @@ export const switchSection: Section = {
     {
       id: "switch-off",
       states: withHoverFocus,
-      shadcn: <Switch data-target aria-label="Off" />,
+      ref: <Switch data-target aria-label="Off" />,
       mui: <MuiSwitch aria-label="Off" slotProps={{ input: dataTargetInput }} />,
     },
     {
       id: "switch-on",
       states: withHoverFocus,
-      shadcn: <Switch data-target defaultChecked aria-label="On" />,
+      ref: <Switch data-target defaultChecked aria-label="On" />,
       mui: <MuiSwitch defaultChecked aria-label="On" slotProps={{ input: dataTargetInput }} />,
     },
     {
       id: "switch-disabled",
-      shadcn: <Switch data-target disabled aria-label="Disabled" />,
+      ref: <Switch data-target disabled aria-label="Disabled" />,
       mui: <MuiSwitch disabled aria-label="Disabled" slotProps={{ input: dataTargetInput }} />,
     },
     {
       id: "switch-with-label",
-      shadcn: (
+      ref: (
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <Switch data-target id="switch-with-label-shadcn" />
           <Label htmlFor="switch-with-label-shadcn">Airplane Mode</Label>

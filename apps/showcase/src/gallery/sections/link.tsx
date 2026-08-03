@@ -16,7 +16,7 @@ export const linkSection: Section = {
     {
       id: "link-default",
       states: withHover,
-      shadcn: (
+      ref: (
         <a data-target href="#" className={linkClassName} onClick={(e) => e.preventDefault()}>
           Terms of Service
         </a>
@@ -30,7 +30,7 @@ export const linkSection: Section = {
     {
       id: "link-hover",
       states: withHover,
-      shadcn: (
+      ref: (
         <a data-target href="#" className={linkClassName} onClick={(e) => e.preventDefault()}>
           Learn more
         </a>

@@ -27,7 +27,7 @@ export const breadcrumbSection: Section = {
     {
       id: "breadcrumb-basic",
       states: ["default", "hover"],
-      shadcn: (
+      ref: (
         <Breadcrumb>
           <BreadcrumbList>
             <BreadcrumbItem>

@@ -36,7 +36,7 @@ export const typographySection: Section = {
   pairs: [
     {
       id: "type-h1",
-      shadcn: (
+      ref: (
         <div style={typeWrapStyle}>
           <h1 className="text-4xl font-extrabold tracking-tight">Taxing Laughter</h1>
         </div>
@@ -49,7 +49,7 @@ export const typographySection: Section = {
     },
     {
       id: "type-h2",
-      shadcn: (
+      ref: (
         <div style={typeWrapStyle}>
           <h2 className="text-3xl font-semibold tracking-tight">The Kingdom</h2>
         </div>
@@ -62,7 +62,7 @@ export const typographySection: Section = {
     },
     {
       id: "type-h3",
-      shadcn: (
+      ref: (
         <div style={typeWrapStyle}>
           <h3 className="text-2xl font-semibold tracking-tight">The Joke Tax</h3>
         </div>
@@ -75,7 +75,7 @@ export const typographySection: Section = {
     },
     {
       id: "type-h4",
-      shadcn: (
+      ref: (
         <div style={typeWrapStyle}>
           <h4 className="text-xl font-semibold tracking-tight">People stopped telling jokes</h4>
         </div>
@@ -88,7 +88,7 @@ export const typographySection: Section = {
     },
     {
       id: "type-body",
-      shadcn: (
+      ref: (
         <div style={typeWrapStyle}>
           <p className="leading-7">The king repealed the joke tax.</p>
         </div>
@@ -101,7 +101,7 @@ export const typographySection: Section = {
     },
     {
       id: "type-muted",
-      shadcn: (
+      ref: (
         <div style={typeWrapStyle}>
           <p className="text-sm text-muted-foreground">Enter your email address.</p>
         </div>
@@ -114,7 +114,7 @@ export const typographySection: Section = {
     },
     {
       id: "type-small",
-      shadcn: (
+      ref: (
         <div style={typeWrapStyle}>
           <small className="text-sm leading-none font-medium">Email address</small>
         </div>

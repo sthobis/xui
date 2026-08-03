@@ -10,7 +10,7 @@ createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <Providers>
       <ModeToggle />
-      {renderSections(sections, ["mui"])}
+      {renderSections(sections, ["mui"], "shadcn")}
     </Providers>
   </StrictMode>,
 )

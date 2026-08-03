@@ -9,7 +9,7 @@ export const buttonGroupSection: Section = {
   pairs: [
     {
       id: "buttongroup-basic",
-      shadcn: (
+      ref: (
         <ButtonGroup>
           <Button variant="outline">One</Button>
           <Button variant="outline">Two</Button>

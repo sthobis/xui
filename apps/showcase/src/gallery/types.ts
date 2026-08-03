@@ -7,6 +7,13 @@ export type PairState = "default" | "hover" | "focus" | "open" | "active" | "anc
 /** Non-pixel behaviors asserted by e2e/behavior.spec.ts (declarative discovery via `data-behaviors`). */
 export type PairBehavior = "animates" | "hover-opens" | "escape-closes" | "overlay-matches" | "item-hover-highlights"
 
+/**
+ * The two cells of a pair. `ref` is the real component of whichever design system the page is
+ * replicating (shadcn, kumo, ...) - named for the ROLE rather than the system, so one gallery
+ * harness serves every theme.
+ */
+export type Side = "ref" | "mui"
+
 export interface Pair {
   id: string
   /** states the harness exercises; default ["default"] */
@@ -32,7 +39,8 @@ export interface Pair {
    * component. Only needed for pairs whose overlay actually extends past the row.
    */
   roomBelow?: number
-  shadcn: ReactNode
+  /** The real reference-system component this pair is judged against. */
+  ref: ReactNode
   mui: ReactNode
 }
 

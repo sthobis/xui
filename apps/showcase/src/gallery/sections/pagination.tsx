@@ -59,7 +59,7 @@ export const paginationSection: Section = {
   pairs: [
     {
       id: "pagination-basic",
-      shadcn: (
+      ref: (
         <Pagination>
           <PaginationContent>
             <PaginationItem>

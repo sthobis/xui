@@ -14,7 +14,7 @@ export default function App() {
   return (
     <>
       <ModeToggle />
-      {renderSections(sections, ["shadcn", "mui"])}
+      {renderSections(sections, ["ref", "mui"], "shadcn")}
       <Toaster theme={mode === "dark" ? "dark" : "light"} />
     </>
   )

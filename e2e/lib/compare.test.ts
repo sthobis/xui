@@ -64,7 +64,7 @@ describe("diffPngs", () => {
 
   it("reports both sides' dimensions so a size difference can be failed on its own terms", () => {
     const r = diffPngs(solidPng(10, 10, [0, 0, 0, 255]), solidPng(10, 12, [0, 0, 0, 255]))
-    expect(r.sizes).toEqual({ shadcn: { width: 10, height: 10 }, mui: { width: 10, height: 12 } })
+    expect(r.sizes).toEqual({ ref: { width: 10, height: 10 }, mui: { width: 10, height: 12 } })
   })
 
   // The delta MUST ignore pixels pixelmatch classified as antialiasing, or it describes the

@@ -26,7 +26,7 @@ export const bottomNavigationSection: Section = {
   pairs: [
     {
       id: "bottomnav-basic",
-      shadcn: (
+      ref: (
         <div style={wrapStyle}>
           <div className="flex h-14 items-stretch border-t bg-background">
             {ITEMS.map(({ label, Icon }, i) => (

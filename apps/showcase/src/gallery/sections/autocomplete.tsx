@@ -144,7 +144,7 @@ export const autocompleteSection: Section = {
     {
       id: "autocomplete-closed",
       states: ["default", "focus"],
-      shadcn: (
+      ref: (
         <div style={wrapStyle}>
           <Combobox items={OPTIONS} defaultValue={VALUE}>
             <ComboboxInput data-target />
@@ -171,7 +171,7 @@ export const autocompleteSection: Section = {
       // corner - transparent, because of the border radius - landed on the next section's heading
       // text on the shadcn side and on blank background on the MUI side. See Pair.roomBelow.
       roomBelow: 112,
-      shadcn: (
+      ref: (
         <div style={wrapStyle}>
           <ShadcnComboboxOpenDemo />
         </div>

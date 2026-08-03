@@ -91,7 +91,7 @@ export const drawerSection: Section = {
       id: "drawer-open",
       states: ["open"],
       behaviors: ["escape-closes", "overlay-matches"],
-      shadcn: (
+      ref: (
         <Sheet>
           <SheetTrigger asChild>
             <Button data-target variant="outline" style={{ width: TRIGGER_WIDTH }}>

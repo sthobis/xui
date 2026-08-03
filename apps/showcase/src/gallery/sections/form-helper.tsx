@@ -30,7 +30,7 @@ export const formHelperSection: Section = {
   pairs: [
     {
       id: "formhelper-default",
-      shadcn: (
+      ref: (
         <div style={wrapStyle}>
           <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
             <Label htmlFor="fh-default">{LABEL}</Label>
@@ -47,7 +47,7 @@ export const formHelperSection: Section = {
     },
     {
       id: "formhelper-error",
-      shadcn: (
+      ref: (
         <div style={wrapStyle}>
           <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
             <Label htmlFor="fh-error">{LABEL}</Label>

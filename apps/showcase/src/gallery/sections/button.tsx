@@ -11,52 +11,52 @@ export const buttonSection: Section = {
     {
       id: "button-contained",
       states: s,
-      shadcn: <Button data-target>Button</Button>,
+      ref: <Button data-target>Button</Button>,
       mui: <MuiButton data-target variant="contained">Button</MuiButton>,
     },
     {
       id: "button-secondary",
       states: s,
-      shadcn: <Button data-target variant="secondary">Secondary</Button>,
+      ref: <Button data-target variant="secondary">Secondary</Button>,
       mui: <MuiButton data-target variant="contained" color="secondary">Secondary</MuiButton>,
     },
     {
       id: "button-destructive",
       states: s,
-      shadcn: <Button data-target variant="destructive">Destructive</Button>,
+      ref: <Button data-target variant="destructive">Destructive</Button>,
       mui: <MuiButton data-target variant="contained" color="error">Destructive</MuiButton>,
     },
     {
       id: "button-outline",
       states: s,
-      shadcn: <Button data-target variant="outline">Outline</Button>,
+      ref: <Button data-target variant="outline">Outline</Button>,
       mui: <MuiButton data-target variant="outlined">Outline</MuiButton>,
     },
     {
       id: "button-ghost",
       states: s,
-      shadcn: <Button data-target variant="ghost">Ghost</Button>,
+      ref: <Button data-target variant="ghost">Ghost</Button>,
       mui: <MuiButton data-target variant="text">Ghost</MuiButton>,
     },
     {
       id: "button-link",
       states: s,
-      shadcn: <Button data-target variant="link">Link</Button>,
+      ref: <Button data-target variant="link">Link</Button>,
       mui: <MuiButton data-target variant="link">Link</MuiButton>,
     },
     {
       id: "button-small",
-      shadcn: <Button data-target size="sm">Small</Button>,
+      ref: <Button data-target size="sm">Small</Button>,
       mui: <MuiButton data-target variant="contained" size="small">Small</MuiButton>,
     },
     {
       id: "button-large",
-      shadcn: <Button data-target size="lg">Large</Button>,
+      ref: <Button data-target size="lg">Large</Button>,
       mui: <MuiButton data-target variant="contained" size="large">Large</MuiButton>,
     },
     {
       id: "button-with-icon",
-      shadcn: (
+      ref: (
         <Button data-target>
           <Mail /> Email
         </Button>
@@ -69,12 +69,12 @@ export const buttonSection: Section = {
     },
     {
       id: "button-disabled",
-      shadcn: <Button data-target disabled>Disabled</Button>,
+      ref: <Button data-target disabled>Disabled</Button>,
       mui: <MuiButton data-target variant="contained" disabled>Disabled</MuiButton>,
     },
     {
       id: "button-outline-disabled",
-      shadcn: <Button data-target variant="outline" disabled>Disabled</Button>,
+      ref: <Button data-target variant="outline" disabled>Disabled</Button>,
       mui: <MuiButton data-target variant="outlined" disabled>Disabled</MuiButton>,
     },
   ],

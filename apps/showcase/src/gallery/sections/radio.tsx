@@ -51,7 +51,7 @@ export const radioSection: Section = {
       // itself makes the helper a preceding SIBLING of the container instead, so Tab lands
       // directly on the container - triggering its real focus-redirect onto the Item exactly
       // like a genuine user Tab keypress would.
-      shadcn: (
+      ref: (
         <div style={singleItemWrapStyle}>
           <RadioGroup data-target aria-label="Unchecked example">
             <RadioGroupItem value="a" aria-label="Unchecked" />
@@ -83,7 +83,7 @@ export const radioSection: Section = {
     {
       id: "radio-checked",
       states: withHoverFocus,
-      shadcn: (
+      ref: (
         <div style={singleItemWrapStyle}>
           <RadioGroup defaultValue="a" data-target aria-label="Checked example">
             <RadioGroupItem value="a" aria-label="Checked" />
@@ -107,7 +107,7 @@ export const radioSection: Section = {
     },
     {
       id: "radio-disabled",
-      shadcn: (
+      ref: (
         <div style={singleItemWrapStyle}>
           <RadioGroup data-target aria-label="Disabled example">
             <RadioGroupItem value="a" disabled aria-label="Disabled" />
@@ -126,7 +126,7 @@ export const radioSection: Section = {
     },
     {
       id: "radio-group",
-      shadcn: (
+      ref: (
         <RadioGroup defaultValue="comfortable" aria-label="Density">
           <div style={rowStyle}>
             <RadioGroupItem data-target value="default" id="radio-group-default-shadcn" />

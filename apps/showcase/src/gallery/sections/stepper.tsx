@@ -25,7 +25,7 @@ export const stepperSection: Section = {
   pairs: [
     {
       id: "stepper-horizontal",
-      shadcn: (
+      ref: (
         <div style={wrapStyle}>
           {/* Steps size to their content and the connectors take up the slack, which is MUI's own
               layout algorithm rather than an invention here - an equal-width `flex-1` step was tried

@@ -26,7 +26,7 @@ export const listSection: Section = {
     {
       id: "list-basic",
       states: ["default"],
-      shadcn: (
+      ref: (
         <div style={wrapStyle}>
           <ItemGroup>
             <Item data-target>
@@ -61,7 +61,7 @@ export const listSection: Section = {
       // one keeps the plain centred case.
       id: "list-icon",
       states: ["default"],
-      shadcn: (
+      ref: (
         <div style={wrapStyle}>
           <ItemGroup>
             <Item data-target>
@@ -105,7 +105,7 @@ export const listSection: Section = {
     {
       id: "list-description",
       states: ["default"],
-      shadcn: (
+      ref: (
         <div style={wrapStyle}>
           <ItemGroup>
             <Item data-target>

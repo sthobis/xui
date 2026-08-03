@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react"
-import type { Pair, Section } from "./types"
+import type { Pair, Section, Side } from "./types"
 import { GallerySidebar, SIDEBAR_WIDTH, sectionId } from "./Sidebar"
 import { ThemePanel, THEME_PANEL_WIDTH } from "./ThemePanel"
 
@@ -24,15 +24,15 @@ const labelStyle: CSSProperties = {
   padding: "0 4px",
 }
 
-export function PairCell({ pair, side }: { pair: Pair; side: "shadcn" | "mui" }) {
+export function PairCell({ pair, side }: { pair: Pair; side: Side }) {
   return (
     <div data-side={side} style={cellStyle}>
-      {side === "shadcn" ? pair.shadcn : pair.mui}
+      {side === "ref" ? pair.ref : pair.mui}
     </div>
   )
 }
 
-export function PairRow({ pair, sides }: { pair: Pair; sides: Array<"shadcn" | "mui"> }) {
+export function PairRow({ pair, sides }: { pair: Pair; sides: Side[] }) {
   return (
     <div
       data-pair-id={pair.id}
@@ -54,14 +54,23 @@ export function PairRow({ pair, sides }: { pair: Pair; sides: Array<"shadcn" | "
   )
 }
 
-export function SectionBlock({ section, sides }: { section: Section; sides: Array<"shadcn" | "mui"> }) {
+export function SectionBlock({
+  section,
+  sides,
+  refLabel,
+}: {
+  section: Section
+  sides: Side[]
+  /** Display name for the reference column ("shadcn", "kumo"); the DOM side key stays "ref". */
+  refLabel: string
+}) {
   return (
     <section id={sectionId(section.title)} style={{ marginBottom: 48, scrollMarginTop: 24 }}>
       <h2 style={{ font: "600 16px/24px system-ui", margin: "0 0 4px" }}>{section.title}</h2>
       <div style={{ display: "flex" }}>
         {sides.map((side) => (
           <div key={side} style={{ ...labelStyle, minWidth: 240, textAlign: "center" }}>
-            {side}
+            {side === "ref" ? refLabel : side}
           </div>
         ))}
       </div>
@@ -72,7 +81,7 @@ export function SectionBlock({ section, sides }: { section: Section; sides: Arra
   )
 }
 
-export function renderSections(sections: Section[], sides: Array<"shadcn" | "mui">) {
+export function renderSections(sections: Section[], sides: Side[], refLabel: string) {
   return (
     <>
       <GallerySidebar sections={sections} />
@@ -87,7 +96,7 @@ export function renderSections(sections: Section[], sides: Array<"shadcn" | "mui
         }}
       >
         {sections.map((s) => (
-          <SectionBlock key={s.title} section={s} sides={sides} />
+          <SectionBlock key={s.title} section={s} sides={sides} refLabel={refLabel} />
         ))}
       </main>
       <ThemePanel />

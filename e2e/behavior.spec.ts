@@ -78,7 +78,7 @@ test.describe("animates", () => {
     for (const { id } of pairs) {
       const row = page.locator(`[data-pair-id="${id}"]`)
       await row.scrollIntoViewIfNeeded()
-      for (const side of ["shadcn", "mui"] as const) {
+      for (const side of ["ref", "mui"] as const) {
         const cell = row.locator(`[data-side="${side}"]`)
         const { first, second } = await sampleAnimationSignature(cell)
         expect(
@@ -91,10 +91,6 @@ test.describe("animates", () => {
   })
 })
 
-// The scrim behind a modal overlay, per side. shadcn marks its own with a data-slot; MUI's is a
-// Backdrop. These are the only two side-specific selectors in the harness, and they are here rather
-// than in the gallery because shadcn's DialogContent renders its overlay internally - a pair cannot
-// put a marker on it.
 /**
  * Drops fully transparent layers from a computed `box-shadow` before comparing two of them.
  *
@@ -122,8 +118,14 @@ function significantShadowLayers(boxShadow: string): string[] {
   return layers.filter((layer) => layer !== "none" && !/(,\s*0\s*\)|\/\s*0\s*\))/.test(layer))
 }
 
+// The scrim behind a modal overlay, per side. MUI's is a Backdrop; the reference side's selector
+// here is shadcn's own (its DialogContent renders the overlay internally with a data-slot, so a
+// pair cannot put a marker on it). These are the only side-specific selectors in the harness, and
+// the `ref` one is the single place that hardcodes a reference SYSTEM rather than reading the DOM -
+// it will have to become per-theme once a second theme gains a pair tagged `overlay-matches`. No
+// kumo pair does yet: every modal is a Tier 2 component.
 const BACKDROP_SELECTOR = {
-  shadcn: "[data-slot$='-overlay']",
+  ref: "[data-slot$='-overlay']",
   mui: ".MuiBackdrop-root:not(.MuiBackdrop-invisible)",
 } as const
 
@@ -145,7 +147,7 @@ test.describe("overlay-matches", () => {
       const row = page.locator(`[data-pair-id="${id}"]`)
       await row.scrollIntoViewIfNeeded()
       const measured: Record<string, unknown> = {}
-      for (const side of ["shadcn", "mui"] as const) {
+      for (const side of ["ref", "mui"] as const) {
         const cell = row.locator(`[data-side="${side}"]`)
         await cell.locator("[data-target]").first().click()
         const scrim = page.locator(BACKDROP_SELECTOR[side]).first()
@@ -178,9 +180,9 @@ test.describe("overlay-matches", () => {
       }
       expect(
         measured.mui,
-        `${id}: the MUI overlay does not match the shadcn one\n` +
-          `  shadcn: ${JSON.stringify(measured.shadcn)}\n  mui:    ${JSON.stringify(measured.mui)}`,
-      ).toEqual(measured.shadcn)
+        `${id}: the MUI overlay does not match the reference one\n` +
+          `  ref: ${JSON.stringify(measured.ref)}\n  mui:    ${JSON.stringify(measured.mui)}`,
+      ).toEqual(measured.ref)
     }
   })
 })
@@ -200,7 +202,7 @@ test.describe("item-hover-highlights", () => {
       const row = page.locator(`[data-pair-id="${id}"]`)
       await row.scrollIntoViewIfNeeded()
       const measured: Record<string, string> = {}
-      for (const side of ["shadcn", "mui"] as const) {
+      for (const side of ["ref", "mui"] as const) {
         const cell = row.locator(`[data-side="${side}"]`)
         await cell.locator("[data-target]").first().click()
         const overlay = openContentLocator(page, cell, id)
@@ -215,10 +217,10 @@ test.describe("item-hover-highlights", () => {
       expect(
         measured.mui,
         `${id}: hovering an item paints a different background on the two sides\n` +
-          `  shadcn: ${measured.shadcn}\n  mui:    ${measured.mui}`,
-      ).toBe(measured.shadcn)
+          `  ref: ${measured.ref}\n  mui:    ${measured.mui}`,
+      ).toBe(measured.ref)
       expect(
-        measured.shadcn,
+        measured.ref,
         `${id}: hovering an item paints nothing on either side - the check proves nothing`,
       ).not.toBe("rgba(0, 0, 0, 0)")
     }
@@ -251,7 +253,7 @@ test.describe("accepts input", () => {
     let checked = 0
     for (const id of pairIds) {
       const row = page.locator(`[data-pair-id="${id}"]`)
-      for (const side of ["shadcn", "mui"] as const) {
+      for (const side of ["ref", "mui"] as const) {
         const control = row.locator(`[data-side="${side}"]`).locator(EDITABLE).first()
         if ((await control.count()) === 0) continue
         if (!(await control.isVisible())) continue
@@ -330,7 +332,7 @@ test.describe("hover-opens", () => {
     for (const { id } of pairs) {
       const row = page.locator(`[data-pair-id="${id}"]`)
       await row.scrollIntoViewIfNeeded()
-      for (const side of ["shadcn", "mui"] as const) {
+      for (const side of ["ref", "mui"] as const) {
         const cell = row.locator(`[data-side="${side}"]`)
         const target = cell.locator("[data-target]").first()
         await target.hover()
@@ -352,7 +354,7 @@ test.describe("escape-closes", () => {
     for (const { id } of pairs) {
       const row = page.locator(`[data-pair-id="${id}"]`)
       await row.scrollIntoViewIfNeeded()
-      for (const side of ["shadcn", "mui"] as const) {
+      for (const side of ["ref", "mui"] as const) {
         const cell = row.locator(`[data-side="${side}"]`)
         const target = cell.locator("[data-target]").first()
         await target.click()
@@ -453,7 +455,7 @@ test.describe("text metrics", () => {
           }
           return seen
         }
-        const a = collect("shadcn")
+        const a = collect("ref")
         const b = collect("mui")
         const out: string[] = []
         for (const [text, m] of a) {
@@ -464,7 +466,7 @@ test.describe("text metrics", () => {
             // omitted means "does not apply here", not "differs".
             if (m[k] === undefined || other[k] === undefined) continue
             if (m[k] !== other[k]) {
-              out.push(`"${text.slice(0, 24)}" ${k}: shadcn ${m[k]} (${m.__tag}) vs mui ${other[k]} (${other.__tag})`)
+              out.push(`"${text.slice(0, 24)}" ${k}: ref ${m[k]} (${m.__tag}) vs mui ${other[k]} (${other.__tag})`)
             }
           }
         }

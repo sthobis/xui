@@ -79,7 +79,7 @@ export const tabsSection: Section = {
       // and the harness's single generic per-pair `data-target` can't reconcile both real
       // behaviors with one probe position. Out of scope for this pair.
       states: ["default", "hover"],
-      shadcn: (
+      ref: (
         <Tabs defaultValue="password" style={tabsRootStyle}>
           <TabsList>
             <TabsTrigger data-target value="account">
