@@ -2,14 +2,18 @@
 
 Material UI v9 themes that make MUI components look pixel-for-pixel identical to another design system.
 
-The first theme, `shadcnTheme`, replicates shadcn/ui's default look so closely that a regular eye cannot tell a themed MUI component from a real shadcn component, in both light and dark mode.
-The repository is structured so more themes (for other design systems) can be added later, reusing the same gallery and verification harness.
+Two themes ship today, both verified in light and dark by the same pixel-parity harness:
+
+- **`shadcnTheme`** replicates shadcn/ui's default look (new-york style, neutral base, Geist). Complete.
+- **`kumoTheme`** replicates [Kumo](https://kumo-ui.com), Cloudflare's design system (Inter). Its Tier 1 primitives are complete: Button, Text, Label, Link, Input, InputArea, Field, Checkbox, Radio, Switch, Badge, Banner, Meter and LayerCard. Portalled components (Select, Dropdown, Dialog, Popover, Tooltip, Toast) are next.
+
+Dark mode follows each design system's own convention, so a theme is a drop-in: shadcn uses a `.dark` class on `<html>`, kumo uses `data-mode="dark"`. Either way MUI's `useColorScheme()` drives it.
 
 ## Why
 
 MUI gives you a mature, accessible component library with a huge surface area.
-shadcn/ui gives you a look people love.
-xui lets you write ordinary MUI code and get the shadcn look, with no wrapper components and no change to how you use MUI.
+Other design systems give you a look people love.
+xui lets you write ordinary MUI code and get that look, with no wrapper components and no change to how you use MUI.
 
 ## Usage
 
