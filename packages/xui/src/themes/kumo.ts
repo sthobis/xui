@@ -1346,6 +1346,45 @@ export const kumoTheme = createTheme({
       },
     },
 
+    // ---- Meter ----
+    //
+    // kumo: dist/chunks/meter-iauic8ww87xxqf74.js
+    //   track      relative h-2 w-full overflow-hidden rounded-full bg-kumo-fill
+    //   indicator  absolute inset-y-0 left-0 rounded-full
+    //              bg-linear-to-r from-kumo-brand via-kumo-brand to-kumo-brand
+    //
+    // All three gradient stops are the same token, so it paints as a flat brand fill and is written
+    // as one here rather than as a gradient that cannot differ from itself.
+    MuiLinearProgress: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          height: "8px", // kumo: h-2
+          width: "100%", // kumo: w-full
+          borderRadius: "9999px", // kumo: rounded-full
+          overflow: "hidden", // kumo: overflow-hidden
+          backgroundColor: theme.vars.palette.kumo.fill, // kumo: bg-kumo-fill
+        }),
+        bar: ({ theme }) => ({
+          borderRadius: "9999px", // kumo: the indicator is rounded-full too
+          backgroundColor: theme.vars.palette.kumo.brand, // kumo: from/via/to-kumo-brand, all identical
+        }),
+        // MUI draws a determinate bar as a FULL-WIDTH span translated left by the remainder. Kumo
+        // instead SIZES its indicator to the value, and that changes the shape: at 2% its fill is
+        // 4.8px wide, and CSS scales a `rounded-full` radius down to fit a box that narrow, so the
+        // right cap is tighter than the full 4px a 240px-wide bar gets. 15 pixels at Δ224.
+        //
+        // `!important` rather than the usual `defaultProps.slotProps` escape hatch (AGENTS.md),
+        // because MUI v9's LinearProgress exposes no slotProps at all - the transform is written as
+        // an inline style, and an !important declaration is the only thing left that outranks one.
+        determinate: ({ ownerState }: { ownerState: { value?: number } }) => ({
+          "& .MuiLinearProgress-bar1": {
+            transform: "none !important",
+            width: `${ownerState.value ?? 0}%`,
+          },
+        }),
+      },
+    },
+
     // ---- Field ----
     //
     // kumo: dist/chunks/field-dxe9ne8fqy5whws2.js wraps a control that has a label, description or
