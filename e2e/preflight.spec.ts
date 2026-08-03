@@ -17,6 +17,33 @@ import { GALLERY_PAGE, PURE_PAGE, targetOf } from "./lib/themes"
 const MAX_CHANNEL_DELTA = 2
 
 /**
+ * Per-pair allowances, for residuals PROVEN not to be a Tailwind dependency.
+ *
+ * This check is deliberately far stricter than the parity suite (Δ2, against Δ40) because it
+ * compares the SAME MUI element under two stylesheets. An entry here has to show that the two
+ * captures differ for a reason unrelated to Tailwind at all, not merely that the difference is
+ * small - so each one records how that was established.
+ */
+const maxDeltaOverrides: Record<string, number> = {
+  // switch-checked: `corner-shape: squircle` rasterizes differently at different device positions.
+  //
+  // Kumo's Switch is the only control drawn with a squircle, which Skia rasterizes from a
+  // superellipse rather than an arc. The two pages lay the same cell out at different x by design
+  // (the gallery page has a reference column beside it, the pure page does not), and the curve's
+  // edge pixels land differently there.
+  //
+  // Proven rather than assumed. Every computed value on the track and thumb is byte-identical
+  // across the two pages - 36x18 and 18x18, same integer x phase, same 10px radius, same resolved
+  // `corner-shape: squircle`, same colours, same box-sizing - and the ONLY difference is that the
+  // switch sits at x=594 on the gallery page and x=354 on the pure page. The parity suite sees the
+  // same artifact from the other direction: its two sides sit at those exact two x positions and
+  // differ by the same handful of corner pixels. Nothing here varies with Tailwind's presence.
+  //
+  // 38 pixels, worst channel Δ8, all of them on the four corner curves.
+  "switch-checked": 8,
+}
+
+/**
  * Captures a cell via a page-level clip with ROUNDED integer bounds, for the same reason
  * parity.spec.ts does: an element screenshot clips at the element's own fractional device-pixel
  * span, so one cell of a fixed CSS width captures to DIFFERENT PNG sizes depending on the
@@ -84,9 +111,10 @@ test("mui renders identically with and without tailwind", async ({ page }) => {
     // the two pages across roughly a thousand pixels - so it scored 1.18% while every single channel
     // was off by exactly 1, which is invisible. The count says how much of the cell moved; only the
     // delta says whether anything actually looks different.
-    if (r.maxChannelDelta > MAX_CHANNEL_DELTA) {
+    const cap = maxDeltaOverrides[id] ?? MAX_CHANNEL_DELTA
+    if (r.maxChannelDelta > cap) {
       failures.push(
-        `${id}: worst channel Δ${r.maxChannelDelta} > ${MAX_CHANNEL_DELTA} ` +
+        `${id}: worst channel Δ${r.maxChannelDelta} > ${cap} ` +
           `(${r.mismatchedPixels}px, ${r.mismatchPct.toFixed(2)}%) - the theme is leaning on Tailwind for something`,
       )
     }

@@ -15,6 +15,11 @@
  * Every value below carries a `// kumo:` provenance comment naming the token or class it came from.
  */
 import { createTheme, type CssVarsTheme, type Theme } from "@mui/material/styles"
+import { CheckIcon, MinusIcon } from "@phosphor-icons/react"
+// createElement rather than JSX, because this file is a plain .ts module - JSX syntax is only valid
+// in .tsx. React is not a new dependency: it is already xui's peer, required by every MUI component
+// the theme configures.
+import { createElement } from "react"
 
 // ---------------------------------------------------------------------------
 // Module augmentation
@@ -924,6 +929,285 @@ export const kumoTheme = createTheme({
           "&.Mui-disabled": {
             WebkitTextFillColor: theme.vars.palette.kumo.textDefault, // MUI greys disabled text via this
           },
+        }),
+      },
+    },
+
+    // ---- Checkbox ----
+    //
+    // kumo: dist/chunks/checkbox-fovnhs7f1sekaxrh.js
+    //   relative flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border-0
+    //   bg-kumo-base ring ring-kumo-hairline focus:outline-none
+    //   not-disabled: hover:ring-kumo-hairline focus:ring-2 focus:ring-kumo-focus
+    //                 focus-visible:ring-2 focus-visible:ring-kumo-brand
+    //   checked/indeterminate: bg-kumo-contrast + ring-kumo-contrast
+    //   disabled: cursor-not-allowed opacity-50
+    // and the mark itself is a Phosphor Check (or Minus when indeterminate) at
+    // `weight="bold" size={12}`, coloured text-kumo-inverse.
+    //
+    // The box FILLS with the contrast colour rather than growing a tick on a white field, so the
+    // icon has to keep its footprint when unchecked - hence the hidden-but-present icon below,
+    // which is also what stops the control resizing between states.
+    MuiCheckbox: {
+      defaultProps: {
+        // The global MuiButtonBase default does NOT reach Checkbox: it resolves its own
+        // `disableRipple` before forwarding, so this has to be restated.
+        disableRipple: true,
+        icon: createElement(CheckIcon, {
+          weight: "bold",
+          size: 12,
+          "aria-hidden": true,
+          style: { visibility: "hidden" },
+        }),
+        checkedIcon: createElement(CheckIcon, { weight: "bold", size: 12, "aria-hidden": true }),
+        indeterminateIcon: createElement(MinusIcon, { weight: "bold", size: 12, "aria-hidden": true }),
+      },
+      styleOverrides: {
+        root: ({ theme }) => {
+          const k = theme.vars.palette.kumo
+          return {
+            width: "16px", // kumo: h-4 w-4
+            height: "16px",
+            padding: 0, // MUI pads the control to a 42px hit target; Kumo uses an ::after instead
+            flexShrink: 0, // kumo: shrink-0
+            boxSizing: "border-box" as const,
+            borderRadius: "4px", // kumo: rounded-sm
+            backgroundColor: k.base, // kumo: bg-kumo-base
+            color: k.textInverse, // kumo: the indicator is text-kumo-inverse
+            boxShadow: `0 0 0 1px ${k.hairline}`, // kumo: ring ring-kumo-hairline
+            "&:hover": {
+              backgroundColor: k.base,
+              boxShadow: `0 0 0 1px ${k.hairline}`, // kumo: hover:ring-kumo-hairline - unchanged
+            },
+            "&.Mui-checked, &.MuiCheckbox-indeterminate": {
+              // kumo: data-[checked]:bg-kumo-contrast data-[checked]:ring-kumo-contrast
+              backgroundColor: k.contrast,
+              boxShadow: `0 0 0 1px ${k.contrast}`,
+              color: k.textInverse,
+              "&:hover": { backgroundColor: k.contrast, boxShadow: `0 0 0 1px ${k.contrast}` },
+            },
+            "&:focus-visible, &.Mui-focusVisible": {
+              boxShadow: `0 0 0 2px ${k.brand}`, // kumo: focus-visible:ring-2 focus-visible:ring-kumo-brand
+              outline: "none", // kumo: focus:outline-none
+            },
+            // ...but only while UNCHECKED. `data-[checked]:ring-kumo-contrast` outranks the
+            // focus-visible colour, so a checked box that gains keyboard focus keeps its contrast
+            // ring and merely widens it to 2px. Measured: oklch(0.12 0 0) at 2px, not brand.
+            "&.Mui-checked.Mui-focusVisible, &.MuiCheckbox-indeterminate.Mui-focusVisible": {
+              boxShadow: `0 0 0 2px ${k.contrast}`,
+            },
+            "&.Mui-disabled": {
+              opacity: 0.5, // kumo: disabled:opacity-50
+              cursor: "not-allowed", // kumo: disabled:cursor-not-allowed
+              pointerEvents: "auto" as const,
+            },
+          }
+        },
+      },
+    },
+
+    // ---- Radio ----
+    //
+    // kumo: dist/chunks/radio-igpo6t2t2tpe08d5.js, `default` appearance.
+    //   control    relative mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full
+    //              border-0 bg-kumo-base ring ring-kumo-line focus:outline-none
+    //              group-hover:ring-kumo-hairline focus:ring-2 focus:ring-kumo-focus
+    //              focus-visible:ring-2 focus-visible:ring-kumo-brand
+    //              data-[checked]:bg-kumo-contrast
+    //   indicator  a `h-2 w-2 rounded-full bg-kumo-base` span
+    //   row        group relative m-0 inline-flex items-start gap-2, label `text-base`
+    //   group      flex flex-col gap-4
+    //
+    // The checked state is the INVERSE of MUI's: the circle fills with the contrast colour and the
+    // 8px dot is painted in the base colour on top, where MUI tints a dot on a transparent field.
+    MuiRadio: {
+      defaultProps: {
+        // Radio resolves its own disableRipple before forwarding, so the global default misses it.
+        disableRipple: true,
+        icon: createElement("span", {
+          "aria-hidden": true,
+          style: { width: "8px", height: "8px", borderRadius: "50%", visibility: "hidden" as const },
+        }),
+        checkedIcon: createElement("span", {
+          "aria-hidden": true,
+          style: {
+            width: "8px", // kumo: h-2 w-2
+            height: "8px",
+            borderRadius: "50%", // kumo: rounded-full
+            backgroundColor: "var(--mui-palette-kumo-base)", // kumo: bg-kumo-base
+          },
+        }),
+      },
+      styleOverrides: {
+        root: ({ theme }) => {
+          const k = theme.vars.palette.kumo
+          return {
+            width: "16px", // kumo: h-4 w-4
+            height: "16px",
+            padding: 0, // MUI pads to a 42px hit target; Kumo uses an ::after overlay instead
+            flexShrink: 0, // kumo: shrink-0
+            boxSizing: "border-box" as const,
+            borderRadius: "50%", // kumo: rounded-full
+            backgroundColor: k.base, // kumo: bg-kumo-base
+            boxShadow: `0 0 0 1px ${k.line}`, // kumo: ring ring-kumo-line
+            "&:hover": { backgroundColor: k.base, boxShadow: `0 0 0 1px ${k.hairline}` }, // kumo: group-hover:ring-kumo-hairline
+            "&.Mui-checked": {
+              backgroundColor: k.contrast, // kumo: data-[checked]:bg-kumo-contrast
+              boxShadow: `0 0 0 1px ${k.line}`,
+              "&:hover": { backgroundColor: k.contrast, boxShadow: `0 0 0 1px ${k.hairline}` },
+            },
+            "&:focus-visible, &.Mui-focusVisible": {
+              boxShadow: `0 0 0 2px ${k.brand}`, // kumo: focus-visible:ring-2 focus-visible:ring-kumo-brand
+              outline: "none", // kumo: focus:outline-none
+            },
+            "&.Mui-disabled": {
+              // NO opacity here: unlike Checkbox, whose control carries `disabled:opacity-50`
+              // itself, Kumo's Radio.Item puts it on the LABEL ROW so the text dims with the
+              // circle. Dimming both would compound to 25%.
+              cursor: "not-allowed",
+              pointerEvents: "auto" as const,
+            },
+          }
+        },
+      },
+    },
+    // MuiRadioGroup renders a FormGroup and has no styleOverrides slot of its own, so the group's
+    // spacing has to be set on FormGroup - setting it on MuiRadioGroup silently did nothing.
+    MuiFormGroup: {
+      styleOverrides: {
+        root: {
+          // kumo: Radio.Group nests a `flex flex-col gap-2` list inside its fieldset. The
+          // fieldset's own `gap-4` separates the legend from that list, NOT one item from the next -
+          // reading it as the item spacing put every row 8px too far apart.
+          gap: "8px",
+        },
+      },
+    },
+
+    // ---- Switch ----
+    //
+    // kumo: dist/chunks/switch-cusffup6w3tan5ot.js, `base` size.
+    //   track  h-4.5 w-9  -> 36x18, ring, `rounded-[5px]` upgraded by
+    //          `supports-[corner-shape:squircle]:rounded-[10px] [corner-shape:squircle]`
+    //   thumb  w-4.5 top-0 bottom-0 -> 18x18, same radius, sliding left-0 -> left-4.5
+    //   thumb shadow: 0 0 1px 0.5px <shadow-edge>, 0 1px 2px <shadow-drop>
+    //
+    // Chrome DOES support corner-shape, so the rendered radius is the 10px squircle branch, not the
+    // 5px fallback - confirmed by reading the computed `corner-shape` off the live control.
+    //
+    // Unlike everything else in Tier 1, the switch's track colours are RAW Tailwind palette entries
+    // rather than kumo-* tokens, so they are transcribed here as literals with the Tailwind name
+    // that produced them.
+    //
+    // AND THE `dark:` HALF OF THOSE CLASSES NEVER FIRES. The source pairs every one with a variant
+    // (`bg-neutral-200 dark:bg-neutral-700`, `dark:bg-neutral-850`, `dark:bg-blue-300`), but Kumo
+    // drives dark mode through CSS light-dark() tokens switched by `data-mode` - its own colour
+    // docs say in as many words never to use Tailwind's `dark:` variant - so nothing on the page
+    // ever matches it. Measured on the live control in dark mode: the track stays neutral-200 and
+    // its ring stays neutral-300, exactly as in light. Only the token-driven parts move, because
+    // those resolve through light-dark(): the thumb is `bg-kumo-base` and the shadow is built from
+    // the shadow-edge / shadow-drop tokens.
+    //
+    // Transcribing the dark: variants as real overrides is therefore wrong, and was worth Δ230-243
+    // across every switch pair. What ships is what paints.
+    MuiSwitch: {
+      defaultProps: {
+        disableRipple: true, // Switch resolves its own default too - see MuiCheckbox above
+      },
+      styleOverrides: {
+        root: {
+          width: "36px", // kumo: w-9
+          height: "18px", // kumo: h-4.5
+          padding: 0, // MUI reserves room around the track for its ripple; Kumo has none
+          overflow: "visible" as const,
+          // kumo: disabled:opacity-50 sits on the whole control, where MUI dims only its own
+          // internals - so the root has to carry it.
+          "&:has(.Mui-disabled)": { opacity: 0.5 },
+        },
+        track: {
+          borderRadius: "10px", // kumo: supports-[corner-shape:squircle]:rounded-[10px]
+          cornerShape: "squircle", // kumo: [corner-shape:squircle]
+          opacity: 1, // MUI fades its track to 38%; Kumo paints a solid colour
+          backgroundColor: "oklch(0.922 0 0)", // kumo: bg-neutral-200 (both schemes - see above)
+          boxShadow: "0 0 0 1px oklch(0.87 0 0)", // kumo: ring-neutral-300 (both schemes)
+        },
+        thumb: ({ theme }) => ({
+          width: "18px", // kumo: w-4.5
+          height: "18px", // kumo: top-0 bottom-0 over an 18px track
+          borderRadius: "10px",
+          cornerShape: "squircle",
+          // kumo: bg-kumo-base - a token, so this one IS scheme-aware where the track is not
+          backgroundColor: theme.vars.palette.kumo.base,
+          // kumo: shadow-[0_0_1px_0.5px_var(--color-kumo-shadow-edge),0_1px_2px_var(--color-kumo-shadow-drop)]
+          boxShadow: `0 0 1px 0.5px ${theme.vars.palette.kumo.shadowEdge}, 0 1px 2px ${theme.vars.palette.kumo.shadowDrop}`,
+        }),
+        switchBase: ({ theme }) => ({
+          padding: 0, // the thumb fills the track's height, so there is no inset
+          color: "transparent",
+          "&.Mui-checked": {
+            // kumo: the thumb slides its own width, and it does so with `left-0` -> `left-4.5`,
+            // NOT a transform. MUI translates instead, which rasterizes the squircle's edge on a
+            // composited layer and left a 52px Δ8 seam; moving the box itself matches.
+            transform: "none",
+            left: "18px",
+            "& + .MuiSwitch-track": {
+              backgroundColor: "oklch(0.623 0.214 259.815)", // kumo: bg-blue-500 (both schemes)
+              boxShadow: "0 0 0 1px oklch(0.546 0.245 262.881)", // kumo: ring-blue-600 (both schemes)
+              opacity: 1,
+            },
+          },
+          // kumo: focus-visible:ring-2 focus-visible:ring-kumo-brand. MUI focuses the hidden input,
+          // so the ring is drawn on the sibling track. It sits AFTER the checked block on purpose:
+          // both selectors carry the same specificity, and the focus ring has to win over the
+          // checked track's own blue ring.
+          "&.Mui-focusVisible + .MuiSwitch-track": {
+            boxShadow: `0 0 0 2px ${theme.vars.palette.kumo.brand}`,
+          },
+          "&.Mui-disabled + .MuiSwitch-track": { opacity: 1 },
+          "&.Mui-disabled": { opacity: 1 },
+        }),
+      },
+    },
+
+    // ---- FormControlLabel ----
+    //
+    // The label row around a control. Kumo builds two different ones and they genuinely differ, so
+    // the block discriminates on which control is inside rather than on a prop:
+    //
+    //   checkbox  FieldLabel `!m-0 inline-flex !min-h-0 items-start gap-2 !text-base`, and the
+    //             control itself picks up `mt-0.5` once it has a label. Label text is weight 400.
+    //   switch    `relative m-0 inline-flex items-center gap-2`, label BEFORE the control, and its
+    //             label is `text-base font-medium text-kumo-default` - weight 500.
+    MuiFormControlLabel: {
+      styleOverrides: {
+        root: {
+          margin: 0, // kumo: !m-0 / m-0
+          gap: "8px", // kumo: gap-2
+          alignItems: "flex-start", // kumo: the checkbox row is items-start
+          // kumo: the control gains mt-0.5 as soon as it sits beside a label
+          "& .MuiCheckbox-root, & .MuiRadio-root": { marginTop: "2px" },
+          "&:has(.MuiSwitch-root)": {
+            alignItems: "center", // kumo: the switch row is items-center
+          },
+          // kumo: a disabled Radio.Item dims its whole row - `disabled:cursor-not-allowed
+          // opacity-50` sits on the label, not on the control.
+          "&.Mui-disabled": {
+            opacity: 0.5,
+            cursor: "not-allowed",
+          },
+        },
+        label: ({ theme }) => ({
+          ...TEXT_BASE, // kumo: !text-base
+          fontWeight: 400, // kumo: the checkbox row's label inherits the row's normal weight
+          letterSpacing: "normal",
+          color: theme.vars.palette.kumo.textDefault, // kumo: text-kumo-default
+          // kumo: a Switch's label is `text-base font-medium` where a Checkbox's is not. Written as
+          // a parent selector in this slot rather than a descendant rule on the root, so that it
+          // beats the `fontWeight: 400` directly above it - the root's version lost to it.
+          ".MuiFormControlLabel-root:has(.MuiSwitch-root) &": { fontWeight: 500 },
+          // Kumo dims a disabled row with opacity ALONE and leaves the text colour alone; MUI also
+          // repaints it to a 38% black, which then compounds with the opacity.
+          "&.Mui-disabled": { color: theme.vars.palette.kumo.textDefault },
         }),
       },
     },

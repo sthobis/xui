@@ -4,5 +4,8 @@ import { textSection } from "./text"
 import { labelSection } from "./label"
 import { linkSection } from "./link"
 import { inputSection } from "./input"
+import { checkboxSection } from "./checkbox"
+import { switchSection } from "./switch"
+import { radioSection } from "./radio"
 
-export const sections: Section[] = [buttonSection, textSection, labelSection, linkSection, inputSection]
+export const sections: Section[] = [buttonSection, textSection, labelSection, linkSection, inputSection, checkboxSection, switchSection, radioSection]

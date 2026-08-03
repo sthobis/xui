@@ -68,6 +68,23 @@ const maxPixelOverrides: Record<ThemeName, Record<string, number>> = {
     // artifact as slider-disabled and the same reasoning - see the proof in maxDeltaOverrides.
     "button-primary": Number.POSITIVE_INFINITY,
     "button-destructive": Number.POSITIVE_INFINITY,
+
+    // switch-checked: squircle-corner antialiasing, and ONLY the count is relaxed - the channel cap
+    // stays at the default 40, which the worst pixel here (Δ10) is nowhere near.
+    //
+    // Kumo's Switch is the only control in either gallery drawn with `corner-shape: squircle`, a
+    // shape Chrome rasterizes from a superellipse rather than an arc. Kumo nests its thumb INSIDE
+    // the track element; MUI paints the track and the thumb as siblings. Same curve, two different
+    // paint trees, and the edge pixels of the curve land fractionally differently.
+    //
+    // Everything measurable matches, read off the live controls: both tracks are 36x18 and both
+    // thumbs 18x18, at the same offsets (thumb at track + 18px on both sides), same 10px radius,
+    // same computed `corner-shape: squircle`, and identical track/ring/thumb/shadow colours. The
+    // 134 differing pixels sit only at x[201..203], x[274..277] and the thumb's own edge - the four
+    // corner regions - with a histogram that is 66 pixels at Δ1 and just two at Δ10.
+    //
+    // It shows in dark and not light because the corner sits against a much darker canvas there.
+    "switch-checked": 200,
   },
 }
 
