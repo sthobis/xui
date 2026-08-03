@@ -109,24 +109,48 @@ declare module "@mui/material/styles" {
   }
 }
 
+declare module "@mui/material/Button" {
+  interface ButtonPropsSizeOverrides {
+    // kumo: Button ships four sizes (xs/sm/base/lg) where MUI ships three. xs - the 20px-tall
+    // `h-5 px-1.5 text-xs` button - has nowhere to land, so the theme adds it as a real size
+    // rather than asking every call site to restate the dimensions.
+    xsmall: true
+  }
+}
+
 // ---------------------------------------------------------------------------
-// Design tokens - transcribed from dist/styles/theme-kumo.css.
+// Design tokens.
 //
-// That file writes every token as `light-dark(<light>, <dark>)` over `var(--color-neutral-900,
-// <literal>)` references into Tailwind's palette. The literals below are those fallbacks, which are
-// Tailwind v4's own values - so they resolve identically while leaving the theme independent of
-// whether Tailwind is loaded at all. That independence is not incidental: e2e/preflight.spec.ts
-// renders every MUI cell on a Tailwind-free page and fails the build if any value moves.
+// These are the RESOLVED values every token computes to in a real Kumo app, read back out of the
+// browser with getComputedStyle on the installed package's own stylesheets (once with
+// `data-mode="light"`, once with `"dark"`), not transcribed from any single source file. Kumo
+// writes each token as `light-dark(<light>, <dark>)` over `var(--color-neutral-900, <fallback>)`
+// references into Tailwind's palette, and reading the source alone gets this wrong twice over:
+//
+//   - The inline fallback is NOT always Tailwind's real value. `--text-color-kumo-default` falls
+//     back to oklch(21% 0.006 285.885) (that is zinc-900) while Tailwind's actual
+//     --color-neutral-900 is oklch(20.5% 0 0), and the real var always wins. Same story for
+//     --color-kumo-info, whose fallback is sky-500 but which resolves to blue-500.
+//   - theme-kumo.css is not the last word. kumo.css redefines several tokens over the top of it,
+//     so `recessed`, `contrast`, `overlay` and dark `fill-hover` all paint different values than
+//     the theme file alone claims.
+//
+// Seven tokens were wrong on the first pass for exactly those two reasons. What paints is the
+// ground truth; a source file is only evidence about it.
+//
+// Every value stays a literal here rather than a var() reference, so the theme carries no
+// dependency on Tailwind or on Kumo's stylesheet being loaded at all - which
+// e2e/preflight.spec.ts enforces by rendering every MUI cell again on a Tailwind-free page.
 // ---------------------------------------------------------------------------
 const light = {
   // --- surfaces ---
   canvas: "oklch(98.75% 0 0)", // kumo: --color-kumo-canvas
   base: "#ffffff", // kumo: --color-kumo-base
   elevated: "oklch(98% 0 0)", // kumo: --color-kumo-elevated
-  recessed: "oklch(96% 0 0)", // kumo: --color-kumo-recessed
+  recessed: "oklch(0.965 0 0)", // kumo: --color-kumo-recessed
   tint: "oklch(97% 0 0)", // kumo: --color-kumo-tint
-  contrast: "oklch(8.5% 0 0)", // kumo: --color-kumo-contrast
-  overlay: "oklch(97.5% 0 0)", // kumo: --color-kumo-overlay
+  contrast: "oklch(0.12 0 0)", // kumo: --color-kumo-contrast
+  overlay: "oklch(0.9875 0 0)", // kumo: --color-kumo-overlay
   control: "#ffffff", // kumo: --color-kumo-control
   interact: "oklch(87% 0 0)", // kumo: --color-kumo-interact
   fill: "oklch(92.2% 0 0)", // kumo: --color-kumo-fill
@@ -143,7 +167,7 @@ const light = {
   tipShadow: "oklch(92.8% 0.006 264.531)", // kumo: --color-kumo-tip-shadow
   tipStroke: "transparent", // kumo: --color-kumo-tip-stroke
   // --- text roles ---
-  textDefault: "oklch(21% 0.006 285.885)", // kumo: --text-color-kumo-default
+  textDefault: "oklch(0.205 0 0)", // kumo: --text-color-kumo-default (neutral-900; the source's inline fallback is zinc-900 and does NOT paint)
   textInverse: "oklch(97% 0 0)", // kumo: --text-color-kumo-inverse
   textStrong: "oklch(14.5% 0 0)", // kumo: --text-color-kumo-strong
   textSubtle: "oklch(55.6% 0 0)", // kumo: --text-color-kumo-subtle
@@ -152,7 +176,7 @@ const light = {
   textBrand: "#f6821f", // kumo: --text-color-kumo-brand (Cloudflare orange, same in both schemes)
   textLink: "oklch(42.4% 0.199 265.638)", // kumo: --text-color-kumo-link
   // --- status ---
-  info: "oklch(68.5% 0.169 237.323)", // kumo: --color-kumo-info
+  info: "oklch(0.623 0.214 259.815)", // kumo: --color-kumo-info (blue-500; the source's inline fallback is sky-500 and does NOT paint)
   infoTint: "oklch(93.2% 0.032 255.6 / 0.45)", // kumo: --color-kumo-info-tint
   textInfo: "oklch(42.4% 0.199 265.638)", // kumo: --text-color-kumo-info
   success: "oklch(59.6% 0.145 163.225)", // kumo: --color-kumo-success
@@ -175,10 +199,10 @@ const dark: typeof light = {
   tint: "oklch(26.9% 0 0)", // kumo: --color-kumo-tint (dark)
   contrast: "oklch(98.5% 0 0)", // kumo: --color-kumo-contrast (dark)
   overlay: "oklch(26.9% 0 0)", // kumo: --color-kumo-overlay (dark)
-  control: "oklch(21% 0.006 285.885)", // kumo: --color-kumo-control (dark)
+  control: "oklch(0.205 0 0)", // kumo: --color-kumo-control (dark, neutral-900)
   interact: "oklch(37.1% 0 0)", // kumo: --color-kumo-interact (dark)
   fill: "oklch(26.9% 0 0)", // kumo: --color-kumo-fill (dark)
-  fillHover: "oklch(37.1% 0 0)", // kumo: --color-kumo-fill-hover (dark)
+  fillHover: "oklch(0.269 0 0)", // kumo: --color-kumo-fill-hover (dark; kumo.css overrides theme-kumo.css here)
   // --- brand ---
   // Transcribed as the color-mix Kumo itself writes, in the space it writes it (oklch, NOT oklab).
   brand: "color-mix(in oklch, oklch(0.5772 0.2324 260), black 10%)", // kumo: --color-kumo-brand (dark)
@@ -201,7 +225,7 @@ const dark: typeof light = {
   textBrand: "#f6821f", // kumo: --text-color-kumo-brand (dark, same as light)
   textLink: "oklch(70.7% 0.165 254.624)", // kumo: --text-color-kumo-link (dark)
   // --- status ---
-  info: "oklch(68.5% 0.169 237.323)", // kumo: --color-kumo-info (dark, same as light)
+  info: "oklch(0.623 0.214 259.815)", // kumo: --color-kumo-info (dark, same as light)
   infoTint: "oklch(38% 0.145 265.5 / 0.22)", // kumo: --color-kumo-info-tint (dark)
   textInfo: "oklch(70.7% 0.165 254.624)", // kumo: --text-color-kumo-info (dark)
   success: "oklch(76.5% 0.177 163.223)", // kumo: --color-kumo-success (dark)
