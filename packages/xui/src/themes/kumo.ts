@@ -557,10 +557,39 @@ export const kumoTheme = createTheme({
     light: { palette: schemePalette(light) },
     dark: { palette: schemePalette(dark) },
   },
+  // ---- Text ----
+  //
+  // Ground truth: dist/chunks/text-e1ko7r96hsoz2tor.js. Kumo's Text is two orthogonal props -
+  // `variant` (body / secondary / error / heading1-3 / mono) and, for the four "copy" variants
+  // only, `size` (xs / sm / base / lg) plus a `bold` flag. MUI flattens that into one list of
+  // typography variants, so the mapping is variant+size -> variant:
+  //
+  //   body   size=base   text-base                  -> body1      14px / 1.5      / 400
+  //   body   size=sm     text-sm                    -> body2      13px / 1/0.85   / 400
+  //   body   size=xs     text-xs                    -> caption    12px / 1/0.75   / 400
+  //   body   size=lg     text-lg                    -> subtitle1  16px / 1.5      / 400
+  //   body   bold        text-base font-medium      -> subtitle2  14px / 1.5      / 500
+  //   heading3           text-lg font-semibold      -> h6         16px / 1.5      / 600
+  //   heading2           text-2xl font-semibold     -> h5         24px / 1.3333   / 600
+  //   heading1           text-3xl font-semibold     -> h4         30px / 1.2      / 600
+  //
+  // The xs/sm/base/lg sizes are Kumo's own redefinitions of Tailwind's tokens (see KUMO_TEXT);
+  // 2xl and 3xl it leaves at Tailwind's defaults, measured at 24/32 and 30/36.
+  //
+  // A heading takes NO size class - `isCopy` is false for heading1-3 in the source - which is why
+  // heading3 and a size=lg body are both 16px and differ only in weight.
   typography: {
     fontFamily: FONT_SANS,
     // Kumo's default body copy is `text-base`, which its own theme file redefines to 14px.
     fontSize: 14,
+    body1: { ...TEXT_BASE, fontWeight: 400, letterSpacing: "normal" }, // kumo: Text variant=body size=base
+    body2: { ...TEXT_SM, fontWeight: 400, letterSpacing: "normal" }, // kumo: Text size=sm
+    caption: { ...TEXT_XS, fontWeight: 400, letterSpacing: "normal" }, // kumo: Text size=xs
+    subtitle1: { ...TEXT_LG, fontWeight: 400, letterSpacing: "normal" }, // kumo: Text size=lg
+    subtitle2: { ...TEXT_BASE, fontWeight: 500, letterSpacing: "normal" }, // kumo: Text bold (font-medium)
+    h6: { ...TEXT_LG, fontWeight: 600, letterSpacing: "normal" }, // kumo: heading3 - text-lg font-semibold
+    h5: { fontSize: "24px", lineHeight: 32 / 24, fontWeight: 600, letterSpacing: "normal" }, // kumo: heading2 - text-2xl font-semibold
+    h4: { fontSize: "30px", lineHeight: 36 / 30, fontWeight: 600, letterSpacing: "normal" }, // kumo: heading1 - text-3xl font-semibold
   },
   components: {
     // -----------------------------------------------------------------------
@@ -778,6 +807,120 @@ export const kumoTheme = createTheme({
               backgroundColor: isOutline ? "transparent" : `color-mix(in oklab, ${k.base} 50%, transparent)`,
               boxShadow: ringWith(k.line),
             },
+          }
+        },
+      },
+    },
+
+    MuiTypography: {
+      defaultProps: {
+        // kumo: Text renders <p> for every copy variant and <span> for the headings and mono - it
+        // leaves semantics to an explicit `as` prop rather than inferring them. MUI's defaults
+        // disagree (caption is a span, subtitle1 an h6, h4-h6 real headings), and since the theme's
+        // job is to make unadorned MUI render as Kumo does, the mapping is restated here. A caller
+        // who wants a semantic heading passes `component`, exactly as a Kumo caller passes `as`.
+        variantMapping: {
+          body1: "p",
+          body2: "p",
+          caption: "p",
+          subtitle1: "p",
+          subtitle2: "p",
+          h4: "span",
+          h5: "span",
+          h6: "span",
+        },
+      },
+      styleOverrides: {
+        root: ({ theme, ownerState }) => ({
+          // kumo: Text always carries `text-kumo-default`, and <p> keeps no UA margin under
+          // Tailwind's preflight.
+          margin: 0,
+          // kumo: the `error` variant is `text-kumo-danger`, which is --TEXT-color-kumo-danger -
+          // the darker, readable-on-a-surface red - NOT --color-kumo-danger, the indicator fill
+          // that Button's destructive variant uses. MUI resolves `color="error"` to
+          // palette.error.main, which is correctly the indicator colour, so text has to say so.
+          ...(ownerState.color === "error" && { color: theme.vars.palette.kumo.textDanger }),
+        }),
+      },
+    },
+
+    // ---- Label ----
+    //
+    // kumo: `m-0 text-base font-medium text-kumo-default` plus `inline-flex items-center gap-1`.
+    // Its optional-field marker is composed content (a `font-normal text-kumo-subtle` span), not a
+    // style, so the gallery composes the same thing out of themed Typography rather than the theme
+    // inventing a slot for it. The `tooltip` prop is out of scope until Tooltip lands in Tier 2.
+    MuiFormLabel: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          margin: 0, // kumo: m-0
+          display: "inline-flex", // kumo: inline-flex
+          alignItems: "center", // kumo: items-center
+          gap: "4px", // kumo: gap-1
+          ...TEXT_BASE, // kumo: text-base
+          fontWeight: 500, // kumo: font-medium
+          letterSpacing: "normal",
+          color: theme.vars.palette.kumo.textDefault, // kumo: text-kumo-default
+          // MUI recolours a label once its field is focused or errored; Kumo's Label has no such
+          // rule, so the colour is pinned across both.
+          "&.Mui-focused, &.Mui-error": {
+            color: theme.vars.palette.kumo.textDefault,
+          },
+        }),
+      },
+    },
+
+    // ---- Link ----
+    //
+    // Ground truth: dist/chunks/link-1b3jda6cdzl4lkeo.js. Every variant also picks up the base
+    // `group/link inline-flex items-center gap-[0.1875em]` from the component body, which is what
+    // spaces the optional external-link icon.
+    //
+    //   inline  (default) text-kumo-link underline underline-offset-[0.15em]
+    //                     decoration-[0.0625em] transition-colors
+    //   current           text-current + the same underline treatment
+    //   plain             text-kumo-link hover:text-kumo-link/70 (no underline)
+    //
+    // The `link-current` class in those strings resolves to no CSS rule at all in the shipped
+    // stylesheet - it is an inert marker, and deliberately not reproduced.
+    MuiLink: {
+      defaultProps: {
+        // Kumo underlines by default and never uses MUI's hover-only mode.
+        underline: "always",
+      },
+      styleOverrides: {
+        root: ({ theme, ownerState }) => {
+          const k = theme.vars.palette.kumo
+          const isCurrent = ownerState.color === "inherit" // kumo: the `current` variant
+          const isPlain = ownerState.underline === "none" // kumo: the `plain` variant
+          return {
+            display: "inline-flex", // kumo: inline-flex
+            alignItems: "center", // kumo: items-center
+            gap: "0.1875em", // kumo: gap-[0.1875em]
+            color: isCurrent ? "inherit" : k.textLink, // kumo: text-current / text-kumo-link
+            transition: "color 150ms", // kumo: transition-colors
+            ...(isPlain
+              ? {
+                  textDecoration: "none",
+                  // kumo: hover:text-kumo-link/70
+                  "&:hover": { color: `color-mix(in oklab, ${k.textLink} 70%, transparent)` },
+                }
+              : {
+                  textDecoration: "underline", // kumo: underline
+                  textDecorationThickness: "0.0625em", // kumo: decoration-[0.0625em]
+                  textUnderlineOffset: "0.15em", // kumo: underline-offset-[0.15em]
+                  // Kumo tints the underline to a fraction of the link's own colour, and the
+                  // fraction is SCHEME-DEPENDENT: 35% in light, 65% in dark. Measured on both
+                  // variants in both modes - the inline link's decoration resolves to its blue at
+                  // /0.35 then /0.65, and the `current` link's to the inherited text colour at the
+                  // same two alphas. MUI's own default is a flat 40% tint of the text colour: close
+                  // enough to look right, and wrong by Δ147 in light and Δ77 in dark.
+                  textDecorationColor: "color-mix(in oklab, currentColor 35%, transparent)",
+                  ...theme.applyStyles("dark", {
+                    textDecorationColor: "color-mix(in oklab, currentColor 65%, transparent)",
+                  }),
+                  "&:hover": { textDecoration: "underline" },
+                }),
           }
         },
       },
