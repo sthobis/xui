@@ -85,7 +85,8 @@ The harness handles them via an `open` state: both the MUI overlay and the shadc
 ## Commands
 
 - `pnpm dev` runs the showcase.
-- `pnpm verify:parity` runs the full pixel-parity suite (light and dark, all pairs, ~90s).
+- `pnpm verify:parity` runs the full pixel-parity suite (light and dark, all pairs, ~4 minutes at ~100 pairs).
+  The per-test budget is derived from the pair count rather than fixed, so adding a pair cannot quietly eat the margin - it used to be a flat 240s, which was generous at ~90s and had become a near-miss that failed intermittently inside `resetState`, looking like a stuck overlay rather than a clock.
 - While iterating on ONE component, filter to it for a ~5s loop instead of the full suite: `PARITY_PAIR=slider pnpm exec playwright test e2e/parity.spec.ts --project=light` (comma-separated id prefixes; add `--project=dark` or drop it for both). Run the full `pnpm verify:parity` once at the end to confirm no regressions.
 - `pnpm verify` runs parity plus the preflight suite (proves the theme does not depend on Tailwind's reset).
 - `pnpm typecheck` typechecks every package and the e2e harness.

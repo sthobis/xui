@@ -83,8 +83,6 @@ test.beforeEach(async ({ page }, testInfo) => {
 })
 
 test("all pairs match within threshold", async ({ page }, testInfo) => {
-  testInfo.setTimeout(240_000)
-
   // Iteration speedup: `PARITY_PAIR=slider` (comma-separated id prefixes) restricts the run to
   // matching pairs, so a single-component check takes ~seconds instead of the whole suite. A
   // filtered run writes a separate `.filtered.md` report and leaves prior diffs in place, so it
@@ -110,6 +108,19 @@ test("all pairs match within threshold", async ({ page }, testInfo) => {
     ? allPairs.filter((p) => only.some((f) => p.id === f || p.id.startsWith(f)))
     : allPairs
   expect(pairIds.length, `no pairs matched PARITY_PAIR=${only.join(",")}`).toBeGreaterThan(0)
+
+  // ONE test walks every pair and every state, so its budget has to scale with the gallery. It used
+  // to be a flat 240_000, which was generous when the suite ran in ~90s and had quietly become a
+  // near-miss: at ~100 pairs a full local run takes about 230s and failed intermittently, always
+  // inside resetState, which reads like a stuck overlay rather than what it is. CI made it
+  // unmissable by failing outright on a slower runner.
+  //
+  // Deriving it from the pair count instead means adding a pair can never silently eat the margin.
+  // Measured cost is ~2.3s per pair locally; the multipliers below leave roughly 2.5x headroom
+  // there and more on CI, whose hosted runners have far less CPU and rasterize every capture for
+  // real. The floor keeps a filtered one-component run from getting an absurdly small budget.
+  const perPair = process.env.CI ? 15_000 : 6_000
+  testInfo.setTimeout(Math.max(120_000, pairIds.length * perPair))
 
   const failures: string[] = []
   for (const { id, states } of pairIds) {
