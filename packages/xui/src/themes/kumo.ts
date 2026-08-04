@@ -1625,6 +1625,44 @@ export const kumoTheme = createTheme({
       },
     },
 
+    // ---- Breadcrumbs ----
+    //
+    // kumo: dist/chunks/breadcrumbs-hxibrxjtvudy0ir9.js
+    //   nav        flex items-center + the size row `text-base h-12 gap-1`, plus `mr-4`
+    //   link item  flex shrink-0 items-center gap-1 whitespace-nowrap text-kumo-subtle no-underline
+    //   current    the same row plus font-medium, in the default text colour
+    //   separator  a 24x24 chevron span in text-kumo-inactive
+    MuiBreadcrumbs: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          display: "flex", // kumo: flex
+          alignItems: "center", // kumo: items-center
+          height: "48px", // kumo: h-12 on the base size
+          marginRight: "16px", // kumo: mr-4
+          // kumo: `min-w-0 grow` - the nav fills the space it is given rather than shrinking to its
+          // items, which is what lets a long trail truncate instead of overflowing.
+          flexGrow: 1,
+          minWidth: 0,
+          ...TEXT_BASE, // kumo: text-base
+          letterSpacing: "normal",
+          color: theme.vars.palette.kumo.textDefault,
+        }),
+        ol: {
+          gap: "4px", // kumo: gap-1
+          alignItems: "center",
+          flexWrap: "nowrap" as const, // kumo: whitespace-nowrap on the items
+        },
+        li: {
+          display: "flex",
+          alignItems: "center",
+        },
+        separator: ({ theme }) => ({
+          margin: 0, // MUI spaces its separator with 0 8px; Kumo uses the row's own gap
+          color: theme.vars.palette.kumo.textInactive, // kumo: text-kumo-inactive
+        }),
+      },
+    },
+
     // ---- Field ----
     //
     // kumo: dist/chunks/field-dxe9ne8fqy5whws2.js wraps a control that has a label, description or
@@ -1713,6 +1751,13 @@ export const kumoTheme = createTheme({
             gap: "0.1875em", // kumo: gap-[0.1875em]
             color: isCurrent ? "inherit" : k.textLink, // kumo: text-current / text-kumo-link
             transition: "color 150ms", // kumo: transition-colors
+            // kumo: a breadcrumb item is `text-kumo-subtle no-underline`, not the link colour and
+            // underline a standalone Link carries. Scoped here so the standalone case is untouched.
+            ".MuiBreadcrumbs-root &": {
+              color: k.textSubtle,
+              textDecoration: "none",
+              gap: "4px", // kumo: the item row is gap-1
+            },
             ...(isPlain
               ? {
                   textDecoration: "none",
