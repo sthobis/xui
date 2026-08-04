@@ -5358,17 +5358,70 @@ export const shadcnTheme = createTheme({
     },
     // -----------------------------------------------------------------------
 
-    // ---- Badge, dot variant (shadcn AvatarBadge) ----
+    // ---- Badge: the dot (shadcn AvatarBadge) and the count pill (shadcn Badge) ----
     //
-    // Ground truth is avatar.tsx's AvatarBadge - installed shadcn source, so a normal extraction:
+    // MUI's Badge is two components wearing one name, and they have two different twins.
+    //
+    // THE DOT. Ground truth is avatar.tsx's AvatarBadge - installed shadcn source, so a normal
+    // extraction:
     //     "absolute right-0 bottom-0 z-10 inline-flex items-center justify-center rounded-full
     //      bg-primary text-primary-foreground bg-blend-color ring-2 ring-background select-none"
     // with `group-data-[size=default]/avatar:size-2.5`, a 10px dot.
     //
-    // SCOPE: the dot only. MUI's count badge (`badgeContent`) is a pill holding a number, and shadcn
-    // ships nothing of that shape - AvatarBadge holds an icon at most - so it gets no treatment.
+    // THE COUNT PILL. Ground truth is badge.tsx - the same installed component the MuiChip block
+    // cites, because a count pill IS shadcn's Badge with a number in it:
+    //     "inline-flex h-5 w-fit shrink-0 items-center justify-center gap-1 overflow-hidden
+    //      rounded-4xl border border-transparent px-2 py-0.5 text-xs font-medium whitespace-nowrap"
+    // with `default` -> bg-primary/text-primary-foreground and `destructive` -> bg-destructive/10
+    // text-destructive (dark: /20).
+    //
+    // PLACEMENT IS NOT THEMED, and the split is the whole point of this block. The dot moves,
+    // because AvatarBadge is a real twin that sits flush inside its corner, so there is ground truth
+    // saying where it goes. The count pill does NOT move, because shadcn ships no anchored count
+    // anywhere - AvatarBadge holds a dot or an icon, never a number - so nothing grounds a position
+    // and MUI's own `top: 0; right: 0` with `translate(50%, -50%)` stands. Styling the pill and
+    // relocating it are separate claims; only the first one is backed.
+    //
+    // An earlier revision of this block read that missing placement twin as "shadcn ships nothing of
+    // that shape" and left the pill entirely untreated. That conflated the pill with where it sits.
+    //
+    // MUI already gets four of the pill's values right and they are not restated, the same way the
+    // MuiDrawer block leaves anchor="right"'s inherited geometry alone: height 20px (shadcn: h-5),
+    // font-weight 500 (font-medium), font-size 0.75rem (text-xs), and colorPrimary already resolving
+    // to bg-primary/text-primary-foreground. Verified by reading computed styles on both sides.
+    //
+    // SCOPE: the dot, and the standard count pill in its primary and error colours. `showZero`, the
+    // `invisible` transition and the non-rectangular `overlap="circular"` anchors have no pair and
+    // get no treatment.
     MuiBadge: {
       styleOverrides: {
+        // Scoped to `.MuiBadge-standard` rather than written as a bare `badge` slot, so it cannot
+        // reach the dot no matter which order MUI emits the two rules in. Same defensive shape as
+        // the Fab size ladder: a rule that is merely expected to lose is a rule waiting to win.
+        badge: ({ theme }) => ({
+          "&.MuiBadge-standard": {
+            width: "fit-content", // shadcn: w-fit
+            // MUI's own `min-width: 20px` holds a one-character pill square; shadcn's Badge sets no
+            // minimum and lets px-2 do the work, which is what makes "3" and "99+" differently wide.
+            minWidth: 0,
+            padding: "0.125rem 0.5rem", // shadcn: py-0.5 px-2
+            borderRadius: `calc(${RADIUS} * 2.6)`, // shadcn: rounded-4xl -> --radius-4xl = radius * 2.6
+            border: "1px solid transparent", // shadcn: border border-transparent
+            lineHeight: "1rem", // shadcn: text-xs's paired line-height (MUI's own is 12px)
+            overflow: "hidden", // shadcn: overflow-hidden
+            whiteSpace: "nowrap", // shadcn: whitespace-nowrap
+            // badge.tsx's destructive is a SOFT wash, not the solid red MUI's error colour gives -
+            // transcribed as found. Three classes deep, so it beats MUI's own two-class
+            // `.MuiBadge-badge.MuiBadge-colorError`.
+            "&.MuiBadge-colorError": {
+              backgroundColor: `color-mix(in oklab, ${theme.vars.palette.error.main} 10%, transparent)`, // shadcn: bg-destructive/10
+              color: theme.vars.palette.error.main, // shadcn: text-destructive
+              ...theme.applyStyles("dark", {
+                backgroundColor: `color-mix(in oklab, ${theme.vars.palette.error.main} 20%, transparent)`, // shadcn: dark:bg-destructive/20
+              }),
+            },
+          },
+        }),
         dot: ({ theme }) => ({
           width: "0.625rem", // shadcn: size-2.5 (10px)
           height: "0.625rem",

@@ -36,6 +36,7 @@ import { appBarSection } from "./app-bar"
 import { formHelperSection } from "./form-helper"
 import { fabSection } from "./fab"
 import { badgeDotSection } from "./badge-dot"
+import { badgeCountSection } from "./badge-count"
 import { ratingSection } from "./rating"
 import { bottomNavigationSection } from "./bottom-navigation"
 import { stepperSection } from "./stepper"
@@ -81,6 +82,7 @@ export const sections: Section[] = [
   formHelperSection,
   fabSection,
   badgeDotSection,
+  badgeCountSection,
   ratingSection,
   bottomNavigationSection,
   stepperSection,

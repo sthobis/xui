@@ -130,7 +130,7 @@ AppBar / Toolbar above is the first of these.
 - [x] BottomNavigation (no shadcn twin)
 - [x] Backdrop (shadcn Dialog/Sheet overlay)
 - [x] Modal (the primitive under Dialog/Drawer)
-- [x] Badge - dot only (shadcn AvatarBadge); the count pill has no shadcn twin
+- [x] Badge - the dot (shadcn AvatarBadge) and the count pill (shadcn Badge)
 - [x] ImageList (no shadcn twin - standard variant)
 - [x] TablePagination (no shadcn twin - caption and actions)
 - [x] FormHelperText (shadcn FieldDescription / FieldError) + InputAdornment (via InputGroup)
@@ -147,7 +147,7 @@ That fallback is deliberate and, where it matters, defensive: `Fab`'s size rules
 | Component | Covered | Not covered |
 | --- | --- | --- |
 | AppBar / Toolbar | The default static bar | `position="fixed"` and `"sticky"`, elevation above 0, the dense variant, non-default `color` |
-| Badge | The dot variant, anchored to an avatar | The count pill (`badgeContent`) |
+| Badge | The dot anchored to an avatar; the count pill in primary and error | `showZero`, the `invisible` transition, `overlap="circular"`. The pill's *placement* is MUI's own, not shadcn's, because shadcn ships no anchored count to copy |
 | BottomNavigation | The resting bar with one item selected | `showLabels={false}`, the selection animation |
 | Dialog | The open dialog with a header and footer | The `size="icon-sm"` close button shadcn draws in the corner |
 | Drawer | `anchor="right"`, with a header | The other three anchors, the `size="icon-sm"` close button |
