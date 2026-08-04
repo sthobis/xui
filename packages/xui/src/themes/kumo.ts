@@ -652,7 +652,43 @@ export const kumoTheme = createTheme({
         },
       },
     },
+    // ---- Toolbar ----
+    //
+    // kumo: dist/chunks/toolbar-gwd1orc8yl7lzaou.js
+    //   root    inline-flex w-fit items-stretch rounded-lg bg-kumo-control shadow-xs
+    //           ring ring-kumo-line
+    //   button  relative min-w-0 border-0 bg-transparent shadow-none ring-0
+    //
+    // The ring, the shadow and the fill live on the BAR; each button is transparent and unringed,
+    // separated from its neighbour by a single left rule. MUI does the opposite - every child keeps
+    // its own outlined-button chrome - so both halves have to move.
     MuiButtonGroup: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          display: "inline-flex", // kumo: inline-flex
+          width: "fit-content", // kumo: w-fit
+          alignItems: "stretch", // kumo: items-stretch
+          borderRadius: "8px", // kumo: rounded-lg
+          backgroundColor: theme.vars.palette.kumo.control, // kumo: bg-kumo-control
+          boxShadow: ringWith(theme.vars.palette.kumo.line), // kumo: ring ring-kumo-line + shadow-xs
+        }),
+        grouped: ({ theme }) => ({
+          // kumo: the child is border-0 bg-transparent shadow-none ring-0
+          backgroundColor: "transparent",
+          boxShadow: "none",
+          minWidth: 0, // kumo: min-w-0
+          "&:hover, &:active, &.Mui-focusVisible": { boxShadow: "none" },
+          "&:hover": { backgroundColor: theme.vars.palette.kumo.tint },
+          // kumo: neighbours are divided by a single rule rather than by each button's own ring
+          "&:not(:first-of-type)": {
+            borderLeft: `1px solid ${theme.vars.palette.kumo.line}`,
+          },
+          // MUI pulls each child 1px into its neighbour so their two borders collapse into one.
+          // Kumo has only one border to begin with, so the bar came out 2px narrow.
+          "&:not(:last-of-type)": { marginRight: 0 },
+          marginLeft: 0,
+        }),
+      },
       defaultProps: {
         // A group publishes its resolved disableRipple through ButtonGroupContext, and Button reads
         // context at higher priority than theme defaults - so without this it hands the ripple back
@@ -945,6 +981,10 @@ export const kumoTheme = createTheme({
         },
         input: ({ theme, ownerState }) => ({
           padding: ownerState.multiline ? "8px 12px" : "0 12px", // kumo: px-3, plus py-2 on InputArea
+          // kumo: InputGroup tightens the field's padding on the side an addon sits, from 12px to
+          // 8px, and the addon carries the rest of the gap itself.
+          ".MuiInputBase-adornedEnd &": { paddingRight: "8px" },
+          ".MuiInputBase-adornedStart &": { paddingLeft: "8px" },
           height: ownerState.multiline ? "auto" : "100%",
           boxSizing: "border-box" as const,
           // Kumo's InputArea is a plain <textarea>, so it keeps the UA's vertical resize grip. MUI
@@ -1557,6 +1597,11 @@ export const kumoTheme = createTheme({
           alignItems: "center",
           gap: "4px", // kumo: gap-1
           ...TEXT_SM, // kumo: text-sm
+          // The summary is a <button>, and a button takes the UA's own font family rather than
+          // inheriting one. Tailwind's reset was quietly supplying `font: inherit`, so the label
+          // measured 3px wider on the gallery page than on the Tailwind-free one - exactly the
+          // dependency preflight exists to catch, and the same trap the shadcn theme hit here.
+          fontFamily: "inherit",
           fontWeight: 400,
           letterSpacing: "normal",
           color: theme.vars.palette.kumo.textLink, // kumo: text-kumo-link
@@ -1574,7 +1619,11 @@ export const kumoTheme = createTheme({
           // rotation, so only the size and the inherited colour need saying.
           fontSize: "16px",
           color: "inherit",
-          "& > svg": { fontSize: "inherit" },
+          // `display: block` is NOT decoration. A bare Phosphor svg is an inline element, and it
+          // only sat right on the gallery page because Tailwind's reset blocks every svg. The
+          // preflight caught the dependency the moment the icon rendered on the Tailwind-free page
+          // (Δ226 over ~950 pixels), so the theme states it itself.
+          "& > svg": { fontSize: "inherit", display: "block" },
         },
       },
     },
@@ -1660,6 +1709,32 @@ export const kumoTheme = createTheme({
           margin: 0, // MUI spaces its separator with 0 8px; Kumo uses the row's own gap
           color: theme.vars.palette.kumo.textInactive, // kumo: text-kumo-inactive
         }),
+      },
+    },
+
+    // ---- InputGroup ----
+    //
+    // kumo: dist/chunks/input-group-otq3m9lach1jyxl0.js. The group owns the box and the input
+    // inside it is stripped (`rounded-none border-0 bg-transparent`); an addon is
+    // `pointer-events-none flex items-center text-kumo-subtle select-none` and holds its own 8px of
+    // trailing space rather than being pushed away by a margin, which is how MUI spaces its
+    // adornment.
+    MuiInputAdornment: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          margin: 0, // MUI uses an 8px margin; Kumo puts the space inside the addon
+          height: "auto",
+          maxHeight: "none",
+          color: theme.vars.palette.kumo.textSubtle, // kumo: text-kumo-subtle
+          userSelect: "none" as const, // kumo: select-none
+          pointerEvents: "none" as const, // kumo: pointer-events-none
+        }),
+        positionEnd: {
+          paddingRight: "8px", // kumo: the addon's own pr-2
+        },
+        positionStart: {
+          paddingLeft: "8px",
+        },
       },
     },
 
