@@ -5,7 +5,7 @@ Material UI v9 themes that make MUI components look pixel-for-pixel identical to
 Two themes ship today, both verified in light and dark by the same pixel-parity harness:
 
 - **`shadcnTheme`** replicates shadcn/ui's default look (new-york style, neutral base, Geist). Complete.
-- **`kumoTheme`** replicates [Kumo](https://kumo-ui.com), Cloudflare's design system (Inter). Its Tier 1 primitives are complete: Button, Text, Label, Link, Input, InputArea, Field, Checkbox, Radio, Switch, Badge, Banner, Meter and LayerCard. Portalled components (Select, Dropdown, Dialog, Popover, Tooltip, Toast) are next.
+- **`kumoTheme`** replicates [Kumo](https://kumo-ui.com), Cloudflare's design system (Inter). Every non-portalled component with a MUI counterpart is complete: Button, Text, Label, Link, Input, InputArea, Field, Checkbox, Radio, Switch, Badge, Banner, Meter, LayerCard, Tabs, Collapsible, Table, Breadcrumbs, Toolbar and InputGroup. The portalled components (Select, Dropdown, Dialog, Popover, Tooltip, Toast) are next.
 
 Dark mode follows each design system's own convention, so a theme is a drop-in: shadcn uses a `.dark` class on `<html>`, kumo uses `data-mode="dark"`. Either way MUI's `useColorScheme()` drives it.
 
