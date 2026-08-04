@@ -5307,8 +5307,10 @@ export const shadcnTheme = createTheme({
     // cites for `variant="contained" color="primary"`. The utilities are real; assembling them into
     // a FAB is a decision taken here. See apps/showcase/src/gallery/sections/fab.tsx.
     //
-    // SCOPE: the 56px default only. `size="small"`/`"medium"` and `variant="extended"` have no pair
-    // and get no treatment.
+    // SCOPE: the 56px default, plus `size="small"` by way of the speeddial-open pair, whose action
+    // buttons are small Fabs. `size="medium"` and `variant="extended"` have no pair and get no
+    // treatment - the size ladder below is written so that leaves them at MUI's own geometry rather
+    // than silently forcing them to 56px.
     MuiFab: {
       styleOverrides: {
         root: {
@@ -5580,10 +5582,10 @@ export const shadcnTheme = createTheme({
     // row has no shadcn height to copy, and 52px is what MUI's dense toolbar already resolves to.
     // The gallery twin states the same 52px explicitly so the pair is comparing like with like.
     //
-    // SCOPE: caption plus actions, with the rows-per-page Select switched off in the pair. That
-    // control is a Select inside a toolbar with layout quirks no pair covers; the Select itself is
-    // themed and verified by the select-* pairs. The first/last-page buttons and disabled edges are
-    // likewise uncovered and get no treatment.
+    // SCOPE: caption plus actions, in two pairs - one with the rows-per-page control off, one with
+    // it on, so the label and the Select inside the toolbar are covered too. The Select's OPEN menu
+    // is not re-verified here; that surface belongs to the select-* pairs. The first/last-page
+    // buttons have no pair and get no treatment.
     MuiTablePagination: {
       styleOverrides: {
         toolbar: {
