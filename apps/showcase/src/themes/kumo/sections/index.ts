@@ -13,6 +13,7 @@ import { meterSection } from "./meter"
 import { layerCardSection } from "./layer-card"
 import { tabsSection } from "./tabs"
 import { collapsibleSection } from "./collapsible"
+import { tableSection } from "./table"
 
 // DELIBERATELY ABSENT, both from the gallery and from the theme - a component with no pair does
 // not ship, so neither MuiCircularProgress nor MuiSkeleton is themed:
@@ -26,4 +27,4 @@ import { collapsibleSection } from "./collapsible"
 //                 SMIL, so a captured frame has no stable phase and a pixel pair could not be
 //                 meaningful. MUI's CircularProgress also has no track ring to pair against.
 //
-export const sections: Section[] = [buttonSection, textSection, labelSection, linkSection, inputSection, checkboxSection, switchSection, radioSection, badgeSection, bannerSection, meterSection, layerCardSection, tabsSection, collapsibleSection]
+export const sections: Section[] = [buttonSection, textSection, labelSection, linkSection, inputSection, checkboxSection, switchSection, radioSection, badgeSection, bannerSection, meterSection, layerCardSection, tabsSection, collapsibleSection, tableSection]

@@ -1589,6 +1589,42 @@ export const kumoTheme = createTheme({
       },
     },
 
+    // ---- Table ----
+    //
+    // Kumo's Table subcomponents carry almost no classes of their own - `Table.Head` is a bare
+    // <th>, `Table.Cell` a bare <td> - so the cell styling comes from Kumo's stylesheet rather than
+    // from a class string, and it was read off the rendered table:
+    //   th   padding 12px, border-bottom 1px --color-kumo-fill, 14px/21px weight 600, text-align left
+    //   td   padding 12px, border-bottom 1px --color-kumo-fill, 14px/21px weight 400
+    //
+    // MUI's own cell is 16px of padding at 13px type over a translucent divider, so every one of
+    // those differs.
+    MuiTableCell: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          padding: "12px", // kumo: 12px on both th and td
+          ...TEXT_BASE, // kumo: 14px/21px - MUI's cell is 13px
+          letterSpacing: "normal",
+          textAlign: "left" as const,
+          color: theme.vars.palette.kumo.textDefault,
+          // kumo: the rule under every row is the FILL token, not the translucent divider MUI uses
+          borderBottom: `1px solid ${theme.vars.palette.kumo.fill}`,
+          // ...and Kumo drops it on the LAST body row, so the table does not end on a rule. MUI
+          // keeps it, which made the table 1px taller - 960 pixels across its width.
+          "tbody tr:last-of-type & , tbody tr:last-child &": { borderBottom: 0 },
+        }),
+        head: ({ theme }) => ({
+          fontWeight: 600, // kumo: header cells are semibold
+          // kumo: a header cell is filled with the base surface rather than left transparent, which
+          // is what lets a sticky header cover the rows scrolling under it.
+          backgroundColor: theme.vars.palette.kumo.base,
+        }),
+        body: {
+          fontWeight: 400,
+        },
+      },
+    },
+
     // ---- Field ----
     //
     // kumo: dist/chunks/field-dxe9ne8fqy5whws2.js wraps a control that has a label, description or
