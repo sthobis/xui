@@ -1413,6 +1413,103 @@ export const kumoTheme = createTheme({
       },
     },
 
+    // ---- Tabs ----
+    //
+    // kumo: dist/chunks/tabs-dz3fsnkrznrggilz.js, `underline` variant.
+    //   list  flex items-stretch gap-4 border-b border-kumo-hairline pb-2 h-7.5
+    //   tab   relative z-2 flex items-center rounded bg-transparent text-base text-kumo-subtle
+    //         hover:bg-kumo-tint hover:text-kumo-default aria-selected:font-medium
+    //         aria-selected:text-kumo-default  px-2 py-3
+    //         focus:ring-kumo-focus/50 focus:outline-none focus-visible:ring-2
+    //         focus-visible:ring-kumo-brand
+    //
+    // Kumo's selected tab goes to the DEFAULT text colour, not the brand - only the indicator
+    // carries the accent - which is the opposite of MUI's default. MUI also gives every tab a 90px
+    // min-width and a 48px row; Kumo sizes from content plus a `gap-4` between tabs.
+    MuiTabs: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          // kumo: the list is a FIXED h-7.5 with overflow-y-hidden, so its tabs are compressed to
+          // fit rather than sizing from their own py-3. A minHeight alone lets them grow to 54px.
+          height: "30px",
+          minHeight: "30px",
+          boxSizing: "border-box" as const,
+          borderBottom: `1px solid ${theme.vars.palette.kumo.hairline}`, // kumo: border-b border-kumo-hairline
+        }),
+        scroller: {
+          // NOT `overflow: hidden`. Kumo's list is overflow-y-hidden, but its indicator sits in the
+          // list's own padding band below the tabs, so clipping the scroller cuts the indicator off
+          // (measured: it lost its bottom row and cost 448 pixels). The row's height is already
+          // pinned on the root, so nothing needs the clip.
+          overflow: "visible !important",
+        },
+        // MUI v9 renamed this slot from `flexContainer` to `list`; the old key silently does
+        // nothing rather than erroring.
+        list: {
+          height: "100%",
+          boxSizing: "border-box" as const,
+          gap: "16px", // kumo: gap-4
+          alignItems: "stretch", // kumo: items-stretch
+          paddingBottom: "8px", // kumo: pb-2
+        },
+        // MUI measures the selected tab and writes an INTEGER width onto its indicator inline
+        // (55px for a 55.547px tab). Kumo's indicator is `w-(--active-tab-width)`, the tab's exact
+        // fractional width, so MUI's is half a pixel narrow - 8 pixels at Δ246 on the trailing edge.
+        // Rather than fight the rounding, the indicator is drawn from the selected tab's own box
+        // (see MuiTab below), which is exact by construction.
+        indicator: {
+          display: "none",
+        },
+      },
+    },
+    MuiTab: {
+      styleOverrides: {
+        root: ({ theme }) => {
+          const k = theme.vars.palette.kumo
+          return {
+            minWidth: 0, // MUI reserves 90px per tab; Kumo sizes from content
+            minHeight: 0,
+            padding: "12px 8px", // kumo: px-2 py-3
+            ...TEXT_BASE, // kumo: text-base
+            fontWeight: 500, // kumo: the root carries font-medium
+            letterSpacing: "normal",
+            textTransform: "none",
+            borderRadius: "4px", // kumo: rounded
+            color: k.textSubtle, // kumo: text-kumo-subtle
+            "&:hover": {
+              backgroundColor: k.tint, // kumo: hover:bg-kumo-tint
+              color: k.textDefault, // kumo: hover:text-kumo-default
+            },
+            position: "relative",
+            // MUI's Tab root is `overflow: hidden`, which clips the indicator pseudo-element below
+            // - it rendered nothing at all until this was lifted.
+            overflow: "visible",
+            "&.Mui-selected": {
+              color: k.textDefault, // kumo: aria-selected:text-kumo-default - NOT the brand
+              "&:hover": { backgroundColor: k.tint }, // kumo: aria-selected:hover:bg-kumo-tint
+              // The indicator, drawn from this tab's own box - see the `indicator` note above.
+              "&::after": {
+                content: '""',
+                position: "absolute",
+                left: 0,
+                right: 0,
+                // Kumo's indicator sits just above the list's bottom border, 3px clear of the
+                // tab's own bottom edge (tab ends at 883.875, indicator spans 886.875-888.875), so
+                // the offset is measured rather than assumed.
+                bottom: "-5px",
+                height: "2px",
+                backgroundColor: k.brand,
+              },
+            },
+            "&:focus-visible": {
+              boxShadow: `0 0 0 2px ${k.brand}`, // kumo: focus-visible:ring-2 focus-visible:ring-kumo-brand
+              outline: "none", // kumo: focus:outline-none
+            },
+          }
+        },
+      },
+    },
+
     // ---- Field ----
     //
     // kumo: dist/chunks/field-dxe9ne8fqy5whws2.js wraps a control that has a label, description or

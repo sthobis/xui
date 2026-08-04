@@ -81,7 +81,11 @@ test.beforeEach(async ({ page }, testInfo) => {
 })
 
 test("all pairs match within threshold", async ({ page }, testInfo) => {
-  testInfo.setTimeout(240_000)
+  // Duration budget, NOT a correctness threshold. Each project drives every pair through every one
+  // of its states, so the run grows with the gallery: shadcn-dark alone now takes ~3.9 minutes, and
+  // at the old 240s it tipped over the moment anything else competed for the machine. Raised with
+  // headroom so a slow run reports real numbers instead of a timeout.
+  testInfo.setTimeout(600_000)
   const { theme } = targetOf(testInfo.project.name)
 
   // Iteration speedup: `PARITY_PAIR=slider` (comma-separated id prefixes) restricts the run to
