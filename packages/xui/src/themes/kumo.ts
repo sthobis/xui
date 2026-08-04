@@ -1510,6 +1510,85 @@ export const kumoTheme = createTheme({
       },
     },
 
+    // ---- Collapsible ----
+    //
+    // kumo: dist/chunks/collapsible-lj0glxe1hezap65x.js
+    //   DefaultTrigger  m-0 border-none bg-transparent p-0 shadow-none
+    //                   flex cursor-pointer items-center gap-1 text-sm text-kumo-link select-none
+    //                   + a CaretDown at h-4 w-4 that rotates 180 while the panel is open
+    //   DefaultPanel    my-2 space-y-4 border-l-2 border-kumo-fill pl-4
+    //
+    // A text disclosure rather than a Material panel, so the whole of Accordion's Paper chrome -
+    // elevation, dividers, the 48px summary bar, the collapsed margins - comes off.
+    MuiAccordion: {
+      defaultProps: {
+        disableGutters: true, // MUI otherwise animates a margin onto the expanded root
+        elevation: 0,
+        square: true,
+        // kumo: the panel is UNMOUNTED while closed. MUI keeps it in the DOM at height 0, and its
+        // 16px padding-left plus 2px rule still occupy width - the collapsed pair measured 20px
+        // wider than Kumo's. Unmounting matches the reference rather than papering over the width.
+        slotProps: { transition: { unmountOnExit: true } },
+      },
+      styleOverrides: {
+        root: {
+          backgroundColor: "transparent",
+          backgroundImage: "none",
+          boxShadow: "none",
+          margin: 0,
+          "&::before": { display: "none" }, // MUI's top divider pseudo-element
+        },
+      },
+    },
+    MuiAccordionSummary: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          minHeight: 0, // MUI reserves a 48px bar; Kumo's trigger is text-height
+          // Kumo's trigger is a plain <button>, which shrinks to its content - the caret sits right
+          // after the label. MUI stretches its summary to 100% and flex-grows the label, which
+          // pushed the caret to the far edge (measured 111.2px wide against 201.7px).
+          width: "fit-content",
+          padding: 0, // kumo: p-0
+          margin: 0, // kumo: m-0
+          border: "none", // kumo: border-none
+          backgroundColor: "transparent", // kumo: bg-transparent
+          boxShadow: "none", // kumo: shadow-none
+          display: "flex", // kumo: flex items-center
+          alignItems: "center",
+          gap: "4px", // kumo: gap-1
+          ...TEXT_SM, // kumo: text-sm
+          fontWeight: 400,
+          letterSpacing: "normal",
+          color: theme.vars.palette.kumo.textLink, // kumo: text-kumo-link
+          userSelect: "none" as const, // kumo: select-none
+          cursor: "pointer", // kumo: cursor-pointer
+          "&.Mui-expanded": { minHeight: 0 },
+        }),
+        content: {
+          margin: 0, // MUI pads the label block; Kumo's row is spaced by its own gap
+          flexGrow: 0, // ...and grows it, which would reintroduce the gap the width fix removes
+          "&.Mui-expanded": { margin: 0 },
+        },
+        expandIconWrapper: {
+          // kumo: the caret is h-4 w-4 and rotates 180 when open - which is MUI's own default
+          // rotation, so only the size and the inherited colour need saying.
+          fontSize: "16px",
+          color: "inherit",
+          "& > svg": { fontSize: "inherit" },
+        },
+      },
+    },
+    MuiAccordionDetails: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          margin: "8px 0", // kumo: my-2
+          padding: 0,
+          paddingLeft: "16px", // kumo: pl-4
+          borderLeft: `2px solid ${theme.vars.palette.kumo.fill}`, // kumo: border-l-2 border-kumo-fill
+        }),
+      },
+    },
+
     // ---- Field ----
     //
     // kumo: dist/chunks/field-dxe9ne8fqy5whws2.js wraps a control that has a label, description or
