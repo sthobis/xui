@@ -27,17 +27,31 @@ export async function focusVisible(target: Locator): Promise<void> {
 }
 
 /**
+ * Reads a pair's opt-in overlay selector (`Pair.openSelector`, emitted by PairGrid as
+ * `data-open-selector`) off its row. Absent for the overwhelming majority of pairs, which tag
+ * their overlay with `data-portal-target` instead.
+ */
+async function openSelectorOf(page: Page, pairId: string): Promise<string | null> {
+  return page.locator(`[data-pair-id="${pairId}"]`).getAttribute("data-open-selector")
+}
+
+/**
  * Locates a pair's open overlay content, regardless of whether it renders in a portal at
  * document.body (marked `[data-portal-target="<pairId>"]`) or inline inside the cell (marked
- * `[data-open-target]`). Both shadcn and MUI overlays for a pair carry the same
+ * `[data-open-target]`). Both the reference and MUI overlays for a pair carry the same
  * `data-portal-target` value; since the harness only ever has one side's overlay open at a
  * time (open -> screenshot -> reset -> open other side), the page-root selector is unambiguous.
+ *
+ * A pair whose reference component gives no way to place that attribute declares an
+ * `openSelector` instead (see Pair.openSelector for when and why), which is folded in here for
+ * that pair only. Same one-side-at-a-time reasoning applies, so adding it cannot make the lookup
+ * ambiguous: the MUI side of such a pair still matches by attribute.
  */
-export function openContentLocator(page: Page, cell: Locator, pairId: string): Locator {
-  return page
-    .locator(`[data-portal-target="${pairId}"]`)
-    .or(cell.locator("[data-open-target]"))
-    .first()
+export async function openContentLocator(page: Page, cell: Locator, pairId: string): Promise<Locator> {
+  const declared = await openSelectorOf(page, pairId)
+  const portalled = page.locator(`[data-portal-target="${pairId}"]`)
+  const byAttributeOrSelector = declared ? portalled.or(page.locator(declared)) : portalled
+  return byAttributeOrSelector.or(cell.locator("[data-open-target]")).first()
 }
 
 export async function applyState(page: Page, cell: Locator, state: PairState, pairId: string): Promise<void> {
@@ -48,7 +62,7 @@ export async function applyState(page: Page, cell: Locator, state: PairState, pa
     await focusVisible(target)
   } else if (state === "open" || state === "anchored") {
     await target.click()
-    await expect(openContentLocator(page, cell, pairId)).toBeVisible({ timeout: 5000 })
+    await expect(await openContentLocator(page, cell, pairId)).toBeVisible({ timeout: 5000 })
   } else if (state === "active") {
     // Press and HOLD the primary button over the target's center so the screenshot captures
     // the pressed (`:active`) state - this is what catches shadcn's press nudge
@@ -225,7 +239,7 @@ export async function anchoredClip(
   pairId: string,
 ): Promise<{ x: number; y: number; width: number; height: number }> {
   const target = cell.locator("[data-target]").first()
-  const overlay = openContentLocator(page, cell, pairId)
+  const overlay = await openContentLocator(page, cell, pairId)
   const [targetBox, overlayBox] = await Promise.all([target.boundingBox(), overlay.boundingBox()])
   if (!targetBox) throw new Error(`anchoredClip(${pairId}): no bounding box for [data-target]`)
   if (!overlayBox) throw new Error(`anchoredClip(${pairId}): no bounding box for open overlay`)
@@ -247,6 +261,19 @@ export async function resetState(page: Page): Promise<void> {
   await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur())
   await clearPixelSnap(page)
   await page.keyboard.press("Escape")
-  await expect(page.locator(OPEN_CONTENT_SELECTOR)).toHaveCount(0, { timeout: 5000 })
+  // Every pair that declares an `openSelector` contributes it here too. Without that, an overlay
+  // the attribute cannot reach would be invisible to this assertion, so the run would proceed with
+  // it still on screen and the NEXT pair's capture would composite it - a failure that reads as a
+  // colour bug in an unrelated component. Collected from the DOM so no caller has to pass it.
+  const declared: string[] = await page.evaluate(() => [
+    ...new Set(
+      Array.from(document.querySelectorAll("[data-open-selector]"), (el) =>
+        el.getAttribute("data-open-selector"),
+      ).filter((s): s is string => !!s),
+    ),
+  ])
+  await expect(page.locator([OPEN_CONTENT_SELECTOR, ...declared].join(", "))).toHaveCount(0, {
+    timeout: 5000,
+  })
   await page.waitForTimeout(300)
 }

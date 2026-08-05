@@ -570,6 +570,38 @@ function ringWith(color: string, width = 1) {
  * Every variant therefore restates its shadow on all three states. Kumo itself has no `:active`
  * styling at all, so the active shadow is simply the hover shadow (a press is also a hover).
  */
+/**
+ * Places a Popper's arrow with `left`/`top` instead of the `transform` popper.js writes by default.
+ *
+ * Same position either way - this is about how the arrow RASTERIZES. `translate3d` promotes the
+ * arrow to its own composited layer, so its (asymmetric) SVG is drawn into that layer and then
+ * composited, while kumo's arrow is placed by plain `left` and drawn in its parent's raster. The
+ * two routes land half a device pixel apart: a byte-identical shape, every intensity value the
+ * same, one pixel to the left. It measured 1010 pixels at Δ27 on the tooltip's anchored capture -
+ * far too big to write off, and invisible to a computed-style probe, since both arrows report the
+ * same 20x10 box at the same coordinates.
+ *
+ * Popper's own `gpuAcceleration: false` fixes the arrow but drags the POPUP off the device grid
+ * too, which reintroduces glyph ghosting across the whole label. This modifier changes only the
+ * arrow, and it keeps popper's computed offset, so alignment and collision shifting still work.
+ */
+const ARROW_BY_LAYOUT = {
+  name: "xuiArrowByLayout",
+  enabled: true,
+  phase: "beforeWrite" as const,
+  requires: ["computeStyles"],
+  fn: ({ state }: { state: { styles: Record<string, Record<string, string>>; modifiersData: { arrow?: { x?: number; y?: number } } } }) => {
+    const offsets = state.modifiersData.arrow
+    if (!offsets) return
+    state.styles.arrow = {
+      ...state.styles.arrow,
+      transform: "", // clears popper's inline translate3d
+      ...(offsets.x != null ? { left: `${offsets.x}px` } : {}),
+      ...(offsets.y != null ? { top: `${offsets.y}px` } : {}),
+    }
+  },
+}
+
 function shadowStates(resting: string, hovered = resting, focused = resting) {
   return {
     "&:hover": { boxShadow: hovered },
@@ -1734,6 +1766,183 @@ export const kumoTheme = createTheme({
         },
         positionStart: {
           paddingLeft: "8px",
+        },
+      },
+    },
+
+    // ---- Tooltip ----
+    //
+    // kumo: dist/chunks/tooltip-maelyxs1y7a78vje.js
+    //   positioner  max-w-[var(--available-width)]   sideOffset: 10   (side defaults to "top")
+    //   popup       flex origin-[var(--transform-origin)] flex-col rounded-md bg-kumo-base px-2.5
+    //               py-1.5 text-sm text-kumo-default shadow-lg shadow-kumo-tip-shadow
+    //               outline outline-kumo-fill  ... kumo-tooltip-popup
+    //   arrow       flex  data-[side=top]:bottom-[-8px] data-[side=top]:rotate-180
+    //               (and the three other sides, each -8px out and rotated to face the trigger)
+    //
+    // Kumo's arrow is a real 20x10 SVG with THREE paths, not a rotated square: a body in the popup
+    // colour, plus two stroke paths of different geometry so the arrow's border lines up with the
+    // popup's outline in both schemes (only one is opaque at a time - tip-shadow is transparent in
+    // dark, tip-stroke is transparent in light). MUI's own arrow is a `::before` square rotated
+    // 45deg, which cannot be coaxed into that shape by any amount of CSS, so the real SVG is
+    // injected through `defaultProps.slotProps.arrow` - the escape hatch AGENTS.md already
+    // documents - and MUI's square is switched off. Its paths carry no fill of their own; the
+    // colours are applied from the token table below, so light/dark work from one definition.
+    MuiTooltip: {
+      defaultProps: {
+        // kumo: the arrow is unconditional - kumo's Tooltip always renders TooltipArrow, where
+        // MUI's is opt-in.
+        arrow: true,
+        slotProps: {
+          // Positioning phase, not styling - and it is a real visual difference, not harness
+          // plumbing. Base UI places kumo's popup by writing ONE transform in page space and
+          // rounding it to the device-pixel grid. MUI's Popper defaults to popper.js's "adaptive"
+          // mode, which splits the same position between a `bottom` offset and a transform and
+          // rounds only the transform half - so the popup lands 0.219px closer to its trigger than
+          // kumo's (measured: a 9.875px gap against kumo's 10.094). Turning adaptive off makes
+          // Popper write the whole offset as one transform and round it the same way, which puts
+          // both popups on exactly the same pixel. `adaptive` only exists to reduce repaint work
+          // while scrolling; it has no other visible effect.
+          popper: {
+            popperOptions: { modifiers: [{ name: "computeStyles", options: { adaptive: false } }, ARROW_BY_LAYOUT] },
+          },
+          arrow: {
+            // The SVG sits inside a plain span, exactly as kumo's arrow does, and that span - not
+            // the SVG - is what carries the rotation (see the popper overrides below for both
+            // reasons it has to be this way).
+            children: createElement(
+              "span",
+              { "data-kumo-arrow": "rotor" },
+              createElement(
+                "svg",
+                { width: "20", height: "10", viewBox: "0 0 20 10", fill: "none", "aria-hidden": true },
+                createElement("path", {
+                  key: "fill",
+                  "data-kumo-arrow": "fill",
+                  d: "M9.66437 2.60207L4.80758 6.97318C4.07308 7.63423 3.11989 8 2.13172 8H0V10H20V8H18.5349C17.5468 8 16.5936 7.63423 15.8591 6.97318L11.0023 2.60207C10.622 2.2598 10.0447 2.25979 9.66437 2.60207Z",
+                }),
+                createElement("path", {
+                  key: "shadow",
+                  "data-kumo-arrow": "shadow",
+                  d: "M8.99542 1.85876C9.75604 1.17425 10.9106 1.17422 11.6713 1.85878L16.5281 6.22989C17.0789 6.72568 17.7938 7.00001 18.5349 7.00001L15.89 7L11.0023 2.60207C10.622 2.2598 10.0447 2.2598 9.66436 2.60207L4.77734 7L2.13171 7.00001C2.87284 7.00001 3.58774 6.72568 4.13861 6.22989L8.99542 1.85876Z",
+                }),
+                createElement("path", {
+                  key: "stroke",
+                  "data-kumo-arrow": "stroke",
+                  d: "M10.3333 3.34539L5.47654 7.71648C4.55842 8.54279 3.36693 9 2.13172 9H0V8H2.13172C3.11989 8 4.07308 7.63423 4.80758 6.97318L9.66437 2.60207C10.0447 2.25979 10.622 2.2598 11.0023 2.60207L15.8591 6.97318C16.5936 7.63423 17.5468 8 18.5349 8H20V9H18.5349C17.2998 9 16.1083 8.54278 15.1901 7.71648L10.3333 3.34539Z",
+                }),
+              ),
+            ),
+          },
+        },
+      },
+      styleOverrides: {
+        tooltip: ({ theme }) => {
+          const k = theme.vars.palette.kumo
+          return {
+            display: "flex", // kumo: flex
+            flexDirection: "column" as const, // kumo: flex-col
+            backgroundColor: k.base, // kumo: bg-kumo-base
+            color: k.textDefault, // kumo: text-kumo-default
+            fontFamily: FONT_SANS,
+            ...TEXT_SM, // kumo: text-sm (13px, NOT Tailwind's 14px)
+            fontWeight: 400, // MUI's own tooltip is fontWeightMedium; kumo's popup inherits 400
+            padding: "6px 10px", // kumo: py-1.5 px-2.5
+            borderRadius: "6px", // kumo: rounded-md
+            // kumo: the popup itself sets no max-width; the POSITIONER caps it at Base UI's
+            // --available-width, a collision-aware value MUI's Popper has no equivalent of. MUI
+            // would otherwise wrap at its own 300px default, which is not a rule kumo has at all.
+            maxWidth: "none",
+            outline: `1px solid ${k.fill}`, // kumo: outline outline-kumo-fill
+            // kumo: dist/styles/kumo-binding.css - `[data-mode="dark"] .kumo-tooltip-popup {
+            // outline-offset: -1px }`, which the component's own class string does not mention at
+            // all. In dark the arrow's visible border is the INNER stroke path, whose geometry sits
+            // a pixel further in than the outer one, so the popup's outline is pulled inside to
+            // meet it. Missing it left the popup painting a pixel larger than kumo's in every
+            // direction (348 pixels at Δ35, and the light pair passed the whole time - the outline
+            // there is a pale grey on white).
+            ...theme.applyStyles("dark", { outlineOffset: "-1px" }),
+            boxShadow: `0 10px 15px -3px ${k.tipShadow}, 0 4px 6px -4px ${k.tipShadow}`, // kumo: shadow-lg shadow-kumo-tip-shadow
+            // MUI spaces the popup from its trigger with a margin on this element (2px all round,
+            // plus 14px on the trigger's side); kumo's popup has no margin and is placed 10px out
+            // by the positioner's `sideOffset`. Same visible gap, expressed the way MUI expresses
+            // it, because Popper's own offset modifier is reachable only through popperOptions.
+            margin: 0,
+            [`.MuiTooltip-popper[data-popper-placement*="top"] &`]: { marginBottom: "10px" },
+            [`.MuiTooltip-popper[data-popper-placement*="bottom"] &`]: { marginTop: "10px" },
+            [`.MuiTooltip-popper[data-popper-placement*="left"] &`]: { marginInlineEnd: "10px" },
+            [`.MuiTooltip-popper[data-popper-placement*="right"] &`]: { marginInlineStart: "10px" },
+          }
+        },
+        arrow: ({ theme }) => {
+          const k = theme.vars.palette.kumo
+          return {
+            display: "flex", // kumo: the arrow wrapper is `flex`
+            width: "20px", // kumo: the SVG's own width; MUI sizes its arrow in em off the font
+            height: "10px",
+            // MUI clips its arrow to hide the far half of the rotated square. Kumo's SVG is exactly
+            // the arrow, so there is nothing to clip - and clipping would eat the rotation's edge.
+            overflow: "visible",
+            "&::before": { display: "none" }, // MUI's rotated-square arrow, switched off
+            "& > [data-kumo-arrow='rotor']": { display: "flex", width: "20px", height: "10px" },
+            "& [data-kumo-arrow='fill']": { fill: k.base },
+            "& [data-kumo-arrow='shadow']": { fill: k.tipShadow },
+            "& [data-kumo-arrow='stroke']": { fill: k.tipStroke },
+          }
+        },
+        // The arrow's offset and rotation are placement-conditional, and MUI writes its own version
+        // of them from the POPPER (`.popper[data-popper-placement*="top"] .arrow`). Restating them
+        // anywhere else loses on specificity, so they live here, mirroring that structure. Kumo's
+        // own offsets are -8px on every side, and its rotation turns the SVG (which points up as
+        // authored) to face the trigger.
+        //
+        // The rotation goes on the injected `rotor` span - not on the arrow itself, and not on the
+        // SVG. Both of the other two placements are wrong, each for its own measured reason:
+        //
+        // NOT the arrow span, because popper.js centres the arrow by writing `transform:
+        // translate3d(41.5px, 0, 0)` onto it inline, and CSS applies the individual `rotate`
+        // property BEFORE the `transform` property - so a 180deg rotation flips the axes that
+        // translate is then measured in and the arrow lands 41.5px LEFT of centre instead of right
+        // (measured x=519 against the popup's own 560.5, far enough out to fall outside the capture
+        // entirely and look as though the arrow had never rendered).
+        //
+        // NOT the SVG, because rotating an <svg> element makes Chrome re-render the vector under
+        // the transform, while rotating a plain element flips the raster its subtree already
+        // produced - and this arrow is not symmetric about its own centre (the stroke path's apex
+        // is at x=10.333 of 20), so the two routes land half a pixel apart. Byte-identical shape,
+        // one device pixel to the left, 1010 pixels at Δ27 on the anchored capture. Kumo rotates a
+        // plain <div> wrapper, so the theme rotates a plain <span> to match.
+        popper: {
+          '&[data-popper-placement*="top"] .MuiTooltip-arrow': {
+            bottom: 0,
+            marginBottom: "-8px", // kumo: data-[side=top]:bottom-[-8px]
+          },
+          '&[data-popper-placement*="top"] [data-kumo-arrow="rotor"]': {
+            rotate: "180deg", // kumo: data-[side=top]:rotate-180
+          },
+          '&[data-popper-placement*="bottom"] .MuiTooltip-arrow': {
+            top: 0,
+            marginTop: "-8px", // kumo: data-[side=bottom]:top-[-8px]
+          },
+          '&[data-popper-placement*="left"] .MuiTooltip-arrow': {
+            width: "20px",
+            height: "10px",
+            insetInlineStart: "auto",
+            insetInlineEnd: 0,
+            marginInlineEnd: "-13px", // kumo: data-[side=left]:right-[-13px]
+          },
+          '&[data-popper-placement*="left"] [data-kumo-arrow="rotor"]': {
+            rotate: "90deg", // kumo: data-[side=left]:rotate-90
+          },
+          '&[data-popper-placement*="right"] .MuiTooltip-arrow': {
+            width: "20px",
+            height: "10px",
+            insetInlineStart: 0,
+            marginInlineStart: "-13px", // kumo: data-[side=right]:left-[-13px]
+          },
+          '&[data-popper-placement*="right"] [data-kumo-arrow="rotor"]': {
+            rotate: "-90deg", // kumo: data-[side=right]:-rotate-90
+          },
         },
       },
     },

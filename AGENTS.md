@@ -6,7 +6,7 @@ The bar is literal: a regular eye must not be able to tell a themed MUI componen
 Two themes ship today:
 
 - **shadcn** - shadcn/ui's default look (new-york style, neutral base, Geist, light and dark). Complete.
-- **kumo** - Kumo, Cloudflare's design system (https://kumo-ui.com), Inter, light and dark. Tier 1 (the non-portalled primitives) complete.
+- **kumo** - Kumo, Cloudflare's design system (https://kumo-ui.com), Inter, light and dark. Every non-portalled primitive is complete, plus Tooltip; the rest of the portalled tier is in progress.
 
 Everything below applies to both. Where they differ, the theme name is called out.
 
@@ -108,8 +108,18 @@ Verify your override actually wins by reading computed styles in the browser, no
 
 The global `MuiButtonBase` `disableRipple` default does not reach `Checkbox`, `Radio`, or `Switch`; they resolve their own default and forward it, so restate `disableRipple: true` on each.
 
-Portalled components (Select, Tooltip, and the coming Menu/Dialog/Popover) render outside their cell.
-The harness handles them via an `open` state: both the MUI overlay and the shadcn overlay must carry `data-portal-target="<pairId>"` on their outermost portalled element so they are captured and diffed symmetrically.
+Portalled components (Select, Tooltip, Menu, Dialog, Popover) render outside their cell.
+The harness handles them via an `open` state: both the MUI overlay and the reference overlay must carry `data-portal-target="<pairId>"` on their outermost portalled element so they are captured and diffed symmetrically.
+When the reference component gives you nowhere to put that attribute, the pair declares `openSelector` instead - a stable, component-owned class the package ships deliberately (kumo's Tooltip spreads its rest props onto the Base UI root and puts `className` on the trigger, but its popup carries `kumo-tooltip-popup`).
+The MUI side of such a pair still uses the attribute; only one side's overlay is ever open at a time, so the two never collide.
+
+Popper places an overlay differently from Floating UI, and both differences are visible at 0 threshold:
+
+- Popper's default "adaptive" mode splits the position between a `bottom` offset and a transform and rounds only the transform half, so the overlay lands a fraction of a pixel off Floating UI's device-grid-rounded position. `popperOptions: { modifiers: [{ name: "computeStyles", options: { adaptive: false } }] }` makes both round the same way.
+- Popper centres an ARROW with an inline `translate3d`, which promotes it to its own compositing layer; a design system that places its arrow with plain `left` draws it in the parent's raster instead, and an arrow that is not symmetric about its own centre then lands a device pixel off. Popper's `gpuAcceleration: false` fixes the arrow but drags the popup off the grid; a `beforeWrite` modifier that rewrites `state.styles.arrow` to `left`/`top` fixes only the arrow (see `ARROW_BY_LAYOUT` in the kumo theme).
+
+Decoration painted OUTSIDE an overlay's border box - an outline band, a shadow's reach - is what the `overlay-matches` behavior exists for; the `open` capture clips at that box and the `anchored` capture's union box is only the overlay's and the trigger's.
+That check compares colours in sRGB, because `getComputedStyle` preserves the space a value was authored in and Tailwind routes every shadow colour through an `oklab` `color-mix` - the same colour, spelled two ways.
 
 ## Commands
 

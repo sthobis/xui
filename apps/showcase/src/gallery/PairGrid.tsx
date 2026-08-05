@@ -38,6 +38,7 @@ export function PairRow({ pair, sides }: { pair: Pair; sides: Side[] }) {
       data-pair-id={pair.id}
       data-states={(pair.states ?? ["default"]).join(",")}
       data-behaviors={(pair.behaviors ?? []).join(",")}
+      data-open-selector={pair.openSelector}
       style={{
         display: "flex",
         gap: 0,

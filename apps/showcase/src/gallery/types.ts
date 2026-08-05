@@ -39,6 +39,27 @@ export interface Pair {
    * component. Only needed for pairs whose overlay actually extends past the row.
    */
   roomBelow?: number
+  /**
+   * CSS selector that finds this pair's open overlay when it CANNOT be tagged with
+   * `data-portal-target`.
+   *
+   * The harness normally identifies a portalled overlay by a `data-portal-target="<pairId>"`
+   * attribute both sides carry, which is exact and needs no knowledge of the component's internals.
+   * Some reference components give you nowhere to put it: kumo's `Tooltip` spreads its rest props
+   * onto the Base UI root and puts `className` on the TRIGGER, so nothing reaches the popup. Its
+   * `container` prop portals into a node you supply, but that wrapper is `position: static` and
+   * 0x0, so it is not the box to screenshot either.
+   *
+   * When set, the selector participates in overlay lookup and in resetState's "everything closed"
+   * assertion alongside the attribute, so only the side that needs it uses it - the MUI side of the
+   * same pair still carries `data-portal-target` as usual. Only one side's overlay is ever open at
+   * a time, so the two never collide.
+   *
+   * Keep it a stable, component-owned class the package ships deliberately (kumo's popup carries
+   * `kumo-tooltip-popup`), never a hashed/utility class, or a package update silently stops
+   * matching and the pair fails as "overlay never opened" rather than as a style difference.
+   */
+  openSelector?: string
   /** The real reference-system component this pair is judged against. */
   ref: ReactNode
   mui: ReactNode

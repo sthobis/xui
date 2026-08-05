@@ -43,7 +43,7 @@ async function captureState(page: Page, cell: Locator, state: PairState, pairId:
     return page.screenshot({ animations: "disabled", clip })
   }
   if (state === "open") {
-    const overlay = openContentLocator(page, cell, pairId)
+    const overlay = await openContentLocator(page, cell, pairId)
     await normalizeOverlayPosition(overlay)
     return overlay.screenshot({ animations: "disabled" })
   }

@@ -1,6 +1,6 @@
 import { expect, test, type Locator, type Page } from "@playwright/test"
 import { openContentLocator, resetState } from "./lib/states"
-import { GALLERY_PAGE, targetOf } from "./lib/themes"
+import { GALLERY_PAGE, targetOf, type ThemeName } from "./lib/themes"
 
 // Non-pixel behavior checks. The pixel harness (parity.spec.ts) only ever screenshots frozen
 // frames of default/hover/focus/open/active/anchored states, so it structurally cannot see
@@ -135,30 +135,104 @@ function significantShadowLayers(boxShadow: string): string[] {
   return layers.filter((layer) => layer !== "none" && !/(,\s*0\s*\)|\/\s*0\s*\))/.test(layer))
 }
 
-// The scrim behind a modal overlay, per side. MUI's is a Backdrop; the reference side's selector
-// here is shadcn's own (its DialogContent renders the overlay internally with a data-slot, so a
-// pair cannot put a marker on it). These are the only side-specific selectors in the harness, and
-// the `ref` one is the single place that hardcodes a reference SYSTEM rather than reading the DOM -
-// it will have to become per-theme once a second theme gains a pair tagged `overlay-matches`. No
-// kumo pair does yet: every modal is a Tier 2 component.
-const BACKDROP_SELECTOR = {
-  ref: "[data-slot$='-overlay']",
-  mui: ".MuiBackdrop-root:not(.MuiBackdrop-invisible)",
-} as const
+/**
+ * Rewrites every colour inside a measured value to its sRGB bytes, so two spellings of the SAME
+ * colour compare equal.
+ *
+ * Needed because getComputedStyle preserves the colour space a value was authored in, and the two
+ * sides of a pair reach the same colour by different routes. Kumo's tooltip shadow is
+ * `shadow-kumo-tip-shadow`, and Tailwind pipes every shadow colour through its own alpha
+ * `color-mix(in oklab, ...)`, so Chrome reports `oklab(0.928 -0.000571842 -0.00597269)`; the theme
+ * names the token directly and Chrome reports `oklch(0.928 0.006 264.531)`. Those are one colour -
+ * the pixel harness renders the pair at exactly zero differing pixels - and a string comparison
+ * that failed on them would be reporting Tailwind's internal plumbing as a theme bug.
+ *
+ * Canvas is the canonicaliser rather than a parser: assigning to `fillStyle` keeps the authored
+ * space (measured - it returns the oklab and oklch spellings unchanged), but actually PAINTING the
+ * colour and reading the pixel back gives the sRGB bytes the screen would show. Colours are located
+ * by scanning for a colour function and matching balanced parentheses, since `color-mix(...)` nests
+ * and a regex cannot.
+ */
+async function inSrgb<T>(page: Page, value: T): Promise<T> {
+  return page.evaluate((input) => {
+    const canvas = document.createElement("canvas")
+    canvas.width = canvas.height = 1
+    const ctx = canvas.getContext("2d", { willReadFrequently: true })!
+    const SENTINEL = "#010203"
+    const toSrgb = (colour: string): string => {
+      ctx.fillStyle = SENTINEL
+      ctx.fillStyle = colour
+      // fillStyle silently ignores a value it cannot parse, so an unchanged sentinel means "not a
+      // colour I can resolve" - leave it exactly as measured rather than reporting it as black.
+      if (ctx.fillStyle === SENTINEL && colour !== SENTINEL) return colour
+      ctx.clearRect(0, 0, 1, 1)
+      ctx.fillRect(0, 0, 1, 1)
+      const [r, g, b, a] = ctx.getImageData(0, 0, 1, 1).data
+      return `srgb(${r} ${g} ${b} / ${a})`
+    }
+    const COLOUR_FN = /\b(?:color-mix|oklab|oklch|lab|lch|hwb|color|rgba?|hsla?)\(/g
+    const canon = (s: string): string => {
+      let out = ""
+      let i = 0
+      for (;;) {
+        COLOUR_FN.lastIndex = i
+        const match = COLOUR_FN.exec(s)
+        if (!match) return out + s.slice(i)
+        let depth = 0
+        let j = match.index + match[0].length - 1
+        for (; j < s.length; j++) {
+          if (s[j] === "(") depth++
+          else if (s[j] === ")" && --depth === 0) {
+            j++
+            break
+          }
+        }
+        out += s.slice(i, match.index) + toSrgb(s.slice(match.index, j))
+        i = j
+      }
+    }
+    const walk = (v: unknown): unknown => {
+      if (typeof v === "string") return canon(v)
+      if (Array.isArray(v)) return v.map(walk)
+      if (v && typeof v === "object") {
+        return Object.fromEntries(Object.entries(v).map(([k, entry]) => [k, walk(entry)]))
+      }
+      return v
+    }
+    return walk(input)
+  }, value) as Promise<T>
+}
+
+// The scrim behind a MODAL overlay, per theme and per side. MUI's is always a Backdrop; the
+// reference selector belongs to the design system under test, because a scrim is rendered by the
+// reference component internally and a pair has nowhere to put a marker on it (shadcn's
+// DialogContent uses a data-slot; kumo's modals are Base UI, whose backdrop carries its own
+// data attribute). These are the only side-specific selectors in the harness.
+//
+// A pair whose overlay is NOT modal - a tooltip, a popover - simply has no scrim on either side,
+// which is a legitimate shape rather than a failure: see the test below for how that is handled
+// without weakening the check for the pairs that do have one.
+const BACKDROP_SELECTOR: Record<ThemeName, { ref: string; mui: string }> = {
+  shadcn: { ref: "[data-slot$='-overlay']", mui: ".MuiBackdrop-root:not(.MuiBackdrop-invisible)" },
+  kumo: { ref: "[data-base-ui-backdrop]", mui: ".MuiBackdrop-root:not(.MuiBackdrop-invisible)" },
+}
 
 test.describe("overlay-matches", () => {
-  // Covers the two things a modal overlay paints that the pixel harness structurally cannot reach.
+  // Covers the things an open overlay paints that the pixel harness structurally cannot reach.
   //
   // The scrim, because it is a full-viewport translucent, blurred layer sitting over whatever the
   // page shows behind each cell - and the two cells are 240px apart, so any framing compares
   // different content (see dialog.tsx's own note).
   //
   // The panel's OUTER decoration, because the open state screenshots the panel element, and an
-  // element capture clips at its border box: a drop shadow or a ring falls outside it and is simply
-  // not in the picture. Sabotaging the drawer's shadow left the pair at 0.00% before this.
+  // element capture clips at its border box: a drop shadow, a ring or an OUTLINE falls outside it
+  // and is simply not in the picture. Sabotaging the drawer's shadow left the pair at 0.00% before
+  // this, and kumo's tooltip is decorated entirely by an outline and a shadow-lg - neither of which
+  // any capture of that pair contains.
   test("each tagged pair's scrim and panel chrome match on both sides", async ({ page }) => {
     const pairs = (await discover(page)).filter((p) => p.behaviors.includes("overlay-matches"))
     skipIfNothingToCheck(pairs.length, "overlay-matches")
+    const { theme } = targetOf(test.info().project.name)
 
     for (const { id } of pairs) {
       const row = page.locator(`[data-pair-id="${id}"]`)
@@ -167,32 +241,52 @@ test.describe("overlay-matches", () => {
       for (const side of ["ref", "mui"] as const) {
         const cell = row.locator(`[data-side="${side}"]`)
         await cell.locator("[data-target]").first().click()
-        const scrim = page.locator(BACKDROP_SELECTOR[side]).first()
-        await expect(scrim, `${id} (${side}): no scrim appeared after opening`).toBeVisible({
-          timeout: 5000,
-        })
-        const panel = openContentLocator(page, cell, id)
+        const panel = await openContentLocator(page, cell, id)
         await expect(panel, `${id} (${side}): no panel appeared after opening`).toBeVisible({
           timeout: 5000,
         })
-        measured[side] = {
-          scrim: await scrim.evaluate((el) => {
-            const c = getComputedStyle(el)
-            const r = el.getBoundingClientRect()
-            return {
-              backgroundColor: c.backgroundColor,
-              backdropFilter: c.backdropFilter,
-              isolation: c.isolation,
-              box: `${Math.round(r.width)}x${Math.round(r.height)} @ ${Math.round(r.x)},${Math.round(r.y)}`,
-            }
-          }),
+        // The scrim is measured only if this overlay HAS one. A missing scrim is not asserted away
+        // here, it is folded into the comparison as `null` - so a non-modal pair (tooltip, popover)
+        // compares null against null and passes, while a modal pair that loses its scrim on one
+        // side only compares an object against null and still fails, with both values printed.
+        const scrim = page.locator(BACKDROP_SELECTOR[theme][side]).first()
+        measured[side] = await inSrgb(page, {
+          scrim: (await scrim.count())
+            ? await scrim.evaluate((el) => {
+                const c = getComputedStyle(el)
+                const r = el.getBoundingClientRect()
+                return {
+                  backgroundColor: c.backgroundColor,
+                  backdropFilter: c.backdropFilter,
+                  isolation: c.isolation,
+                  box: `${Math.round(r.width)}x${Math.round(r.height)} @ ${Math.round(r.x)},${Math.round(r.y)}`,
+                }
+              })
+            : null,
           panel: await panel
             .evaluate((el) => {
               const c = getComputedStyle(el)
-              return { boxShadow: c.boxShadow, border: c.border, borderRadius: c.borderRadius }
+              // An outline (or border) with no style, or zero width, paints NOTHING - and its
+              // colour and width are then whatever each library happens to leave lying around.
+              // Comparing those would fail two overlays that look identical: shadcn's dialog panel
+              // reports a 3px translucent grey `none` outline on one side and a 0px black `none`
+              // outline on the other, and neither draws a single pixel. Collapse both to "none" so
+              // the check only ever compares decoration that actually paints.
+              const drawn = (style: string, width: string, value: string) =>
+                style === "none" || parseFloat(width) === 0 ? "none" : value
+              return {
+                boxShadow: c.boxShadow,
+                border: drawn(c.borderStyle, c.borderWidth, c.border),
+                borderRadius: c.borderRadius,
+                // Kumo draws the tooltip and popover edge with an OUTLINE, which sits outside the
+                // border box and therefore outside every capture of the pair. Its offset is part of
+                // it: kumo pulls the tooltip's outline inward in dark mode only.
+                outline: drawn(c.outlineStyle, c.outlineWidth, c.outline),
+                outlineOffset: drawn(c.outlineStyle, c.outlineWidth, c.outlineOffset),
+              }
             })
             .then((p) => ({ ...p, boxShadow: significantShadowLayers(p.boxShadow) })),
-        }
+        })
         await resetState(page)
       }
       expect(
@@ -222,7 +316,7 @@ test.describe("item-hover-highlights", () => {
       for (const side of ["ref", "mui"] as const) {
         const cell = row.locator(`[data-side="${side}"]`)
         await cell.locator("[data-target]").first().click()
-        const overlay = openContentLocator(page, cell, id)
+        const overlay = await openContentLocator(page, cell, id)
         await expect(overlay).toBeVisible({ timeout: 5000 })
         // The LAST item, so the result cannot be confused with whatever the overlay autofocuses.
         const item = overlay.locator("[role='menuitem'], [role='option']").last()
@@ -354,7 +448,7 @@ test.describe("hover-opens", () => {
         const target = cell.locator("[data-target]").first()
         await target.hover()
         await expect(
-          openContentLocator(page, cell, id),
+          await openContentLocator(page, cell, id),
           `${id} (${side}): overlay did not become visible on hover (no click was performed)`,
         ).toBeVisible({ timeout: 3000 })
         await resetState(page)
@@ -375,7 +469,7 @@ test.describe("escape-closes", () => {
         const cell = row.locator(`[data-side="${side}"]`)
         const target = cell.locator("[data-target]").first()
         await target.click()
-        const overlay = openContentLocator(page, cell, id)
+        const overlay = await openContentLocator(page, cell, id)
         await expect(
           overlay,
           `${id} (${side}): overlay never opened on click, so Escape-close cannot be tested`,
