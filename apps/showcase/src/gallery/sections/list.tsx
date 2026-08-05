@@ -56,9 +56,8 @@ export const listSection: Section = {
       ),
     },
     {
-      // Icon but no description: shadcn's ItemMedia only shifts to `self-start` plus a half-step
-      // translate when the item HAS a description, and that alignment shift has no pair, so this
-      // one keeps the plain centred case.
+      // Icon but no description: ItemMedia stays vertically centred. The item WITH a description is
+      // a separate pair below, because shadcn moves the media when one is present.
       id: "list-icon",
       states: ["default"],
       shadcn: (
@@ -105,6 +104,7 @@ export const listSection: Section = {
     {
       id: "list-description",
       states: ["default"],
+      // no icon - the icon-plus-description case is its own pair below
       shadcn: (
         <div style={wrapStyle}>
           <ItemGroup>
@@ -130,6 +130,58 @@ export const listSection: Section = {
               <MuiListItemText primary="Inbox" secondary="12 unread" />
             </MuiListItem>
             <MuiListItem>
+              <MuiListItemText primary="Sent" secondary="Last week" />
+            </MuiListItem>
+          </MuiList>
+        </div>
+      ),
+    },
+    {
+      // Icon AND description together, which is not just the two previous pairs stacked. shadcn
+      // moves the media when a description is present - `group-has-data-[slot=item-description]/item`
+      // switches it to `self-start` and nudges it down `translate-y-0.5` - so the icon stops being
+      // vertically centred on the whole item and instead aligns to the title's line. MUI keeps its
+      // icon centred, so without this pair the two would drift apart exactly when a list gets its
+      // most common real-world shape.
+      id: "list-icon-description",
+      states: ["default"],
+      shadcn: (
+        <div style={wrapStyle}>
+          <ItemGroup>
+            <Item data-target>
+              <ItemMedia variant="icon">
+                <Inbox />
+              </ItemMedia>
+              <ItemContent>
+                <ItemTitle>Inbox</ItemTitle>
+                <ItemDescription>12 unread</ItemDescription>
+              </ItemContent>
+            </Item>
+            <Item>
+              <ItemMedia variant="icon">
+                <Send />
+              </ItemMedia>
+              <ItemContent>
+                <ItemTitle>Sent</ItemTitle>
+                <ItemDescription>Last week</ItemDescription>
+              </ItemContent>
+            </Item>
+          </ItemGroup>
+        </div>
+      ),
+      mui: (
+        <div style={wrapStyle}>
+          <MuiList>
+            <MuiListItem data-target>
+              <MuiListItemIcon>
+                <Inbox />
+              </MuiListItemIcon>
+              <MuiListItemText primary="Inbox" secondary="12 unread" />
+            </MuiListItem>
+            <MuiListItem>
+              <MuiListItemIcon>
+                <Send />
+              </MuiListItemIcon>
               <MuiListItemText primary="Sent" secondary="Last week" />
             </MuiListItem>
           </MuiList>

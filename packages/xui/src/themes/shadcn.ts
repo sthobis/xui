@@ -4614,6 +4614,16 @@ export const shadcnTheme = createTheme({
           gap: "0.5rem", // shadcn: gap-2
           minWidth: "auto", // shadcn: no min-width - the box is the icon (MUI reserves 36px)
           color: "inherit", // shadcn: no colour of its own (MUI uses action.active)
+          // ItemMedia moves when the item has a description, rather than staying centred on the
+          // whole row: `group-has-data-[slot=item-description]/item:self-start` plus
+          // `group-has-data-[slot=item-description]/item:translate-y-0.5`, which lines the icon up
+          // with the TITLE instead of with the title-and-description block. MUI has no equivalent
+          // notion, so the condition is expressed the same way shadcn expresses it - a parent-scoped
+          // :has() - keyed on MUI's own secondary slot, which is what a description renders as.
+          ".MuiListItem-root:has(.MuiListItemText-secondary) &": {
+            alignSelf: "flex-start", // shadcn: group-has-data-[slot=item-description]/item:self-start
+            transform: "translateY(0.125rem)", // shadcn: ...:translate-y-0.5
+          },
           "& svg": {
             width: "1rem", // shadcn: [&_svg:not([class*='size-'])]:size-4
             height: "1rem",

@@ -3,6 +3,21 @@ import type { Pair, Section } from "./types"
 import { GallerySidebar, SIDEBAR_WIDTH, sectionId } from "./Sidebar"
 import { ThemePanel, THEME_PANEL_WIDTH } from "./ThemePanel"
 
+/**
+ * The widest a pair's own content may be.
+ *
+ * Two cells sit side by side, each adding `padding: 24` on both sides, and the row has to fit
+ * between the fixed sidebar and the fixed theme panel. Go over and the MUI cell - the right-hand
+ * one - slides under the theme panel, whose left border then lands INSIDE the screenshot, because
+ * the capture clips to the cell and does not know the panel is not part of it.
+ *
+ * That failure is worth naming because of how it reads: a crisp full-height line at Δ245, scoring
+ * hundreds of differing pixels, in a pair whose every computed style matches. It has been diagnosed
+ * twice now - once at 360 on the AppBar, once at 368 on TablePagination's edge buttons - so the
+ * limit lives here rather than in a comment inside whichever section hit it last.
+ */
+export const MAX_PAIR_CONTENT_WIDTH = 336
+
 const cellStyle: CSSProperties = {
   display: "flex",
   alignItems: "center",

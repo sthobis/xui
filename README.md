@@ -149,16 +149,16 @@ That fallback is deliberate and, where it matters, defensive: `Fab`'s size rules
 | AppBar / Toolbar | The default static bar | `position="fixed"` and `"sticky"`, elevation above 0, the dense variant, non-default `color` |
 | Badge | The dot anchored to an avatar; the count pill in primary and error | `showZero`, the `invisible` transition, `overlap="circular"`. The pill's *placement* is MUI's own, not shadcn's, because shadcn ships no anchored count to copy |
 | BottomNavigation | The resting bar with one item selected | `showLabels={false}`, the selection animation |
-| Dialog | The open dialog with a header and footer | The `size="icon-sm"` close button shadcn draws in the corner |
-| Drawer | All four anchors, with a header | The `size="icon-sm"` close button |
+| Dialog | The open dialog with a header and footer | Nothing in the theme. The pair turns off shadcn's corner close button, but that button is a `size="icon-sm"` ghost IconButton, which `iconbutton-small` already covers - only where an app puts it is untested, and the theme does not own that |
+| Drawer | All four anchors, with a header | Its corner close button, on the same terms as Dialog above |
 | Fab | The circular 56px default, `size="small"`, and `variant="extended"` | `size="medium"` |
 | ImageList | The standard variant at a fixed column count | `variant="masonry"`, `"quilted"` and `"woven"`, `ImageListItemBar`, per-item row and column spans |
-| List | Plain items, items with an icon, items with a description | An icon and a description on the same item, which shifts the icon's alignment |
+| List | Plain items, and items with an icon, a description, or both | Item's `outline` and `muted` variants, its `sm` and `xs` sizes, `ItemSeparator`, `ItemActions`, `ItemHeader`, `ItemFooter` |
 | Rating | Read-only display at whole-number values | Hover preview, click to set, `precision` below 1, the `size` ladder |
 | Snackbar | A single-line message, with and without an action | Title plus description, the cancel and close buttons, placement |
 | SpeedDial | Closed, and open with its actions | The tooltips an action can show |
 | Stepper | Horizontal, on the first step | Completed steps, the vertical orientation, error and disabled steps |
-| TablePagination | Caption, actions, and the rows-per-page control | The first and last page buttons |
+| TablePagination | Caption, actions, the rows-per-page control, and the first and last page buttons | The rows-per-page menu when open, which the `select-*` pairs cover instead |
 
 Components not listed here have no recorded gap, which means the pairs cover the surfaces we set out to cover, not that every prop MUI exposes has been exercised.
 

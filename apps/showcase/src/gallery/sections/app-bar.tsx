@@ -4,6 +4,7 @@ import MuiToolbar from "@mui/material/Toolbar"
 import MuiTypography from "@mui/material/Typography"
 import { PanelLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { MAX_PAIR_CONTENT_WIDTH } from "../PairGrid"
 import type { Section } from "../types"
 
 // THE TWIN ON THE LEFT IS COMPOSED, NOT INSTALLED - the only pair in this gallery where that is
@@ -35,12 +36,10 @@ const TITLE = "Dashboard"
 
 // Whole, even pixels so both sides start on the same pixel column - see menu.tsx.
 //
-// 336 and not wider: two cells of (width + 48px padding) have to fit between the gallery's fixed
-// sidebar and its fixed theme panel. At 360 the MUI cell ran 8px under the theme panel's left edge,
-// and since the capture clips to the cell, the panel's own edge landed inside the screenshot - 452
-// differing pixels that had nothing to do with the AppBar. Anything wider than about 344 here will
-// do the same.
-const wrapStyle = { width: 336 } as const
+// Full width, which for a pair means MAX_PAIR_CONTENT_WIDTH. This is where that limit was first
+// diagnosed: at 360 the MUI cell ran 8px under the theme panel's left edge and the panel's own
+// border landed inside the screenshot, 452 differing pixels that had nothing to do with the AppBar.
+const wrapStyle = { width: MAX_PAIR_CONTENT_WIDTH } as const
 
 export const appBarSection: Section = {
   title: "AppBar",
