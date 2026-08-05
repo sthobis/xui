@@ -10,7 +10,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet"
-import type { Section } from "../types"
+import type { Pair, Section } from "../types"
 
 const TITLE = "Filters"
 const BODY = "Narrow the results."
@@ -36,7 +36,6 @@ const descriptionStyle = { color: "var(--mui-palette-text-secondary)", margin: 0
 interface PortalTargetProps extends HTMLAttributes<HTMLDivElement> {
   "data-portal-target"?: string
 }
-const portalTargetPaper: PortalTargetProps = { "data-portal-target": "drawer-open" }
 
 // Same Escape story as the other overlays - see menu.tsx.
 function useControlledOpen() {
@@ -52,8 +51,12 @@ function useControlledOpen() {
   return { open, onOpen: () => setOpen(true), onClose: () => setOpen(false) }
 }
 
-function MuiDrawerDemo() {
+// MUI's anchor and shadcn's side are the same four values under different names.
+type Side = "top" | "right" | "bottom" | "left"
+
+function MuiDrawerDemo({ anchor, pairId }: { anchor: Side; pairId: string }) {
   const { open, onOpen, onClose } = useControlledOpen()
+  const paper: PortalTargetProps = { "data-portal-target": pairId }
   return (
     <>
       <MuiButton
@@ -66,12 +69,7 @@ function MuiDrawerDemo() {
       >
         Filters
       </MuiButton>
-      <MuiDrawer
-        anchor="right"
-        open={open}
-        onClose={onClose}
-        slotProps={{ paper: portalTargetPaper }}
-      >
+      <MuiDrawer anchor={anchor} open={open} onClose={onClose} slotProps={{ paper }}>
         <div style={headerStyle}>
           <div style={titleStyle}>{TITLE}</div>
           <p style={descriptionStyle}>{BODY}</p>
@@ -81,34 +79,46 @@ function MuiDrawerDemo() {
   )
 }
 
+function ShadcnSheetDemo({ side, pairId }: { side: Side; pairId: string }) {
+  return (
+    <Sheet>
+      <SheetTrigger asChild>
+        <Button data-target variant="outline" style={{ width: TRIGGER_WIDTH }}>
+          Filters
+        </Button>
+      </SheetTrigger>
+      {/* showCloseButton={false} for the same reason the dialog pair sets it: the built-in
+          close button is a `size="icon-sm"` ghost Button, a size no pair covers. */}
+      <SheetContent side={side} showCloseButton={false} data-portal-target={pairId}>
+        <SheetHeader>
+          <SheetTitle>{TITLE}</SheetTitle>
+          <SheetDescription>{BODY}</SheetDescription>
+        </SheetHeader>
+      </SheetContent>
+    </Sheet>
+  )
+}
+
+// One pair per side. The four are NOT variations on a theme - sheet.tsx gives the horizontal pair
+// (left/right) a width and a full height, and the vertical pair (top/bottom) a full width and a
+// content-driven height, and each side draws its border on the edge that faces the page. A theme
+// that only covers `right` therefore has three genuinely different layouts untested behind it,
+// which is what these add.
+function sidePair(side: Side): Pair {
+  const id = `drawer-${side}`
+  return {
+    // No `anchored` state, for the same reason the dialog pair has none: the panel is pinned to
+    // the viewport edge rather than positioned relative to its trigger, so the union of the two
+    // measures where the trigger happens to sit. See dialog.tsx's own note.
+    id,
+    states: ["open"],
+    behaviors: ["escape-closes", "overlay-matches"],
+    shadcn: <ShadcnSheetDemo side={side} pairId={id} />,
+    mui: <MuiDrawerDemo anchor={side} pairId={id} />,
+  }
+}
+
 export const drawerSection: Section = {
   title: "Drawer",
-  pairs: [
-    {
-      // No `anchored` state, for the same reason the dialog pair has none: the panel is pinned to
-      // the viewport edge rather than positioned relative to its trigger, so the union of the two
-      // measures where the trigger happens to sit. See dialog.tsx's own note.
-      id: "drawer-open",
-      states: ["open"],
-      behaviors: ["escape-closes", "overlay-matches"],
-      shadcn: (
-        <Sheet>
-          <SheetTrigger asChild>
-            <Button data-target variant="outline" style={{ width: TRIGGER_WIDTH }}>
-              Filters
-            </Button>
-          </SheetTrigger>
-          {/* showCloseButton={false} for the same reason the dialog pair sets it: the built-in
-              close button is a `size="icon-sm"` ghost Button, a size no pair covers. */}
-          <SheetContent showCloseButton={false} data-portal-target="drawer-open">
-            <SheetHeader>
-              <SheetTitle>{TITLE}</SheetTitle>
-              <SheetDescription>{BODY}</SheetDescription>
-            </SheetHeader>
-          </SheetContent>
-        </Sheet>
-      ),
-      mui: <MuiDrawerDemo />,
-    },
-  ],
+  pairs: [sidePair("right"), sidePair("left"), sidePair("top"), sidePair("bottom")],
 }

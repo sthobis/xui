@@ -4834,7 +4834,6 @@ export const shadcnTheme = createTheme({
     MuiDrawer: {
       styleOverrides: {
         paper: ({ theme }) => ({
-          width: "min(75vw, 24rem)", // shadcn: w-3/4 with sm:max-w-sm
           gap: "1rem", // shadcn: gap-4
           backgroundColor: theme.vars.palette.popover.main, // shadcn: bg-popover
           backgroundImage: "none", // kills MUI Paper's dark-mode elevation overlay - see the MuiMenu banner
@@ -4842,16 +4841,41 @@ export const shadcnTheme = createTheme({
           color: theme.vars.palette.popover.contrastText, // shadcn: text-popover-foreground
           fontSize: "0.875rem", // shadcn: text-sm
           lineHeight: "1.25rem", // shadcn: text-sm's paired line-height
-          // shadcn: border-l. MUI gates its own anchorRight border on `variant !== 'temporary'`,
-          // so a modal drawer - the only kind with a Sheet twin - draws none at all. Stating just a
-          // colour therefore had nothing to colour; the whole border has to be declared. It is
-          // load-bearing beyond the line itself: the border widens the box, so without it every
-          // glyph inside sat a pixel off (0.40% of the panel, all of it in the leading 275px).
-          borderLeft: `1px solid ${theme.vars.palette.border}`,
           boxShadow: [
             "0 10px 15px -3px rgba(0, 0, 0, 0.1)", // shadcn: shadow-lg
             "0 4px 6px -4px rgba(0, 0, 0, 0.1)", // shadcn: shadow-lg
           ].join(", "),
+
+          // PER-SIDE, and the split is not cosmetic. sheet.tsx gives the two axes different
+          // layouts: left/right get a width and a full height, top/bottom get the full width and a
+          // height driven by their content. A single unconditional `width` therefore does not
+          // "cover right and leave the rest alone" - it makes a top sheet 384px wide instead of
+          // full-bleed, which measured as a 74% mismatch. Same trap as the Fab size ladder.
+          //
+          // MUI puts the anchor on the Drawer ROOT (`MuiDrawer-anchorLeft`), not on the paper, so
+          // these reach down from the parent rather than being paper classes of their own.
+          ".MuiDrawer-anchorLeft &, .MuiDrawer-anchorRight &": {
+            width: "min(75vw, 24rem)", // shadcn: w-3/4 with sm:max-w-sm
+          },
+
+          // Each side draws ONE border, on the edge facing the page. MUI gates its own paper border
+          // on `variant !== 'temporary'`, so a modal drawer - the only kind with a Sheet twin -
+          // draws none at all, and stating just a colour would have nothing to colour; the whole
+          // border has to be declared. It is load-bearing beyond the line itself, because it widens
+          // the box: without it every glyph inside sat a pixel off (0.40% of the panel, all of it in
+          // the leading 275px, when this was measured on the right side).
+          ".MuiDrawer-anchorRight &": {
+            borderLeft: `1px solid ${theme.vars.palette.border}`, // shadcn: data-[side=right]:border-l
+          },
+          ".MuiDrawer-anchorLeft &": {
+            borderRight: `1px solid ${theme.vars.palette.border}`, // shadcn: data-[side=left]:border-r
+          },
+          ".MuiDrawer-anchorTop &": {
+            borderBottom: `1px solid ${theme.vars.palette.border}`, // shadcn: data-[side=top]:border-b
+          },
+          ".MuiDrawer-anchorBottom &": {
+            borderTop: `1px solid ${theme.vars.palette.border}`, // shadcn: data-[side=bottom]:border-t
+          },
         }),
       },
     },

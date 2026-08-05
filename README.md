@@ -101,7 +101,7 @@ A checked box means the component has at least one pair that reaches zero differ
 
 - [x] Menu
 - [x] Dialog
-- [x] Drawer (shadcn Sheet)
+- [x] Drawer (shadcn Sheet, all four anchors)
 - [x] Popover
 - [x] Snackbar (shadcn Sonner, single-line message)
 - [x] Accordion
@@ -150,7 +150,7 @@ That fallback is deliberate and, where it matters, defensive: `Fab`'s size rules
 | Badge | The dot anchored to an avatar; the count pill in primary and error | `showZero`, the `invisible` transition, `overlap="circular"`. The pill's *placement* is MUI's own, not shadcn's, because shadcn ships no anchored count to copy |
 | BottomNavigation | The resting bar with one item selected | `showLabels={false}`, the selection animation |
 | Dialog | The open dialog with a header and footer | The `size="icon-sm"` close button shadcn draws in the corner |
-| Drawer | `anchor="right"`, with a header | The other three anchors, the `size="icon-sm"` close button |
+| Drawer | All four anchors, with a header | The `size="icon-sm"` close button |
 | Fab | The circular 56px default, `size="small"`, and `variant="extended"` | `size="medium"` |
 | ImageList | The standard variant at a fixed column count | `variant="masonry"`, `"quilted"` and `"woven"`, `ImageListItemBar`, per-item row and column spans |
 | List | Plain items, items with an icon, items with a description | An icon and a description on the same item, which shifts the icon's alignment |
