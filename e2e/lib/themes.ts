@@ -1,0 +1,53 @@
+import { expect, type Page } from "@playwright/test"
+
+/**
+ * The themes the harness knows about.
+ *
+ * A Playwright project is named `<theme>-<mode>`, which is what lets one suite cover several
+ * reference systems: the project name is the only thing that decides which page a spec opens and
+ * how it switches to dark. Everything else in the harness reads the DOM and stays theme-agnostic.
+ */
+export type ThemeName = "shadcn" | "kumo"
+
+export const GALLERY_PAGE: Record<ThemeName, string> = {
+  shadcn: "/",
+  kumo: "/kumo.html",
+}
+
+/**
+ * The Tailwind-free twin of each gallery page, rendering only the MUI column. preflight.spec.ts
+ * compares the same MUI cell across the pair of pages to prove the theme does not lean on the
+ * reference system's stylesheet for anything.
+ */
+export const PURE_PAGE: Record<ThemeName, string> = {
+  shadcn: "/pure.html",
+  kumo: "/kumo-pure.html",
+}
+
+export function targetOf(projectName: string): { theme: ThemeName; mode: "light" | "dark" } {
+  const match = projectName.match(/^(shadcn|kumo)-(light|dark)$/)
+  if (!match) {
+    throw new Error(`project "${projectName}" is not named <theme>-<mode> (e.g. "shadcn-light")`)
+  }
+  return { theme: match[1] as ThemeName, mode: match[2] as "light" | "dark" }
+}
+
+/**
+ * Clicks the in-app mode toggle and asserts the theme's OWN dark-mode contract on <html>.
+ *
+ * The two reference systems disagree on how dark mode is expressed, and each xui theme follows its
+ * own rather than normalizing: shadcn drives a `.dark` class, kumo a `data-mode="dark"` attribute.
+ * Both are written by MUI's `useColorScheme().setMode` via the theme's `colorSchemeSelector`, so a
+ * single toggle button moves the MUI theme and the reference system's CSS together. Asserting the
+ * attribute (rather than just clicking) is what catches a theme whose selector silently stopped
+ * matching - the page would still render, in the wrong scheme, and every pair would still "match".
+ */
+export async function activateDark(page: Page, theme: ThemeName): Promise<void> {
+  await page.getByTestId("mode-toggle").click()
+  if (theme === "shadcn") {
+    await expect(page.locator("html")).toHaveClass(/dark/)
+  } else {
+    await expect(page.locator("html")).toHaveAttribute("data-mode", "dark")
+  }
+  await page.waitForTimeout(300)
+}

@@ -1,0 +1,23 @@
+@import "@fontsource-variable/inter";
+
+/* Tailwind v4 does not scan node_modules, so Kumo's own utility classes would be missing from the
+   generated stylesheet and its components would render half-styled. Kumo's install docs call this
+   out as required. The path is relative to THIS file. */
+@source "../../../node_modules/@cloudflare/kumo/dist/**/*.{js,jsx,ts,tsx}";
+
+/* Order matters and is Kumo's own instruction: its theme tokens must register before tailwindcss,
+   so that `--text-base` and friends are Kumo's values (14px) rather than Tailwind's defaults. */
+@import "@cloudflare/kumo/styles/tailwind";
+@import "tailwindcss";
+
+/* kumo-ui.com renders in Inter. The package's tokens do not pin a page font, so the app supplies
+   it - the same job apps/showcase/src/themes/shadcn/index.css does for Geist. */
+@theme {
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--color-kumo-canvas);
+  color: var(--text-color-kumo-default);
+}

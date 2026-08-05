@@ -1,0 +1,15 @@
+node_modules/
+dist/
+*.local
+.DS_Store
+
+# working artifacts, never committed
+docs/superpowers/
+
+# test output
+e2e/results/
+playwright-report/
+test-results/
+
+# browser MCP tool artifacts
+.playwright-mcp/

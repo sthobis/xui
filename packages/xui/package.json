@@ -1,0 +1,61 @@
+{
+  "name": "xui",
+  "version": "0.1.0",
+  "description": "Material UI v9 themes that make MUI components look pixel-for-pixel identical to another design system. Ships shadcn/ui and Kumo (Cloudflare) themes.",
+  "license": "MIT",
+  "keywords": [
+    "mui",
+    "material-ui",
+    "shadcn",
+    "shadcn-ui",
+    "kumo",
+    "cloudflare",
+    "theme",
+    "design-system"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "publishConfig": {
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "pnpm run build"
+  },
+  "peerDependencies": {
+    "@emotion/react": "^11.5.0",
+    "@emotion/styled": "^11.3.0",
+    "@mui/material": "^9.0.0",
+    "react": "^18.0.0 || ^19.0.0"
+  },
+  "dependencies": {
+    "@phosphor-icons/react": "^2.1.10",
+    "lucide-react": "^1.24.0"
+  },
+  "devDependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
+    "@mui/material": "^9.2.0",
+    "@types/react": "^19.2.17",
+    "react": "^19.0.0",
+    "typescript": "^5.9.0"
+  }
+}
