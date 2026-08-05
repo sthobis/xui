@@ -125,15 +125,48 @@ test("all pairs match within threshold", async ({ page }, testInfo) => {
   const failures: string[] = []
   for (const { id, states } of pairIds) {
     const row = page.locator(`[data-pair-id="${id}"]`)
-    await row.scrollIntoViewIfNeeded()
+    // CENTRE the row rather than scrolling it minimally into view. `scrollIntoViewIfNeeded` stops as
+    // soon as the row is visible, so a row can end up hard against the bottom of the viewport, and
+    // where it lands depends on which pair ran before it - which is to say, on the order and size of
+    // everything else in the gallery.
+    //
+    // That matters because both libraries avoid collisions: a panel with no room below gets nudged
+    // up, and Radix and MUI nudge by different amounts. It made popover-open pass when its section
+    // was run alone and fail in a full run, with the MUI panel 6px closer to its trigger - a
+    // difference in the harness's scroll position reported as a difference between two components.
+    // Centring gives every overlay the same room to open into no matter what precedes it.
+    await row.evaluate((el) => el.scrollIntoView({ block: "center" }))
     for (const state of states) {
       const shadcnCell = row.locator('[data-side="shadcn"]')
       const muiCell = row.locator('[data-side="mui"]')
+
+      // An overlay is positioned FROM its trigger at the moment it opens, so a trigger sitting at a
+      // fractional coordinate has to be squared up before the state is applied - afterwards is too
+      // late, the panel's position is already computed.
+      //
+      // This matters because the two libraries round differently: Radix places content on the
+      // device-pixel grid (0.5 CSS px at this harness's deviceScaleFactor of 2) while MUI's Popover
+      // rounds to whole CSS pixels. From a trigger at y=483.5 they resolve gaps of 4 and 4.5, and
+      // the anchored capture - which deliberately skips normalization so it can still see real
+      // placement errors - has nothing to absorb that half pixel. It re-rasterizes every glyph and
+      // the panel outline, scoring 2.5% at Δ255 on pairs where the panels are byte-identical.
+      //
+      // menu.tsx already pins its trigger to an even whole WIDTH for exactly this reason, on the x
+      // axis. The y axis has no such knob - it depends on where the row lands - which is why this
+      // surfaced as two long-green pairs "breaking" when an unrelated row was added above them.
+      if (state === "anchored") {
+        await snapToPixelGrid(shadcnCell)
+        await snapToPixelGrid(muiCell)
+      }
 
       await applyState(page, shadcnCell, state, id)
       const shadcnShot = await captureState(page, shadcnCell, state, id)
       await resetState(page)
 
+      if (state === "anchored") {
+        await snapToPixelGrid(shadcnCell)
+        await snapToPixelGrid(muiCell)
+      }
       await applyState(page, muiCell, state, id)
       const muiShot = await captureState(page, muiCell, state, id)
       await resetState(page)

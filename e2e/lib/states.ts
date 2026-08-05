@@ -81,7 +81,37 @@ export async function applyState(page: Page, cell: Locator, state: PairState, pa
  * mask a genuine multi-pixel style difference - a real difference in size/position/color still
  * changes every pixel beyond that sub-pixel remainder and still fails the diff.
  */
+/**
+ * Freezes an overlay at its RESTING appearance, so it can be measured.
+ *
+ * Radix's enter effects are CSS ANIMATIONS (`animate-in`, `zoom-in-95`, `fade-in-0` via
+ * tailwindcss-animate), not transitions, and the two need separate handling. `transition: none`
+ * does nothing to an animation, and Playwright's `animations: "disabled"` applies to the SCREENSHOT
+ * only - it does not affect what `boundingBox()` returns a moment earlier. So an overlay measured
+ * while its enter animation is in flight reports an interpolated box while the screenshot that
+ * follows shows the settled one.
+ *
+ * Removing the animation is what settles it: these are enter effects that finish at the element's
+ * natural style, so with the animation gone the element is already where it was heading.
+ *
+ * This is what made menu-open and popover-open FLAKY in the `anchored` state, and flaky is the
+ * important word - two consecutive runs of the same commit reported 210 and 212 pixels tall for the
+ * same panel, because the measurement was racing a 150ms zoom from 95%. It surfaced as a pair
+ * "breaking" when an unrelated row was added elsewhere in the gallery, which is exactly the kind of
+ * false lead that costs an afternoon: the change did not touch either component, it only moved them
+ * enough to shift the timing.
+ */
+async function settleOverlay(target: Locator): Promise<void> {
+  await target.evaluate((el) => {
+    const node = el as HTMLElement
+    node.style.setProperty("animation", "none", "important")
+    node.style.setProperty("transition", "none", "important")
+    void node.offsetWidth // force reflow so both commit before anything measures
+  })
+}
+
 export async function normalizeOverlayPosition(target: Locator): Promise<void> {
+  await settleOverlay(target)
   await target.evaluate((el) => {
     const node = el as HTMLElement
     // Radix's tailwindcss-animate enter/exit classes leave a *finished* CSS Transition on
@@ -226,14 +256,33 @@ export async function anchoredClip(
 ): Promise<{ x: number; y: number; width: number; height: number }> {
   const target = cell.locator("[data-target]").first()
   const overlay = openContentLocator(page, cell, pairId)
+  // Settle BEFORE measuring. Unlike the "open" state this capture is deliberately not normalized
+  // onto the pixel grid - that is what lets it see real placement errors - so it has nothing to
+  // absorb a box measured mid-animation. See settleOverlay for what that cost.
+  await settleOverlay(overlay)
   const [targetBox, overlayBox] = await Promise.all([target.boundingBox(), overlay.boundingBox()])
   if (!targetBox) throw new Error(`anchoredClip(${pairId}): no bounding box for [data-target]`)
   if (!overlayBox) throw new Error(`anchoredClip(${pairId}): no bounding box for open overlay`)
-  const left = Math.round(Math.min(targetBox.x, overlayBox.x))
-  const top = Math.round(Math.min(targetBox.y, overlayBox.y))
+  const left = Math.min(targetBox.x, overlayBox.x)
+  const top = Math.min(targetBox.y, overlayBox.y)
   const right = Math.max(targetBox.x + targetBox.width, overlayBox.x + overlayBox.width)
   const bottom = Math.max(targetBox.y + targetBox.height, overlayBox.y + overlayBox.height)
-  return { x: left, y: top, width: right - left, height: bottom - top }
+  // Round the ORIGIN and the SIZE independently, never the far edges. Size is a property of the two
+  // components - trigger height plus gap plus panel height - so it is the same real number on both
+  // sides and rounds to the same integer. A far edge is not: it carries the row's own position on
+  // the page, so `bottom - Math.round(top)` mixes a rounded origin into an unrounded extent and the
+  // height then depends on where the row happens to sit.
+  //
+  // That is how a 2px height difference appeared in a pair that had not changed - adding a row
+  // higher up the gallery shifted this one's sub-pixel phase, and captures of 210 and 212 were
+  // compared as though a component had moved. Rounding the size makes the capture describe the
+  // components; rounding the origin keeps it on the pixel grid.
+  return {
+    x: Math.round(left),
+    y: Math.round(top),
+    width: Math.round(right - left),
+    height: Math.round(bottom - top),
+  }
 }
 
 export async function resetState(page: Page): Promise<void> {
