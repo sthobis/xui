@@ -26,6 +26,8 @@ import type { Section } from "../types"
 // Fab or the theme having changed. That reads exactly like a threshold problem and is not one. The
 // fix is here, in the twin, and it returns the pair to a true zero rather than widening a cap.
 const wrapStyle = { width: 96 } as const
+// The extended FAB is a pill with a label, so it needs a wider cell than the circular one.
+const extendedWrapStyle = { width: 160 } as const
 
 export const fabSection: Section = {
   title: "Fab",
@@ -45,6 +47,33 @@ export const fabSection: Section = {
         <div style={wrapStyle}>
           <MuiFab data-target color="primary" aria-label="Add">
             <Plus />
+          </MuiFab>
+        </div>
+      ),
+    },
+    {
+      // variant="extended": a pill with the icon and a label side by side. Same composition rule as
+      // the circular pair - MUI's geometry, dressed in real shadcn utilities - because there is no
+      // shadcn extended FAB to extract from either.
+      id: "fab-extended",
+      states: ["default", "hover"],
+      shadcn: (
+        <div style={extendedWrapStyle}>
+          <Button
+            data-target
+            className="relative z-[1050] h-12 gap-2 rounded-full px-4 shadow-lg"
+            aria-label="Create"
+          >
+            <Plus />
+            Create
+          </Button>
+        </div>
+      ),
+      mui: (
+        <div style={extendedWrapStyle}>
+          <MuiFab data-target variant="extended" color="primary" aria-label="Create">
+            <Plus />
+            Create
           </MuiFab>
         </div>
       ),

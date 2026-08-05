@@ -5307,25 +5307,40 @@ export const shadcnTheme = createTheme({
     // cites for `variant="contained" color="primary"`. The utilities are real; assembling them into
     // a FAB is a decision taken here. See apps/showcase/src/gallery/sections/fab.tsx.
     //
-    // SCOPE: the 56px default, plus `size="small"` by way of the speeddial-open pair, whose action
-    // buttons are small Fabs. `size="medium"` and `variant="extended"` have no pair and get no
-    // treatment - the size ladder below is written so that leaves them at MUI's own geometry rather
-    // than silently forcing them to 56px.
+    // SCOPE: the circular 56px default, `size="small"` by way of the speeddial-open pair whose
+    // action buttons are small Fabs, and `variant="extended"`. `size="medium"` has no pair and gets
+    // no treatment - the size ladder below is written so that leaves it at MUI's own geometry
+    // rather than silently forcing it to 56px.
     MuiFab: {
       styleOverrides: {
         root: {
-          // SIZE IS SCOPED. MUI's Fab ladder is 40/48/56, and setting width/height on the root
-          // unconditionally does not "leave the other sizes untreated" - it actively breaks them,
-          // forcing every Fab to 56px. Found via SpeedDial, whose action buttons are `size="small"`
-          // and were rendering the same size as the trigger they sit under.
-          "&:not(.MuiFab-sizeSmall):not(.MuiFab-sizeMedium)": {
+          // SIZE IS SCOPED, on BOTH axes of MUI's Fab matrix - variant and size. Setting width and
+          // height on the root unconditionally does not "leave the rest untreated", it actively
+          // breaks them, and this rule has now been caught doing that twice.
+          //
+          // First on size: MUI's ladder is 40/48/56 and a flat rule forced every Fab to 56px, found
+          // via SpeedDial, whose `size="small"` actions rendered as large as the trigger above them.
+          //
+          // Then on variant, which is the subtler one. `:not(sizeSmall):not(sizeMedium)` reads like
+          // "the default size", but MUI's Fab defaults to size="large", so an EXTENDED Fab matched
+          // it too and a pill meant to be 102x48 was squashed into a 56x56 circle with its icon
+          // crushed to zero width. The scope note above had claimed extended "gets no treatment",
+          // which was not true - it was getting the wrong treatment. Keying off `.MuiFab-circular`
+          // states the intent directly instead of approximating it by exclusion.
+          "&.MuiFab-circular:not(.MuiFab-sizeSmall):not(.MuiFab-sizeMedium)": {
             width: "3.5rem", // shadcn: size-14
             height: "3.5rem",
           },
           // The small size is what a SpeedDial's actions use, so the speeddial-open pair covers it.
-          "&.MuiFab-sizeSmall": {
+          "&.MuiFab-circular.MuiFab-sizeSmall": {
             width: "2.5rem", // shadcn: size-10
             height: "2.5rem",
+          },
+          // The extended pill. MUI already gets its 48px height and its 16px side padding right, so
+          // only the icon/label gap is restated - MUI leaves it to the caller, shadcn's Button owns
+          // it as `gap-2`.
+          "&.MuiFab-extended": {
+            gap: "0.5rem", // shadcn Button: gap-2
           },
           borderRadius: "9999px", // shadcn: rounded-full
           // shadcn's Button carries `border border-transparent` and `bg-clip-padding`; both are
@@ -5340,6 +5355,10 @@ export const shadcnTheme = createTheme({
           "& svg": {
             width: "1rem", // shadcn Button: [&_svg:not([class*='size-'])]:size-4
             height: "1rem",
+            // Only load-bearing on the extended pill, where the icon sits in a flex row beside a
+            // label and would otherwise be the thing that gives when space is tight - it was
+            // measured at width 0 against the twin's 16px.
+            flexShrink: 0, // shadcn Button: [&_svg]:shrink-0
           },
         },
         primary: ({ theme }) => ({

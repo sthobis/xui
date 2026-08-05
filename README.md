@@ -125,7 +125,7 @@ AppBar / Toolbar above is the first of these.
 
 - [x] Rating (no shadcn twin - read-only display)
 - [x] Stepper (no shadcn twin - horizontal, first step)
-- [x] Fab (no shadcn twin - composed from Button)
+- [x] Fab (no shadcn twin - composed from Button; circular and extended)
 - [x] SpeedDial (no shadcn twin - closed state)
 - [x] BottomNavigation (no shadcn twin)
 - [x] Backdrop (shadcn Dialog/Sheet overlay)
@@ -151,7 +151,7 @@ That fallback is deliberate and, where it matters, defensive: `Fab`'s size rules
 | BottomNavigation | The resting bar with one item selected | `showLabels={false}`, the selection animation |
 | Dialog | The open dialog with a header and footer | The `size="icon-sm"` close button shadcn draws in the corner |
 | Drawer | `anchor="right"`, with a header | The other three anchors, the `size="icon-sm"` close button |
-| Fab | The 56px default and `size="small"` | `size="medium"`, `variant="extended"` |
+| Fab | The circular 56px default, `size="small"`, and `variant="extended"` | `size="medium"` |
 | ImageList | The standard variant at a fixed column count | `variant="masonry"`, `"quilted"` and `"woven"`, `ImageListItemBar`, per-item row and column spans |
 | List | Plain items, items with an icon, items with a description | An icon and a description on the same item, which shifts the icon's alignment |
 | Rating | Read-only display at whole-number values | Hover preview, click to set, `precision` below 1, the `size` ladder |
