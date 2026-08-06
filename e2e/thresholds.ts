@@ -69,6 +69,23 @@ const maxPixelOverrides: Record<ThemeName, Record<string, number>> = {
     "button-primary": Number.POSITIVE_INFINITY,
     "button-destructive": Number.POSITIVE_INFINITY,
 
+    // dialog-open: rounded-corner antialiasing, and again ONLY the count is relaxed - the worst
+    // pixel here is Δ3 against a cap of 40.
+    //
+    // The panel is a 384x106 box with a 12px radius, and both sides land it on exactly the same
+    // pixel (measured: 384.000x106.000 at 528,447 on both), with the same fill, the same
+    // `0 0 0 1px` ring and the same two 3%-alpha shadow layers. What differs is a handful of
+    // pixels along each of the four corner CURVES, by one or two levels: reading the top-left
+    // corner's first row off both captures gives 220 220 220 221 229 239 242 246 250 253 against
+    // 220 220 220 220 230 238 242 246 249 254 - the same curve, with the coverage of a few
+    // partially covered pixels rounded the other way. Everything straight is byte-identical.
+    //
+    // Both panels are drawn into their own compositing layer (kumo centres with a translate, MUI
+    // mounts the paper inside a Fade), and matching kumo's centring mechanism exactly was tried
+    // and changed nothing, which is what places this with the other rasterization entries here
+    // rather than with a geometry bug.
+    "dialog-open": 200,
+
     // switch-checked: squircle-corner antialiasing, and ONLY the count is relaxed - the channel cap
     // stays at the default 40, which the worst pixel here (Δ10) is nowhere near.
     //

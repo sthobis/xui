@@ -214,7 +214,14 @@ async function inSrgb<T>(page: Page, value: T): Promise<T> {
 // without weakening the check for the pairs that do have one.
 const BACKDROP_SELECTOR: Record<ThemeName, { ref: string; mui: string }> = {
   shadcn: { ref: "[data-slot$='-overlay']", mui: ".MuiBackdrop-root:not(.MuiBackdrop-invisible)" },
-  kumo: { ref: "[data-base-ui-backdrop]", mui: ".MuiBackdrop-root:not(.MuiBackdrop-invisible)" },
+  // Base UI gives its backdrop no attribute of its own, so kumo's is identified structurally: the
+  // one presentation box that is both OPEN and hidden from assistive tech. Base UI's internal inert
+  // layer shares the role but carries no `data-open`, and a Select positioner carries `data-open`
+  // but is not aria-hidden.
+  kumo: {
+    ref: '[role="presentation"][data-open][aria-hidden="true"]',
+    mui: ".MuiBackdrop-root:not(.MuiBackdrop-invisible)",
+  },
 }
 
 test.describe("overlay-matches", () => {
@@ -245,6 +252,11 @@ test.describe("overlay-matches", () => {
         await expect(panel, `${id} (${side}): no panel appeared after opening`).toBeVisible({
           timeout: 5000,
         })
+        // Let the open transition finish before reading anything. Now that element opacity is
+        // folded into the scrim's colour, a measurement taken mid-fade reports whatever alpha the
+        // animation happened to be at - shadcn's overlay read back at 2/255 on one side and 0 on
+        // the other, purely from being sampled a frame apart.
+        await page.waitForTimeout(400)
         // The scrim is measured only if this overlay HAS one. A missing scrim is not asserted away
         // here, it is folded into the comparison as `null` - so a non-modal pair (tooltip, popover)
         // compares null against null and passes, while a modal pair that loses its scrim on one
@@ -256,7 +268,15 @@ test.describe("overlay-matches", () => {
                 const c = getComputedStyle(el)
                 const r = el.getBoundingClientRect()
                 return {
-                  backgroundColor: c.backgroundColor,
+                  // Element opacity is folded INTO the colour, because the two sides express the
+                  // same translucent layer differently and both spellings paint the same thing.
+                  // kumo writes `bg-kumo-recessed opacity-80`; the theme has to carry the alpha in
+                  // the colour, since MUI mounts every Backdrop inside a Fade that writes
+                  // `opacity: 1` inline once the transition ends and outranks any rule.
+                  backgroundColor:
+                    c.opacity === "1"
+                      ? c.backgroundColor
+                      : `color-mix(in srgb, ${c.backgroundColor} ${parseFloat(c.opacity) * 100}%, transparent)`,
                   backdropFilter: c.backdropFilter,
                   isolation: c.isolation,
                   box: `${Math.round(r.width)}x${Math.round(r.height)} @ ${Math.round(r.x)},${Math.round(r.y)}`,
