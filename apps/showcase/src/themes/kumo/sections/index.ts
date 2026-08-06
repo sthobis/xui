@@ -22,6 +22,7 @@ import { dropdownSection } from "./dropdown"
 import { selectSection } from "./select"
 import { popoverSection } from "./popover"
 import { dialogSection } from "./dialog"
+import { toastSection } from "./toast"
 
 // DELIBERATELY ABSENT, both from the gallery and from the theme - a component with no pair does
 // not ship, so neither MuiCircularProgress nor MuiSkeleton is themed:
@@ -38,10 +39,13 @@ import { dialogSection } from "./dialog"
 //                 buttons. MUI's Pagination renders numbered page buttons and its TablePagination
 //                 a rows-per-page select with a range readout - different components, not a
 //                 different skin, so there is nothing here a theme could reconcile.
+//   Toast's        stack is only partly reachable: a toast is paired title-only, because kumo
+//   description   always renders a title AND a description node and MUI's SnackbarContent has one
+//                 opaque `message` slot. The shadcn snackbar pair is scoped the same way.
 //   Loader        is a hand-rolled SVG animated with SMIL (<animateTransform> plus two <animate>
 //                 elements driving stroke-dasharray/dashoffset), over a second static ring at 10%
 //                 opacity. Playwright's `animations: "disabled"` freezes CSS animations but not
 //                 SMIL, so a captured frame has no stable phase and a pixel pair could not be
 //                 meaningful. MUI's CircularProgress also has no track ring to pair against.
 //
-export const sections: Section[] = [buttonSection, textSection, labelSection, linkSection, inputSection, checkboxSection, switchSection, radioSection, badgeSection, bannerSection, meterSection, layerCardSection, tabsSection, collapsibleSection, tableSection, breadcrumbsSection, toolbarSection, inputGroupSection, tooltipSection, dropdownSection, selectSection, popoverSection, dialogSection]
+export const sections: Section[] = [buttonSection, textSection, labelSection, linkSection, inputSection, checkboxSection, switchSection, radioSection, badgeSection, bannerSection, meterSection, layerCardSection, tabsSection, collapsibleSection, tableSection, breadcrumbsSection, toolbarSection, inputGroupSection, tooltipSection, dropdownSection, selectSection, popoverSection, dialogSection, toastSection]

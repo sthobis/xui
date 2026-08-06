@@ -1982,6 +1982,102 @@ export const kumoTheme = createTheme({
       },
     },
 
+    // ---- Toast ----
+    //
+    // kumo: dist/chunks/toast-itl6qo5oy1vy6d36.js
+    //   viewport   fixed top-auto right-4 bottom-4 sm:right-8 sm:bottom-8 w-[340px]
+    //   root       absolute right-0 bottom-0 w-full  +  toastVariants:
+    //              rounded-xl ring ring-kumo-line bg-clip-padding p-4 shadow-lg
+    //   surface    a SEPARATE layer inside it - `absolute inset-0 rounded-[11px] bg-kumo-base/90` -
+    //              so the fill is inset by the ring's width and sits at 90% alpha over the root
+    //   title      text-[0.975rem] leading-5 font-medium text-kumo-default
+    //   close      absolute top-2 right-2 size-5 rounded text-kumo-subtle, holding a 12px glyph
+    MuiSnackbar: {
+      defaultProps: {
+        // kumo pins its viewport 32px from the bottom-right corner (`sm:right-8 sm:bottom-8`);
+        // MUI's own default is bottom-centre at 24px.
+        anchorOrigin: { vertical: "bottom", horizontal: "right" },
+      },
+      styleOverrides: {
+        // `&&` doubles the selector's specificity on purpose: MUI states its own 24px offsets
+        // inside an `@media (min-width: 600px)` block, and a plain root rule loses to it.
+        root: {
+          "&&": {
+            bottom: "32px", // kumo: sm:bottom-8
+            right: "32px", // kumo: sm:right-8
+            left: "auto",
+          },
+        },
+      },
+    },
+    MuiSnackbarContent: {
+      styleOverrides: {
+        root: ({ theme }) => {
+          const k = theme.vars.palette.kumo
+          return {
+            position: "relative",
+            width: "340px", // kumo: the viewport's own w-[340px], which the toast fills
+            minWidth: 0, // MUI floors its content at 288px
+            padding: "16px", // kumo: p-4
+            borderRadius: "12px", // kumo: rounded-xl
+            backgroundColor: k.base,
+            backgroundImage: "none",
+            color: k.textDefault,
+            boxShadow: `0 0 0 1px ${k.line}, ${SHADOW_LG}`, // kumo: ring ring-kumo-line + shadow-lg
+            // kumo paints the fill as its own layer rather than as the root's background: inset to
+            // the ring, one pixel tighter in radius, and at 90% alpha. A pseudo-element is the only
+            // way to reach it - SnackbarContent renders no such node - and it is the same technique
+            // the Button's gradient and the Popover's arrow already use.
+            "&::before": {
+              content: '""',
+              position: "absolute",
+              inset: 0,
+              borderRadius: "11px", // kumo: rounded-[11px]
+              backgroundColor: `color-mix(in oklab, ${k.base} 90%, transparent)`, // kumo: bg-kumo-base/90
+            },
+          }
+        },
+        message: {
+          // kumo's title, which is the only content this pair carries - see the section for why a
+          // description cannot be expressed through MUI's single `message` slot.
+          position: "relative", // above the fill layer
+          padding: 0, // MUI pads the message by 8px vertically
+          fontFamily: FONT_SANS,
+          fontSize: "0.975rem", // kumo: text-[0.975rem]
+          lineHeight: "20px", // kumo: leading-5
+          fontWeight: 500, // kumo: font-medium
+          letterSpacing: "normal",
+        },
+        action: ({ theme }) => {
+          const k = theme.vars.palette.kumo
+          return {
+            // kumo's close button is pinned to the corner rather than laid out beside the message.
+            position: "absolute",
+            top: "8px", // kumo: top-2
+            right: "8px", // kumo: right-2
+            margin: 0,
+            padding: 0,
+            // kumo: `absolute top-2 right-2 size-5 rounded text-kumo-subtle hover:bg-current/15`
+            // over a ghost square Button, holding an `h-3 w-3` glyph. Scoped to this slot so the
+            // theme's own IconButton block, which mirrors kumo's IconButton, is left alone.
+            "& .MuiIconButton-root": {
+              // kumo's close is the GHOST variant - `shadow-none bg-inherit` - where the theme's
+              // own IconButton block gives every icon button kumo's default surface, ring and all.
+              backgroundColor: "transparent",
+              boxShadow: "none",
+              width: "20px", // kumo: size-5
+              height: "20px",
+              padding: 0,
+              borderRadius: "4px", // kumo: rounded
+              color: k.textSubtle, // kumo: text-kumo-subtle
+              "&:hover": { backgroundColor: "color-mix(in oklab, currentColor 15%, transparent)" }, // kumo: hover:bg-current/15
+              "& svg": { width: "12px", height: "12px" }, // kumo: h-3 w-3
+            },
+          }
+        },
+      },
+    },
+
     // ---- Dialog ----
     //
     // kumo: dist/chunks/dialog-b4r3dv8uvgl2pqem.js

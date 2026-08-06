@@ -6,7 +6,7 @@ The bar is literal: a regular eye must not be able to tell a themed MUI componen
 Two themes ship today:
 
 - **shadcn** - shadcn/ui's default look (new-york style, neutral base, Geist, light and dark). Complete.
-- **kumo** - Kumo, Cloudflare's design system (https://kumo-ui.com), Inter, light and dark. Every non-portalled primitive is complete, plus Tooltip; the rest of the portalled tier is in progress.
+- **kumo** - Kumo, Cloudflare's design system (https://kumo-ui.com), Inter, light and dark. Complete, including the portalled tier (Tooltip, DropdownMenu, Select, Popover, Dialog, Toast).
 
 Everything below applies to both. Where they differ, the theme name is called out.
 
@@ -117,6 +117,14 @@ Popper places an overlay differently from Floating UI, and both differences are 
 
 - Popper's default "adaptive" mode splits the position between a `bottom` offset and a transform and rounds only the transform half, so the overlay lands a fraction of a pixel off Floating UI's device-grid-rounded position. `popperOptions: { modifiers: [{ name: "computeStyles", options: { adaptive: false } }] }` makes both round the same way.
 - Popper centres an ARROW with an inline `translate3d`, which promotes it to its own compositing layer; a design system that places its arrow with plain `left` draws it in the parent's raster instead, and an arrow that is not symmetric about its own centre then lands a device pixel off. Popper's `gpuAcceleration: false` fixes the arrow but drags the popup off the grid; a `beforeWrite` modifier that rewrites `state.styles.arrow` to `left`/`top` fixes only the arrow (see `ARROW_BY_LAYOUT` in the kumo theme).
+
+MUI renders Menu, Select and Popover inside a Modal whose invisible backdrop covers the trigger and suppresses its `:hover`, while Base UI deliberately leaves a trigger live so a second click closes the overlay.
+The harness opens an overlay by clicking, so the pointer is still on the trigger - and the `anchored` capture frames the trigger too, which means those pairs compare hover states rather than placement (measured on kumo's dropdown: 12478 pixels, every one of them trigger fill).
+No theme can reconcile that, so such a pair drops `anchored` and declares `anchored-to-trigger` instead, which measures where the overlay opens relative to its trigger without putting the trigger in the picture.
+A pair that needs `anchored` anyway - kumo's popover, whose arrow hangs outside every other capture - uses an unstyled trigger so there is no hover to differ.
+
+Popper and MUI's Popover round an overlay's position to different grids than Floating UI does (`Math.round` to whole CSS pixels against the device grid), so an overlay anchored to a trigger at a fractional position lands half a pixel out.
+`applyState` snaps a cell onto whole pixels before opening for this reason; a pair whose own dimensions are odd can still land on a half pixel, and kumo's Select does - see its section for why that pair has no pixel state at all.
 
 Decoration painted OUTSIDE an overlay's border box - an outline band, a shadow's reach - is what the `overlay-matches` behavior exists for; the `open` capture clips at that box and the `anchored` capture's union box is only the overlay's and the trigger's.
 That check compares colours in sRGB, because `getComputedStyle` preserves the space a value was authored in and Tailwind routes every shadow colour through an `oklab` `color-mix` - the same colour, spelled two ways.
