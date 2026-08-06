@@ -298,6 +298,67 @@ test.describe("overlay-matches", () => {
   })
 })
 
+test.describe("anchored-to-trigger", () => {
+  // The numeric equivalent of the "anchored" pixel state: it proves an overlay opens on the same
+  // side of its trigger, at the same distance, at the same size - without putting the trigger in
+  // the picture.
+  //
+  // That distinction is what this exists for. The "anchored" capture frames the trigger and the
+  // overlay together, so it also compares the TRIGGER, and for some pairs the trigger legitimately
+  // looks different while the overlay is open: the harness opens an overlay by clicking, which
+  // leaves the pointer on the trigger, and MUI renders Menu/Select/Popover inside a Modal whose
+  // invisible backdrop covers the trigger and suppresses its `:hover`, while Base UI deliberately
+  // keeps a menu trigger live so a second click closes the menu. Measured on kumo's dropdown: the
+  // panels matched exactly and the pair still reported 12478 differing pixels, every one of them
+  // the trigger's own hover fill. No theme can reconcile that - it is Modal versus non-modal
+  // behavior - so those pairs prove placement here and leave the trigger to its own pairs.
+  //
+  // Distances are relative to the trigger, because the two cells sit at unrelated absolute
+  // positions. Sub-pixel differences survive: this catches the half-pixel divergence between
+  // Popper's rounding and Floating UI's that the pixel diff needs a capture to see.
+  test("each tagged pair's overlay opens at the same offset from its trigger", async ({ page }) => {
+    const pairs = (await discover(page)).filter((p) => p.behaviors.includes("anchored-to-trigger"))
+    skipIfNothingToCheck(pairs.length, "anchored-to-trigger")
+
+    for (const { id } of pairs) {
+      const row = page.locator(`[data-pair-id="${id}"]`)
+      await row.scrollIntoViewIfNeeded()
+      const measured: Record<string, unknown> = {}
+      for (const side of ["ref", "mui"] as const) {
+        const cell = row.locator(`[data-side="${side}"]`)
+        const trigger = cell.locator("[data-target]").first()
+        await trigger.click()
+        const overlay = await openContentLocator(page, cell, id)
+        await expect(overlay, `${id} (${side}): no overlay appeared after opening`).toBeVisible({
+          timeout: 5000,
+        })
+        // Both libraries open an overlay with a scale/opacity transition, and a box measured while
+        // one is still running is the INTERPOLATED box - a 144px panel reports 108px a frame in.
+        // Same 300ms settle the pixel harness's own applyState waits out.
+        await page.waitForTimeout(400)
+        const [triggerBox, overlayBox] = await Promise.all([trigger.boundingBox(), overlay.boundingBox()])
+        if (!triggerBox || !overlayBox) throw new Error(`${id} (${side}): missing bounding box`)
+        const round = (n: number) => Math.round(n * 1000) / 1000
+        measured[side] = {
+          size: `${round(overlayBox.width)}x${round(overlayBox.height)}`,
+          fromTriggerLeft: round(overlayBox.x - triggerBox.x),
+          fromTriggerTop: round(overlayBox.y - triggerBox.y),
+          // The gap on the side the overlay actually opens on, stated as its own number so a
+          // failure reads as "8px became 4px" rather than as a pair of coordinates.
+          gapBelow: round(overlayBox.y - (triggerBox.y + triggerBox.height)),
+          gapAbove: round(triggerBox.y - (overlayBox.y + overlayBox.height)),
+        }
+        await resetState(page)
+      }
+      expect(
+        measured.mui,
+        `${id}: the MUI overlay is not anchored the way the reference one is\n` +
+          `  ref: ${JSON.stringify(measured.ref)}\n  mui:    ${JSON.stringify(measured.mui)}`,
+      ).toEqual(measured.ref)
+    }
+  })
+})
+
 test.describe("item-hover-highlights", () => {
   // Hovering an item inside an open overlay is invisible to the pixel harness: its "open" state
   // parks the mouse on the trigger and screenshots the panel, so no item is ever under the pointer.

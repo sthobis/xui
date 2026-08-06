@@ -479,6 +479,15 @@ export type KumoThemeWithVars = Theme & CssVarsTheme
 /** kumo: Tailwind's `shadow-xs`, which the button's base classes apply to every variant but ghost. */
 const SHADOW_XS = "0 1px 2px 0 rgb(0 0 0 / 0.05)"
 
+/**
+ * kumo: Tailwind's `shadow-lg`, which every kumo overlay wears.
+ *
+ * Its colour is Tailwind's own default black/10 and does NOT change with the colour scheme - only
+ * the components that pass a `shadow-<color>` class (Tooltip and Popover, via `shadow-kumo-tip-
+ * shadow`) replace it, and those spell their own shadow out rather than using this.
+ */
+const SHADOW_LG = "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)"
+
 type KumoButtonSize = "xsmall" | "small" | "medium" | "large"
 
 /** kumo: the four size rows of KUMO_BUTTON_VARIANTS.size, resolved against Kumo's own type scale. */
@@ -1943,6 +1952,95 @@ export const kumoTheme = createTheme({
           '&[data-popper-placement*="right"] [data-kumo-arrow="rotor"]': {
             rotate: "-90deg", // kumo: data-[side=right]:-rotate-90
           },
+        },
+      },
+    },
+
+    // ---- DropdownMenu ----
+    //
+    // kumo: dist/chunks/dropdown-k0y5j6iuad7tvqgx.js
+    //   positioner  sideOffset: 8, side "bottom", align "center" (Base UI's own defaults)
+    //   popup       overflow-hidden bg-kumo-control text-kumo-default
+    //               max-h-[var(--available-height)] overflow-y-auto
+    //               rounded-lg shadow-lg ring ring-kumo-line  min-w-36 p-1.5
+    //   item        relative flex cursor-default items-center rounded-md px-2 py-1.5 text-base
+    //               outline-hidden select-none focus:text-kumo-default
+    //               data-disabled:opacity-50 data-highlighted:bg-kumo-overlay
+    //
+    // MUI builds a Menu out of Popover + Paper + MenuList, and reuses the same three for a Select's
+    // popup - where kumo uses a DIFFERENT recipe (see the Select block below). The two are split
+    // the way the shadcn theme already splits them, on the role MUI puts on the list inside:
+    // `menu` here, `listbox` there. Everything they genuinely share sits outside both branches.
+    MuiMenu: {
+      defaultProps: {
+        // kumo: the popup's top-CENTRE sits 8px below the trigger's bottom-centre. MUI's Menu
+        // instead defaults to top-left-on-top-left, overlapping the trigger entirely. The gap
+        // rides on a negative `transformOrigin.vertical`, which Popover treats as a numeric offset
+        // (its own getOffsetTop), rather than on a margin - the same technique the shadcn theme
+        // uses, and the only one that survives Popover writing `top`/`left` as inline styles.
+        anchorOrigin: { vertical: "bottom", horizontal: "center" },
+        transformOrigin: { vertical: -8, horizontal: "center" },
+        // Base UI keeps 5px of viewport padding where MUI's Popover reserves 16px and nudges the
+        // panel up to respect it, so near a viewport edge the two disagree about placement rather
+        // than about styling.
+        marginThreshold: 5,
+      },
+      styleOverrides: {
+        paper: ({ theme }) => {
+          const k = theme.vars.palette.kumo
+          return {
+            borderRadius: "8px", // kumo: rounded-lg
+            color: k.textDefault, // kumo: text-kumo-default
+            // MUI's Paper lays an unthemed white gradient over its own background in dark mode,
+            // scaled by `elevation` (Menu's Paper defaults to 8). Kumo's popup is one flat colour.
+            backgroundImage: "none",
+            "&:has([role='menu'])": {
+              backgroundColor: k.control, // kumo: bg-kumo-control - NOT bg-kumo-base, which is what Select's popup uses
+              boxShadow: `0 0 0 1px ${k.line}, ${SHADOW_LG}`, // kumo: ring ring-kumo-line + shadow-lg
+              minWidth: "144px", // kumo: min-w-36
+              padding: "6px", // kumo: p-1.5
+              overflowX: "hidden" as const, // kumo: overflow-hidden
+              overflowY: "auto" as const, // kumo: overflow-y-auto
+            },
+          }
+        },
+        list: {
+          padding: 0, // kumo: the popup owns the padding; the list inside adds none
+        },
+      },
+    },
+
+    // ---- DropdownMenu items ----
+    //
+    // Scoped by the role of the list they sit in, for the same reason the paper above is: MUI's
+    // MenuItem is also a Select's option, and kumo styles those two differently (a select option
+    // has side margins and a tint highlight; a menu item has neither).
+    MuiMenuItem: {
+      styleOverrides: {
+        root: ({ theme }) => {
+          const k = theme.vars.palette.kumo
+          return {
+            "[role='menu'] &": {
+              ...TEXT_BASE, // kumo: text-base (14px)
+              fontFamily: FONT_SANS,
+              letterSpacing: "normal",
+              color: k.textDefault,
+              borderRadius: "6px", // kumo: rounded-md
+              padding: "6px 8px", // kumo: py-1.5 px-2
+              minHeight: 0, // MUI floors a menu item at 48px (36px on a dense list); kumo sizes from content
+              cursor: "default", // kumo: cursor-default
+              // kumo: data-highlighted:bg-kumo-overlay. Base UI sets data-highlighted on pointer
+              // move, so this is what a hovered item paints - MUI reaches the same state through
+              // :hover and .Mui-focusVisible, and its own default is an alpha-blended action tint.
+              "&:hover, &.Mui-focusVisible, &.Mui-selected, &.Mui-selected:hover": {
+                backgroundColor: k.overlay,
+              },
+              "&.Mui-disabled": {
+                opacity: 0.5, // kumo: data-disabled:opacity-50
+                pointerEvents: "none" as const, // kumo: data-disabled:pointer-events-none
+              },
+            },
+          }
         },
       },
     },
