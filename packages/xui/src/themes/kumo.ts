@@ -488,6 +488,21 @@ const SHADOW_XS = "0 1px 2px 0 rgb(0 0 0 / 0.05)"
  */
 const SHADOW_LG = "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)"
 
+/**
+ * kumo: the three paths of the 20x10 arrow SVG that Tooltip and Popover both render, copied
+ * verbatim from either component's own ArrowSvg.
+ *
+ * Three rather than one because the outer and inner strokes have different geometry, so the arrow's
+ * border can meet the popup's outline correctly in both schemes; only one of the two is ever
+ * opaque, since `tip-stroke` is transparent in light and `tip-shadow` is transparent in dark.
+ */
+const ARROW_FILL_PATH =
+  "M9.66437 2.60207L4.80758 6.97318C4.07308 7.63423 3.11989 8 2.13172 8H0V10H20V8H18.5349C17.5468 8 16.5936 7.63423 15.8591 6.97318L11.0023 2.60207C10.622 2.2598 10.0447 2.25979 9.66437 2.60207Z"
+const ARROW_OUTER_STROKE_PATH =
+  "M8.99542 1.85876C9.75604 1.17425 10.9106 1.17422 11.6713 1.85878L16.5281 6.22989C17.0789 6.72568 17.7938 7.00001 18.5349 7.00001L15.89 7L11.0023 2.60207C10.622 2.2598 10.0447 2.2598 9.66436 2.60207L4.77734 7L2.13171 7.00001C2.87284 7.00001 3.58774 6.72568 4.13861 6.22989L8.99542 1.85876Z"
+const ARROW_INNER_STROKE_PATH =
+  "M10.3333 3.34539L5.47654 7.71648C4.55842 8.54279 3.36693 9 2.13172 9H0V8H2.13172C3.11989 8 4.07308 7.63423 4.80758 6.97318L9.66437 2.60207C10.0447 2.25979 10.622 2.2598 11.0023 2.60207L15.8591 6.97318C16.5936 7.63423 17.5468 8 18.5349 8H20V9H18.5349C17.2998 9 16.1083 8.54278 15.1901 7.71648L10.3333 3.34539Z"
+
 type KumoButtonSize = "xsmall" | "small" | "medium" | "large"
 
 /** kumo: the four size rows of KUMO_BUTTON_VARIANTS.size, resolved against Kumo's own type scale. */
@@ -1848,21 +1863,9 @@ export const kumoTheme = createTheme({
               createElement(
                 "svg",
                 { width: "20", height: "10", viewBox: "0 0 20 10", fill: "none", "aria-hidden": true },
-                createElement("path", {
-                  key: "fill",
-                  "data-kumo-arrow": "fill",
-                  d: "M9.66437 2.60207L4.80758 6.97318C4.07308 7.63423 3.11989 8 2.13172 8H0V10H20V8H18.5349C17.5468 8 16.5936 7.63423 15.8591 6.97318L11.0023 2.60207C10.622 2.2598 10.0447 2.25979 9.66437 2.60207Z",
-                }),
-                createElement("path", {
-                  key: "shadow",
-                  "data-kumo-arrow": "shadow",
-                  d: "M8.99542 1.85876C9.75604 1.17425 10.9106 1.17422 11.6713 1.85878L16.5281 6.22989C17.0789 6.72568 17.7938 7.00001 18.5349 7.00001L15.89 7L11.0023 2.60207C10.622 2.2598 10.0447 2.2598 9.66436 2.60207L4.77734 7L2.13171 7.00001C2.87284 7.00001 3.58774 6.72568 4.13861 6.22989L8.99542 1.85876Z",
-                }),
-                createElement("path", {
-                  key: "stroke",
-                  "data-kumo-arrow": "stroke",
-                  d: "M10.3333 3.34539L5.47654 7.71648C4.55842 8.54279 3.36693 9 2.13172 9H0V8H2.13172C3.11989 8 4.07308 7.63423 4.80758 6.97318L9.66437 2.60207C10.0447 2.25979 10.622 2.2598 11.0023 2.60207L15.8591 6.97318C16.5936 7.63423 17.5468 8 18.5349 8H20V9H18.5349C17.2998 9 16.1083 8.54278 15.1901 7.71648L10.3333 3.34539Z",
-                }),
+                createElement("path", { key: "fill", "data-kumo-arrow": "fill", d: ARROW_FILL_PATH }),
+                createElement("path", { key: "shadow", "data-kumo-arrow": "shadow", d: ARROW_OUTER_STROKE_PATH }),
+                createElement("path", { key: "stroke", "data-kumo-arrow": "stroke", d: ARROW_INNER_STROKE_PATH }),
               ),
             ),
           },
@@ -1975,6 +1978,88 @@ export const kumoTheme = createTheme({
           '&[data-popper-placement*="right"] [data-kumo-arrow="rotor"]': {
             rotate: "-90deg", // kumo: data-[side=right]:-rotate-90
           },
+        },
+      },
+    },
+
+    // ---- Popover ----
+    //
+    // kumo: dist/chunks/popover-l0xg7b854w7txyoz.js
+    //   positioner  side "bottom", align "center", sideOffset 8
+    //   popup       flex origin-(--transform-origin) flex-col rounded-lg bg-kumo-base px-4 py-3
+    //               text-sm text-kumo-default shadow-lg shadow-kumo-tip-shadow
+    //               outline outline-kumo-fill  ... kumo-popover-popup
+    //   arrow       the SAME 20x10 three-path SVG the Tooltip uses, `data-[side=bottom]:-top-2`
+    //
+    // MUI's Popover has no arrow slot at all - not a styling gap but a missing element - so this is
+    // the one place in the theme where a shape is drawn rather than rendered. Two pseudo-elements
+    // on the Paper carry the arrow's two VISIBLE paths (`clip-path: path()` takes the SVG's own `d`
+    // verbatim), which is enough because only two of kumo's three paths are ever opaque at once:
+    // tip-stroke is transparent in light, tip-shadow is transparent in dark. Measured against the
+    // real SVG in isolation, a clipped box and a filled path differ by 27 pixels at Δ1 - the
+    // rasterizers agree to within a rounding step.
+    MuiPopover: {
+      defaultProps: {
+        // kumo: the popup's top-CENTRE sits 8px below the trigger's bottom-centre. The gap rides on
+        // a negative transformOrigin, which Popover treats as a numeric offset - see the MuiMenu
+        // block for why a margin cannot do this.
+        anchorOrigin: { vertical: "bottom", horizontal: "center" },
+        transformOrigin: { vertical: -8, horizontal: "center" },
+        marginThreshold: 5, // Base UI's own viewport padding; MUI reserves 16 and shifts to respect it
+      },
+      styleOverrides: {
+        // Scoped away from Menu and Select, which are Popovers too and have their own recipes
+        // (see MuiMenu). Without this, styling "the popover" restyles every dropdown in the theme.
+        paper: ({ theme }) => {
+          const k = theme.vars.palette.kumo
+          return {
+            "&:not(.MuiMenu-paper)": {
+              display: "flex",
+              flexDirection: "column" as const, // kumo: flex flex-col
+              ...TEXT_SM, // kumo: text-sm (13px)
+              fontFamily: FONT_SANS,
+              letterSpacing: "normal",
+              color: k.textDefault, // kumo: text-kumo-default
+              backgroundColor: k.base, // kumo: bg-kumo-base
+              backgroundImage: "none", // MUI's Paper lays a white gradient over an elevated dark surface
+              borderRadius: "8px", // kumo: rounded-lg
+              padding: "12px 16px", // kumo: py-3 px-4
+              outline: `1px solid ${k.fill}`, // kumo: outline outline-kumo-fill
+              // kumo: dist/styles/kumo-binding.css pulls the popover's outline inward in dark mode
+              // only, exactly as it does the tooltip's - the class string mentions neither.
+              ...theme.applyStyles("dark", { outlineOffset: "-1px" }),
+              boxShadow: `0 10px 15px -3px ${k.tipShadow}, 0 4px 6px -4px ${k.tipShadow}`, // kumo: shadow-lg shadow-kumo-tip-shadow
+              // The arrow hangs 8px above the paper's own box, so the paper must not clip it - MUI
+              // gives every Popover paper `overflow-y: auto`.
+              overflow: "visible",
+              "&::before, &::after": {
+                content: '""',
+                position: "absolute",
+                top: "-8px", // kumo: data-[side=bottom]:-top-2
+                left: "50%",
+                marginLeft: "-10px", // half the arrow's 20px width - kumo's arrow is centre-aligned
+                width: "20px",
+                height: "10px",
+              },
+              // The body of the arrow, in the popup's own colour.
+              "&::before": {
+                backgroundColor: k.base,
+                clipPath: `path('${ARROW_FILL_PATH}')`,
+              },
+              // Its border. kumo draws this with two paths of different geometry and lets the
+              // colour tokens decide which one is visible, because an outer stroke and an inner
+              // stroke meet the popup's outline differently. Only one is ever opaque, so one
+              // pseudo-element carries whichever it is.
+              "&::after": {
+                backgroundColor: k.tipShadow,
+                clipPath: `path('${ARROW_OUTER_STROKE_PATH}')`,
+                ...theme.applyStyles("dark", {
+                  backgroundColor: k.tipStroke,
+                  clipPath: `path('${ARROW_INNER_STROKE_PATH}')`,
+                }),
+              },
+            },
+          }
         },
       },
     },
