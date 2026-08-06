@@ -61,6 +61,14 @@ export async function applyState(page: Page, cell: Locator, state: PairState, pa
   } else if (state === "focus") {
     await focusVisible(target)
   } else if (state === "open" || state === "anchored") {
+    // Snap the CELL onto whole pixels BEFORE opening, so the trigger the overlay is measured
+    // against sits at a deterministic position. Both positioning engines round, but to different
+    // grids - Floating UI to the device grid (half a CSS pixel here), MUI's Popover to whole CSS
+    // pixels with Math.round - so when the trigger sits at a fraction the two round the same
+    // intention to different places. Measured on kumo's popover: an 8px gap became 8.125 on one
+    // side and 7.625 on the other, and the anchored capture ghosted every glyph. From an integral
+    // trigger both engines land on the same pixel. Undone by resetState's clearPixelSnap.
+    await snapToPixelGrid(cell)
     await target.click()
     await expect(await openContentLocator(page, cell, pairId)).toBeVisible({ timeout: 5000 })
   } else if (state === "active") {

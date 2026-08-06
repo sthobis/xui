@@ -20,6 +20,7 @@ import { inputGroupSection } from "./input-group"
 import { tooltipSection } from "./tooltip"
 import { dropdownSection } from "./dropdown"
 import { selectSection } from "./select"
+import { popoverSection } from "./popover"
 
 // DELIBERATELY ABSENT, both from the gallery and from the theme - a component with no pair does
 // not ship, so neither MuiCircularProgress nor MuiSkeleton is themed:
@@ -42,4 +43,4 @@ import { selectSection } from "./select"
 //                 SMIL, so a captured frame has no stable phase and a pixel pair could not be
 //                 meaningful. MUI's CircularProgress also has no track ring to pair against.
 //
-export const sections: Section[] = [buttonSection, textSection, labelSection, linkSection, inputSection, checkboxSection, switchSection, radioSection, badgeSection, bannerSection, meterSection, layerCardSection, tabsSection, collapsibleSection, tableSection, breadcrumbsSection, toolbarSection, inputGroupSection, tooltipSection, dropdownSection, selectSection]
+export const sections: Section[] = [buttonSection, textSection, labelSection, linkSection, inputSection, checkboxSection, switchSection, radioSection, badgeSection, bannerSection, meterSection, layerCardSection, tabsSection, collapsibleSection, tableSection, breadcrumbsSection, toolbarSection, inputGroupSection, tooltipSection, dropdownSection, selectSection, popoverSection]
