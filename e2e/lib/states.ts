@@ -119,6 +119,7 @@ export async function normalizeOverlayPosition(target: Locator): Promise<void> {
     const rect = node.getBoundingClientRect()
     const dx = Math.round(rect.left) - rect.left
     const dy = Math.round(rect.top) - rect.top
+
     if (dx === 0 && dy === 0) return
 
     // Compose against the COMPUTED transform, not the inline one. Radix and MUI both write their
@@ -136,6 +137,19 @@ export async function normalizeOverlayPosition(target: Locator): Promise<void> {
     // remainder, so it cannot mask a real difference either way.
     // `transform: none` cannot be combined with a translate() in the same value list (`none` must
     // be the sole value), so treat "none"/unset the same as "no existing transform to preserve".
+    //
+    // KNOWN LIMIT, and the reason kumo's Select has no `open` pixel state: a transform moves an
+    // already-rasterized subtree rather than re-laying it out, and it promotes the overlay to its
+    // own compositing layer, where Chrome draws text with grayscale rather than subpixel
+    // antialiasing. When both sides need the same nudge that cancels out exactly; when only one
+    // side needs a nudge at all, every glyph in it is drawn differently. Two other implementations
+    // were measured and are worse: a MARGIN re-lays-out correctly but changes the element's outer
+    // size, which Base UI's and Floating UI's ResizeObservers feed straight back into positioning
+    // (kumo's tooltip landed a device pixel out by capture time); writing `top`/`left` leaves the
+    // size alone and fixed kumo's Select and dropdown outright, but cost the shadcn tooltip 535
+    // pixels at Δ241, so it is not a safe swap either. Matching the two sides' sub-pixel PHASE to
+    // each other, instead of forcing both onto whole pixels, is the design that would fix all
+    // three, and it needs the capture order to carry the first side's fraction to the second.
     const existing = getComputedStyle(node).transform
     const base = existing && existing !== "none" ? `${existing} ` : ""
     node.style.setProperty("transform", `${base}translate(${dx}px, ${dy}px)`, "important")
