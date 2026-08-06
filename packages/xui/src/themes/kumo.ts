@@ -1982,6 +1982,88 @@ export const kumoTheme = createTheme({
       },
     },
 
+    // ---- Dialog ----
+    //
+    // kumo: dist/chunks/dialog-b4r3dv8uvgl2pqem.js
+    //   backdrop  fixed inset-0 bg-kumo-recessed opacity-80 transition-all duration-150
+    //   panel     LayerCard rendered AS Base UI's DialogPopup, so it carries LayerCard's
+    //             `overflow-hidden rounded-lg bg-kumo-base shadow-xs ring ring-kumo-line` plus
+    //             dialogVariants' `ring ring-kumo-line fixed top-1/2 left-1/2 w-full
+    //             max-w-[calc(100vw-2rem)] -translate-x-1/2 -translate-y-1/2 overflow-hidden
+    //             rounded-xl bg-kumo-base text-kumo-default` and the base size's `sm:w-96`,
+    //             over an INLINE `--tw-shadow` of `0 20px 25px -5px rgb(0 0 0 / 0.03),
+    //             0 8px 10px -6px rgb(0 0 0 / 0.03)` that replaces both shadow classes.
+    //   title     Base UI's DialogTitle with NO classes at all, and the same for Description -
+    //             kumo ships no typography here, so a themed MuiDialogTitle has to give its own
+    //             back rather than keep MUI's h6-and-padding.
+    MuiDialog: {
+      styleOverrides: {
+        paper: ({ theme }) => {
+          const k = theme.vars.palette.kumo
+          return {
+            width: "384px", // kumo: sm:w-96
+            maxWidth: "calc(100vw - 2rem)", // kumo: max-w-[calc(100vw-2rem)]
+            margin: 0, // MUI insets its paper by 32px; kumo centres a fixed-width panel instead
+            // kumo: `fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2`. MUI centres its
+            // paper with flexbox on the container instead, and the two land on the same pixel but
+            // do not RASTERIZE the same: a translated box is drawn into its own compositing layer,
+            // where the rounded corners are antialiased slightly differently (106 pixels at Δ2,
+            // all of them corner curve). Same mechanism, same picture.
+            position: "fixed",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            borderRadius: "12px", // kumo: rounded-xl (which beats LayerCard's own rounded-lg)
+            backgroundColor: k.base, // kumo: bg-kumo-base
+            backgroundImage: "none", // MUI's Paper lays a white gradient over an elevated dark surface
+            color: k.textDefault, // kumo: text-kumo-default
+            overflow: "hidden", // kumo: overflow-hidden
+            // kumo: ring ring-kumo-line over the INLINE --tw-shadow, which replaces the shadow-xs
+            // LayerCard would otherwise contribute.
+            boxShadow: `0 0 0 1px ${k.line}, 0 20px 25px -5px rgb(0 0 0 / 0.03), 0 8px 10px -6px rgb(0 0 0 / 0.03)`,
+          }
+        },
+      },
+    },
+    MuiBackdrop: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          // kumo writes this as `bg-kumo-recessed opacity-80` - two declarations - but the alpha
+          // has to be folded into the COLOUR here. MUI mounts every Backdrop inside a Fade, which
+          // writes `opacity: 1` as an inline style once the transition finishes, and an inline
+          // declaration outranks any rule the theme can write. A flat layer at 80% opacity and one
+          // whose colour carries 80% alpha composite identically.
+          backgroundColor: `color-mix(in oklab, ${theme.vars.palette.kumo.recessed} 80%, transparent)`,
+          "&.MuiBackdrop-invisible": { backgroundColor: "transparent" },
+        }),
+      },
+    },
+    MuiDialogTitle: {
+      styleOverrides: {
+        root: {
+          // kumo renders its Dialog.Title with no classes, so it inherits the surface's own type.
+          // MUI's own default is h6 with 16px 24px of padding.
+          ...TEXT_BASE,
+          fontFamily: FONT_SANS,
+          fontWeight: 400,
+          letterSpacing: "normal",
+          padding: 0,
+        },
+      },
+    },
+    MuiDialogContentText: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          // Same story as the title: unstyled in kumo, so the theme states the inherited values
+          // rather than leaving MUI's secondary-text default in place.
+          ...TEXT_BASE,
+          fontFamily: FONT_SANS,
+          letterSpacing: "normal",
+          color: theme.vars.palette.kumo.textDefault,
+        }),
+      },
+    },
+
     // ---- Popover ----
     //
     // kumo: dist/chunks/popover-l0xg7b854w7txyoz.js
