@@ -104,7 +104,13 @@ test("all pairs match within threshold", async ({ page }, testInfo) => {
   const allPairs: Array<{ id: string; states: PairState[] }> = await page.evaluate(() =>
     Array.from(document.querySelectorAll("[data-pair-id]")).map((el) => ({
       id: el.getAttribute("data-pair-id")!,
-      states: (el.getAttribute("data-states") ?? "default").split(",") as PairState[],
+      // `states: []` is a legitimate declaration, not a mistake: a pair can exist to be judged by
+      // e2e/behavior.spec.ts alone when the pixel harness structurally cannot compare it (kumo's
+      // Select popup - see its section for the measurements). Filtering the empty string keeps that
+      // from being read as one state named "".
+      states: (el.getAttribute("data-states") ?? "default")
+        .split(",")
+        .filter(Boolean) as PairState[],
     })),
   )
   expect(allPairs.length).toBeGreaterThan(0)

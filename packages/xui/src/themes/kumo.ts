@@ -990,6 +990,29 @@ export const kumoTheme = createTheme({
             padding: 0, // the padding belongs to the control itself, as it does in Kumo
             // kumo: ring ring-kumo-line - and NO shadow-xs, unlike every Button variant.
             boxShadow: `0 0 0 1px ${k.line}`,
+            // ...except when the control is a SELECT. kumo does not build its Select trigger from
+            // its Input at all - `selectVariants` is `cn(buttonVariants({ size }), "justify-between
+            // font-normal", "focus:ring-kumo-focus/50 focus-visible:ring-inset")`, so the trigger is
+            // a secondary BUTTON in every respect: the kumo-base surface rather than the input's
+            // kumo-control (identical in light, visibly different in dark - 19149 pixels at Δ8),
+            // shadow-xs behind the ring, a tint on hover, a pointer cursor, and the button's own
+            // 1px focus ring rather than the input's 1.5px one.
+            "&:has(.MuiSelect-select)": {
+              backgroundColor: k.base, // kumo: secondary's bg-kumo-base
+              boxShadow: ringWith(k.line), // kumo: ring ring-kumo-line + shadow-xs
+              cursor: "pointer",
+              "&:hover": { backgroundColor: k.tint, boxShadow: ringWith(k.line) }, // kumo: not-disabled:hover:bg-kumo-tint
+              "&:has(:focus)": {
+                boxShadow: ringWith(`color-mix(in oklab, ${k.focus} 50%, transparent)`), // kumo: focus:ring-kumo-focus/50
+              },
+              // kumo: the button base's `focus-visible:ring-2 focus-visible:ring-kumo-brand`, and
+              // selectVariants' own `focus-visible:ring-inset` - so a keyboard-focused trigger
+              // wears a 2px BRAND ring drawn INSIDE its box, not the grey one a press shows.
+              "&:has(:focus-visible)": {
+                boxShadow: `inset 0 0 0 2px ${k.brand}, ${SHADOW_XS}`,
+                outline: "none",
+              },
+            },
             ...(ownerState.multiline
               ? { height: "auto" } // kumo: InputArea's h-auto
               : { height: "36px" }), // kumo: h-9
@@ -1956,6 +1979,38 @@ export const kumoTheme = createTheme({
       },
     },
 
+    // ---- Select trigger ----
+    //
+    // kumo: dist/chunks/select-ln6ibqbbs0n4tiig.js
+    //   trigger  buttonVariants({ size }) + "justify-between font-normal"
+    //   icon     CaretUpDown at 16px for the base size, in `text-kumo-subtle`
+    //
+    // The BOX is styled on MuiOutlinedInput (scoped to `:has(.MuiSelect-select)` - see there);
+    // what is left here is the display area and the icon, which are Select's own slots.
+    MuiSelect: {
+      styleOverrides: {
+        select: {
+          cursor: "pointer",
+          // kumo: the trigger is `flex justify-between` with `px-3`, so the value sits 12px from
+          // the left edge and the room on the right is the icon's 16px plus the same 12px.
+          padding: "0 28px 0 12px",
+          minHeight: 0,
+        },
+        icon: ({ theme }) => ({
+          right: "12px", // kumo: the trigger's own px-3, not MUI's 7px
+          width: "16px", // kumo: triggerIconStyles.base.iconSize
+          height: "16px",
+          // MUI centres its icon with `calc(50% - .5em)`, which is only correct while the icon is
+          // 1em tall. kumo's is a fixed 16px against a 14px font, so the em-based offset leaves it
+          // a pixel low - the last 81 pixels of this pair.
+          top: "calc(50% - 8px)",
+          color: theme.vars.palette.kumo.textSubtle, // kumo: text-kumo-subtle
+          // kumo's caret never rotates when the popup opens; MUI's own icon flips 180deg.
+          "&.MuiSelect-iconOpen": { transform: "none" },
+        }),
+      },
+    },
+
     // ---- DropdownMenu ----
     //
     // kumo: dist/chunks/dropdown-k0y5j6iuad7tvqgx.js
@@ -1994,13 +2049,30 @@ export const kumoTheme = createTheme({
             // MUI's Paper lays an unthemed white gradient over its own background in dark mode,
             // scaled by `elevation` (Menu's Paper defaults to 8). Kumo's popup is one flat colour.
             backgroundImage: "none",
+            boxShadow: `0 0 0 1px ${k.line}, ${SHADOW_LG}`, // kumo: ring ring-kumo-line + shadow-lg, on both recipes
             "&:has([role='menu'])": {
               backgroundColor: k.control, // kumo: bg-kumo-control - NOT bg-kumo-base, which is what Select's popup uses
-              boxShadow: `0 0 0 1px ${k.line}, ${SHADOW_LG}`, // kumo: ring ring-kumo-line + shadow-lg
               minWidth: "144px", // kumo: min-w-36
               padding: "6px", // kumo: p-1.5
               overflowX: "hidden" as const, // kumo: overflow-hidden
               overflowY: "auto" as const, // kumo: overflow-y-auto
+            },
+            // kumo: dist/chunks/select-ln6ibqbbs0n4tiig.js - the Select popup is a DIFFERENT
+            // recipe from the menu above: `flex flex-col max-h-[var(--available-height)]
+            // bg-kumo-base text-kumo-default rounded-lg shadow-lg ring ring-kumo-line
+            // min-w-[calc(var(--anchor-width)+3px)] py-1.5`. Vertical padding only, a different
+            // surface token, and the scroll lives on the list inside rather than on the popup.
+            "&:has([role='listbox'])": {
+              backgroundColor: k.base, // kumo: bg-kumo-base
+              display: "flex",
+              flexDirection: "column" as const, // kumo: flex flex-col
+              padding: "6px 0", // kumo: py-1.5
+              overflow: "hidden" as const,
+              "& [role='listbox']": {
+                minHeight: 0,
+                flex: 1,
+                overflowY: "auto" as const, // kumo: the LIST scrolls, not the popup
+              },
             },
           }
         },
@@ -2038,6 +2110,30 @@ export const kumoTheme = createTheme({
               "&.Mui-disabled": {
                 opacity: 0.5, // kumo: data-disabled:opacity-50
                 pointerEvents: "none" as const, // kumo: data-disabled:pointer-events-none
+              },
+            },
+            // kumo: Select.Option - `group mx-1.5 flex cursor-pointer items-center
+            // justify-between gap-2 rounded px-2 py-1.5 text-base outline-none
+            // data-highlighted:bg-kumo-tint`. Side MARGINS rather than the popup's padding, a
+            // smaller radius than a menu item, and a tint highlight instead of an overlay one.
+            "[role='listbox'] &": {
+              ...TEXT_BASE, // kumo: text-base (14px)
+              fontFamily: FONT_SANS,
+              letterSpacing: "normal",
+              color: k.textDefault,
+              margin: "0 6px", // kumo: mx-1.5
+              padding: "6px 8px", // kumo: py-1.5 px-2
+              borderRadius: "4px", // kumo: rounded (the base radius, not the menu item's rounded-md)
+              minHeight: 0,
+              cursor: "pointer", // kumo: cursor-pointer
+              justifyContent: "space-between", // kumo: justify-between - the label and its indicator
+              gap: "8px", // kumo: gap-2
+              "&:hover, &.Mui-focusVisible, &.Mui-selected, &.Mui-selected:hover": {
+                backgroundColor: k.tint, // kumo: data-highlighted:bg-kumo-tint
+              },
+              "&.Mui-disabled": {
+                opacity: 0.5, // kumo: data-[disabled]:opacity-50
+                pointerEvents: "none" as const,
               },
             },
           }
