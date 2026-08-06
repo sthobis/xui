@@ -5,7 +5,13 @@ import type { ReactNode } from "react"
 export type PairState = "default" | "hover" | "focus" | "open" | "active" | "anchored"
 
 /** Non-pixel behaviors asserted by e2e/behavior.spec.ts (declarative discovery via `data-behaviors`). */
-export type PairBehavior = "animates" | "hover-opens" | "escape-closes" | "overlay-matches" | "item-hover-highlights"
+export type PairBehavior =
+  | "animates"
+  | "hover-opens"
+  | "escape-closes"
+  | "overlay-matches"
+  | "item-hover-highlights"
+  | "anchored-to-trigger"
 
 /**
  * The two cells of a pair. `ref` is the real component of whichever design system the page is
