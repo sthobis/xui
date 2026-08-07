@@ -5,10 +5,11 @@ import { diffPngs } from "./lib/compare"
 import {
   anchoredClip,
   applyState,
-  normalizeOverlayPosition,
+  matchOverlayPhase,
   openContentLocator,
   resetState,
   snapToPixelGrid,
+  type OverlayPhase,
   type PairState,
 } from "./lib/states"
 import { activateDark, GALLERY_PAGE, targetOf } from "./lib/themes"
@@ -27,25 +28,33 @@ const rows: Array<{
 /**
  * Captures the screenshot to diff for a given state, per pair/side. Three shapes:
  *  - "open": overlay content (Tooltip/Select, etc.) renders in a portal outside the cell, so
- *    capture the overlay itself instead of the (visually empty) cell. Portalled overlays can
- *    land at a fractional sub-pixel position (Radix/Floating UI vs MUI's integer rounding) -
- *    normalize both sides to the same phase first so the diff isn't dominated by capture-clip/
- *    glyph-AA artifacts (see normalizeOverlayPosition's own banner).
+ *    capture the overlay itself instead of the (visually empty) cell. The two libraries settle an
+ *    overlay on different sub-pixel fractions (Floating UI rounds to the device grid, MUI's
+ *    Popover to whole CSS pixels, Base UI's item-aligned Select not at all), which changes how
+ *    everything inside it rasterizes - so the reference side is captured exactly where it landed
+ *    and the MUI side is moved onto that same PHASE (see matchOverlayPhase's own banner).
  *  - "anchored": same open overlay, but captured together with its trigger via a page-level clip
  *    over their union bounding box (see anchoredClip's own banner for why - this is the only
  *    capture shape that can see anchor distance/placement at all).
  *  - everything else (default/hover/focus/active): the cell itself, which is where the
  *    :active press nudge - and every other inline visual state - actually renders.
  */
-async function captureState(page: Page, cell: Locator, state: PairState, pairId: string): Promise<Buffer> {
+async function captureState(
+  page: Page,
+  cell: Locator,
+  state: PairState,
+  pairId: string,
+  /** The phase the other side of this pair rasterized at, or null when this side goes first. */
+  phase: OverlayPhase | null,
+): Promise<{ shot: Buffer; phase: OverlayPhase | null }> {
   if (state === "anchored") {
     const clip = await anchoredClip(page, cell, pairId)
-    return page.screenshot({ animations: "disabled", clip })
+    return { shot: await page.screenshot({ animations: "disabled", clip }), phase: null }
   }
   if (state === "open") {
     const overlay = await openContentLocator(page, cell, pairId)
-    await normalizeOverlayPosition(overlay)
-    return overlay.screenshot({ animations: "disabled" })
+    const settled = await matchOverlayPhase(overlay, phase)
+    return { shot: await overlay.screenshot({ animations: "disabled" }), phase: settled }
   }
   // Inline states capture the cell via a page-level clip with ROUNDED integer bounds rather than
   // an element screenshot. Element screenshots clip at the element's own fractional device-pixel
@@ -62,15 +71,18 @@ async function captureState(page: Page, cell: Locator, state: PairState, pairId:
   await snapToPixelGrid(cell)
   const box = await cell.boundingBox()
   if (!box) throw new Error(`cell for ${pairId} (${state}) has no bounding box`)
-  return page.screenshot({
-    animations: "disabled",
-    clip: {
-      x: Math.round(box.x),
-      y: Math.round(box.y),
-      width: Math.round(box.width),
-      height: Math.round(box.height),
-    },
-  })
+  return {
+    shot: await page.screenshot({
+      animations: "disabled",
+      clip: {
+        x: Math.round(box.x),
+        y: Math.round(box.y),
+        width: Math.round(box.width),
+        height: Math.round(box.height),
+      },
+    }),
+    phase: null,
+  }
 }
 
 test.beforeEach(async ({ page }, testInfo) => {
@@ -128,13 +140,18 @@ test("all pairs match within threshold", async ({ page }, testInfo) => {
       const refCell = row.locator('[data-side="ref"]')
       const muiCell = row.locator('[data-side="mui"]')
 
+      // The reference side goes FIRST and un-nudged, and its sub-pixel phase is what the MUI side
+      // is then matched to - see matchOverlayPhase. The reference is the one being replicated, so
+      // it is the one whose rasterization the comparison should be held to.
       await applyState(page, refCell, state, id)
-      const refShot = await captureState(page, refCell, state, id)
+      const ref = await captureState(page, refCell, state, id, null)
       await resetState(page)
 
       await applyState(page, muiCell, state, id)
-      const muiShot = await captureState(page, muiCell, state, id)
+      const mui = await captureState(page, muiCell, state, id, ref.phase)
       await resetState(page)
+      const refShot = ref.shot
+      const muiShot = mui.shot
 
       const result = diffPngs(refShot, muiShot)
       // A pair with a maxDelta override is judged on the size of its worst per-channel error

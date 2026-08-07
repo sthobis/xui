@@ -154,22 +154,14 @@ export const selectSection: Section = {
     },
     {
       id: "select-open",
-      // NO pixel state at all, and that is a limit of the harness rather than of the theme.
-      //
-      // Base UI aligns the selected option with the trigger by writing an unrounded position
-      // (measured: y=626.375), while MUI's Popover rounds every overlay position with Math.round
-      // and lands at 626.000. The two popups are then 0.375px apart vertically - far too small to
-      // see, far too big to ignore, because the harness's `open` state corrects a sub-pixel offset
-      // with a transform, and a transform re-rasterizes text in a composited layer. Only the
-      // reference side needed correcting, so every label in the list ghosted: 1858 pixels at Δ232
-      // on a popup whose every computed style matches exactly.
-      //
-      // Neither cap can express that honestly and no theme value is wrong, so the pair proves what
-      // it can prove: the popup's surface through `overlay-matches`, its placement through
-      // `anchored-to-trigger`, and the closed trigger through its own pixel pair above.
-      // e2e/lib/states.ts's normalizeOverlayPosition carries the three implementations that were
-      // measured and what each cost.
-      states: [],
+      // Base UI aligns the selected option with the trigger by writing an UNROUNDED position
+      // (measured: y=626.375) where MUI's Popover rounds every overlay with Math.round and lands at
+      // 626.000. The harness captures the reference side where it landed and moves the MUI side
+      // onto the same sub-pixel phase, which is what makes this pair comparable at all - see
+      // matchOverlayPhase in e2e/lib/states.ts. Forcing both onto whole pixels instead, which is
+      // what it used to do, transformed the reference side alone and ghosted every label in the
+      // list: 1858 pixels at Δ232 on a popup whose every computed style already matched.
+      states: ["open"],
       behaviors: ["escape-closes", "overlay-matches", "anchored-to-trigger"],
       // kumo's Select popup carries no marker class of its own and the component forwards nothing
       // to it, so the pair identifies it structurally: the one presentation box whose DIRECT child
