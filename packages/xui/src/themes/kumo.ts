@@ -1727,6 +1727,49 @@ export const kumoTheme = createTheme({
     //
     // MUI's own cell is 16px of padding at 13px type over a translucent divider, so every one of
     // those differs.
+    MuiTable: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          isolation: "isolate" as const, // kumo: isolate - the table is its own stacking context, which is what keeps a sticky column's z-index local
+          textAlign: "left" as const, // kumo: text-left
+          ...TEXT_BASE, // kumo: text-base on the root; the cells inherit it
+          fontFamily: FONT_SANS,
+          letterSpacing: "normal",
+          color: theme.vars.palette.kumo.textDefault, // kumo: text-kumo-default
+        }),
+      },
+    },
+    MuiTableRow: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          // kumo: the `selected` variant is `bg-kumo-tint`. MUI's own .Mui-selected is an
+          // alpha-blended primary, and its `hover` prop paints an action tint kumo has no
+          // equivalent for at all - a kumo row reacts to neither hover nor focus.
+          "&.Mui-selected, &.Mui-selected:hover": {
+            backgroundColor: theme.vars.palette.kumo.tint,
+          },
+          "&.MuiTableRow-hover:hover": { backgroundColor: "transparent" },
+        }),
+      },
+    },
+    MuiTableHead: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          // kumo: `[&_th]:bg-kumo-base` is written on the TABLE root, so it applies to header cells
+          // wherever they sit; restated here so a head section keeps its opaque fill even when a
+          // consumer builds the table out of MUI's parts without a themed cell in between.
+          "& th": { backgroundColor: theme.vars.palette.kumo.base },
+        }),
+      },
+    },
+    MuiTableBody: {
+      styleOverrides: {
+        root: {
+          // kumo: `[&_tr:last-child_td]:border-b-0` - the table does not end on a rule.
+          "& tr:last-child td": { borderBottom: 0 },
+        },
+      },
+    },
     MuiTableCell: {
       styleOverrides: {
         root: ({ theme }) => ({

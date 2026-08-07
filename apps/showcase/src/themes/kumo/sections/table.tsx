@@ -10,6 +10,10 @@ const ROWS = [
   ["Worker 1", "Active"],
   ["Worker 2", "Paused"],
 ]
+// kumo: Table.Row's only variant. Everything else a kumo table paints lives on the TABLE root as
+// descendant selectors (`[&_td]:p-3`, `[&_th]:font-semibold`, ...), which is why the row itself has
+// nothing to say until it is selected.
+const SELECTED_ROW = 1
 
 export const tableSection: Section = {
   title: "Table",
@@ -48,6 +52,40 @@ export const tableSection: Section = {
             <MuiTableBody>
               {ROWS.map(([n, s]) => (
                 <MuiTableRow key={n}>
+                  <MuiTableCell>{n}</MuiTableCell>
+                  <MuiTableCell>{s}</MuiTableCell>
+                </MuiTableRow>
+              ))}
+            </MuiTableBody>
+          </MuiTable>
+        </div>
+      ),
+    },
+    {
+      // A selected row is the one piece of table styling kumo puts on a subcomponent rather than on
+      // the root, and MUI's own `.Mui-selected` is an alpha-blended primary tint - a completely
+      // different colour - so it needs a pair of its own.
+      id: "table-selected",
+      ref: (
+        <div style={{ width: 240 }}>
+          <Table>
+            <Table.Body>
+              {ROWS.map(([n, s], i) => (
+                <Table.Row key={n} variant={i === SELECTED_ROW ? "selected" : "default"}>
+                  <Table.Cell>{n}</Table.Cell>
+                  <Table.Cell>{s}</Table.Cell>
+                </Table.Row>
+              ))}
+            </Table.Body>
+          </Table>
+        </div>
+      ),
+      mui: (
+        <div style={{ width: 240 }}>
+          <MuiTable>
+            <MuiTableBody>
+              {ROWS.map(([n, s], i) => (
+                <MuiTableRow key={n} selected={i === SELECTED_ROW}>
                   <MuiTableCell>{n}</MuiTableCell>
                   <MuiTableCell>{s}</MuiTableCell>
                 </MuiTableRow>
