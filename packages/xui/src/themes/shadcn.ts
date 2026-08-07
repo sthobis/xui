@@ -4584,6 +4584,12 @@ export const shadcnTheme = createTheme({
             width: "100%", // shadcn: w-full
             paddingTop: 0, // shadcn: ItemGroup has no padding (MUI's default adds 8px top/bottom)
             paddingBottom: 0,
+            // `dense` is MUI's only compactness flag and it maps to shadcn's `xs`, the size that
+            // tightens the ITEM's padding the way dense does - see list.tsx for why not `sm`, which
+            // is byte-identical to default at the item and only changes this gap.
+            "&.MuiList-dense": {
+              gap: "0.5rem", // shadcn: ItemGroup has-data-[size=xs]:gap-2
+            },
           },
         },
       },
@@ -4594,6 +4600,13 @@ export const shadcnTheme = createTheme({
           flexWrap: "wrap", // shadcn: flex-wrap
           gap: "0.625rem", // shadcn: gap-2.5
           padding: "0.625rem 0.75rem", // shadcn: py-2.5 px-3 (MUI's default is 8px 16px)
+          // The compact size. MUI's own `dense` only trims vertical padding (8px to 4px) and leaves
+          // the horizontal alone; shadcn's `xs` moves all three of gap, x and y, so all three are
+          // restated rather than leaning on MUI's version of "denser".
+          "&.MuiListItem-dense": {
+            gap: "0.5rem", // shadcn: size xs gap-2
+            padding: "0.5rem 0.625rem", // shadcn: size xs py-2 px-2.5
+          },
           border: "1px solid transparent", // shadcn: border border-transparent
           borderRadius: RADIUS, // shadcn: rounded-lg
           fontSize: "0.875rem", // shadcn: text-sm
@@ -4641,6 +4654,12 @@ export const shadcnTheme = createTheme({
           gap: "0.25rem", // shadcn: gap-1
           minWidth: "auto", // shadcn: no min-width (MUI sets 0)
           margin: 0, // shadcn: no margin - the gap does the spacing (MUI adds 4px, or 6px with both lines)
+          // ItemContent closes its column gap at the smallest size, unlike Item's own gap which
+          // only shrinks: `group-data-[size=xs]/item:gap-0`. Invisible on a title-only item and
+          // very visible on one with a description.
+          "&.MuiListItemText-dense": {
+            gap: 0, // shadcn: ItemContent group-data-[size=xs]/item:gap-0
+          },
         },
         primary: {
           display: "flex", // shadcn: flex
@@ -4652,6 +4671,12 @@ export const shadcnTheme = createTheme({
           fontWeight: 500, // shadcn: font-medium
           lineHeight: 1.375, // shadcn: leading-snug
           letterSpacing: "normal", // shadcn: no tracking class (see GOTCHA above)
+          // shadcn: ItemTitle carries no colour class, so it inherits the Item's. Stating that
+          // explicitly is load-bearing, because MUI picks the Typography VARIANT behind this slot
+          // by density - body1 normally, body2 when the list is dense - and body2 is the muted one
+          // in this theme. Without this the title silently turned grey the moment a list went
+          // dense, which is a colour change nobody asked for and no shadcn size does.
+          color: "inherit",
         },
         secondary: ({ theme }) => ({
           overflow: "hidden", // shadcn: line-clamp-2's clipping (see GOTCHA above)

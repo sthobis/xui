@@ -153,7 +153,7 @@ That fallback is deliberate and, where it matters, defensive: `Fab`'s size rules
 | Drawer | All four anchors, with a header | Its corner close button, on the same terms as Dialog above |
 | Fab | The circular 56px default, `size="small"`, and `variant="extended"` | `size="medium"` |
 | ImageList | The standard variant at a fixed column count | `variant="masonry"`, `"quilted"` and `"woven"`, `ImageListItemBar`, per-item row and column spans |
-| List | Plain items, and items with an icon, a description, or both | Item's `outline` and `muted` variants, its `sm` and `xs` sizes, `ItemSeparator`, `ItemActions`, `ItemHeader`, `ItemFooter` |
+| List | Plain items; items with an icon, a description, or both; and `dense`, which maps to shadcn's `xs` size | `ItemSeparator`, `ItemActions`, `ItemHeader`, `ItemFooter`. Item's `outline` and `muted` variants and its `sm` size are not gaps the theme can close: MUI's ListItem has no variant prop and only one density flag, so those are app-level work, not theming |
 | Rating | Read-only display at whole-number values | Hover preview, click to set, `precision` below 1, the `size` ladder |
 | Snackbar | A message alone, with an action, and with a description | The cancel and close buttons, placement |
 | SpeedDial | Closed, and open with its actions | The tooltips an action can show |

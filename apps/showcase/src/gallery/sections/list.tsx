@@ -20,6 +20,20 @@ import type { Section } from "../types"
 // Both sides are `w-full`, so the pair needs an outer box with a real width.
 const wrapStyle = { width: "16rem" } as const
 
+// SIZES. shadcn's Item has three (`default`, `sm`, `xs`); MUI has one boolean, `dense`. They cannot
+// map one to one, so the mapping is a decision and is recorded here rather than left implicit.
+//
+// `dense` maps to `xs`, not to `sm`, because of WHAT each one changes. shadcn's `sm` is
+// byte-identical to `default` at the item (`gap-2.5 px-3 py-2.5` both); the only difference is the
+// GROUP's gap. `xs` is the size that tightens the item's own padding (`gap-2 px-2.5 py-2`), which is
+// exactly what MUI's `dense` does - it takes a ListItem's vertical padding from 8px to 4px. Mapping
+// dense to `sm` would mean a prop named for compactness that left the item's padding alone.
+//
+// `sm` therefore has no MUI expression and is not themed. Neither are Item's `outline` and `muted`
+// VARIANTS: MUI's ListItem has no variant prop at all, so a consumer wanting a bordered list item
+// reaches for sx or a styled component, which is app-level work and not something a theme can own.
+// Both are recorded in the README's surface table rather than silently missing.
+
 export const listSection: Section = {
   title: "List",
   pairs: [
@@ -183,6 +197,40 @@ export const listSection: Section = {
                 <Send />
               </MuiListItemIcon>
               <MuiListItemText primary="Sent" secondary="Last week" />
+            </MuiListItem>
+          </MuiList>
+        </div>
+      ),
+    },
+    {
+      // The compact size. `dense` on the List is what a consumer writes; MUI propagates it to the
+      // items through context, so neither ListItem needs the prop itself.
+      id: "list-dense",
+      states: ["default"],
+      shadcn: (
+        <div style={wrapStyle}>
+          <ItemGroup>
+            <Item data-target size="xs">
+              <ItemContent>
+                <ItemTitle>Inbox</ItemTitle>
+              </ItemContent>
+            </Item>
+            <Item size="xs">
+              <ItemContent>
+                <ItemTitle>Sent</ItemTitle>
+              </ItemContent>
+            </Item>
+          </ItemGroup>
+        </div>
+      ),
+      mui: (
+        <div style={wrapStyle}>
+          <MuiList dense>
+            <MuiListItem data-target>
+              <MuiListItemText primary="Inbox" />
+            </MuiListItem>
+            <MuiListItem>
+              <MuiListItemText primary="Sent" />
             </MuiListItem>
           </MuiList>
         </div>
