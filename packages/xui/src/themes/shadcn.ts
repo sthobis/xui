@@ -5560,15 +5560,28 @@ export const shadcnTheme = createTheme({
     MuiRating: {
       styleOverrides: {
         root: {
-          fontSize: "1rem", // shadcn: size-4, via MUI's font-size-driven icon sizing
           gap: "0.125rem", // shadcn: gap-0.5
+          // SIZE IS SCOPED to MUI's default, for the reason the Fab block spells out at length: a
+          // flat rule here does not leave the other sizes untreated, it pins them. MUI's ladder is
+          // font-size driven (18/24/30px), so an unconditional `font-size: 1rem` plus a fixed 1rem
+          // icon forced `size="small"` and `size="large"` to render at the medium size.
+          //
+          // Only the default is grounded - `size-4` is shadcn's icon size, and shadcn ships no
+          // rating at all, so there is no ladder to extract. The other two therefore keep MUI's own
+          // font sizes rather than getting invented ones.
+          "&.MuiRating-sizeMedium": {
+            fontSize: "1rem", // shadcn: size-4, via MUI's font-size-driven icon sizing
+          },
           // MUI's font-size-driven sizing only reaches an icon that asks for it - its own star is an
           // SvgIcon at `font-size: inherit`. A lucide icon ships literal width="24" height="24"
           // attributes instead and ignores font-size entirely, so it has to be sized directly. On the
           // shadcn side `size-4` does exactly this, as CSS beating the same attributes.
+          //
+          // In `em`, not `rem`, so it tracks whichever font size applies: 16px at the default, and
+          // MUI's own 18px and 30px at the sizes this theme does not claim to cover.
           "& svg": {
-            width: "1rem", // shadcn: size-4
-            height: "1rem",
+            width: "1em", // shadcn: size-4 at the default size
+            height: "1em",
           },
         },
         iconFilled: ({ theme }) => ({
@@ -5871,6 +5884,39 @@ export const shadcnTheme = createTheme({
             borderRadius: RADIUS, // shadcn: rounded-lg
           },
         },
+      },
+    },
+    // ---- ImageListItemBar (the caption over a tile) ----
+    //
+    // PROVENANCE: composed, and this is the one part of ImageList where MUI's own look is plainly
+    // out of place rather than merely different. Its bar is a Material scrim - `rgba(0,0,0,0.5)`
+    // behind 16px white text - which no shadcn surface does. Restyled to a translucent
+    // `bg-background` panel with ordinary foreground text, the same way the AppBar block borrows
+    // shadcn's header surface for a component shadcn does not ship.
+    //
+    // SCOPE: `position="bottom"` with a title. The `subtitle` and `actionIcon` slots and the
+    // `"top"`/`"below"` positions have no pair and get no treatment.
+    MuiImageListItemBar: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          // shadcn: bg-background/80. Over an image the panel has to stay translucent or it stops
+          // reading as an overlay, which is why this is a mix rather than the flat surface token.
+          backgroundColor: `color-mix(in oklab, ${theme.vars.palette.background.default} 80%, transparent)`,
+          // shadcn: rounded-b-lg. The tile's own radius sits on the image (see MuiImageListItem
+          // above), so the bar has to round its own bottom corners or it squares the tile off.
+          borderBottomLeftRadius: RADIUS,
+          borderBottomRightRadius: RADIUS,
+        }),
+        titleWrap: {
+          // MUI's own is 12px 16px, sized for its 16px title. shadcn: px-3 py-2.
+          padding: "0.5rem 0.75rem",
+        },
+        title: ({ theme }) => ({
+          fontSize: "0.75rem", // shadcn: text-xs
+          lineHeight: "1rem", // shadcn: text-xs's paired line-height
+          fontWeight: 500, // shadcn: font-medium
+          color: theme.vars.palette.text.primary, // shadcn: text-foreground (MUI's own is white)
+        }),
       },
     },
     // -----------------------------------------------------------------------
