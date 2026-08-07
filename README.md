@@ -123,15 +123,15 @@ For these there is no installed component to extract from, so the twin in the ga
 Each such block says so at the top.
 AppBar / Toolbar above is the first of these.
 
-- [x] Rating (no shadcn twin - read-only display)
+- [x] Rating (no shadcn twin - read-only, whole and half values)
 - [x] Stepper (no shadcn twin - horizontal, first step)
 - [x] Fab (no shadcn twin - composed from Button; circular and extended)
 - [x] SpeedDial (no shadcn twin - closed state)
-- [x] BottomNavigation (no shadcn twin)
+- [x] BottomNavigation (no shadcn twin - labels on and off)
 - [x] Backdrop (shadcn Dialog/Sheet overlay)
 - [x] Modal (the primitive under Dialog/Drawer)
 - [x] Badge - the dot (shadcn AvatarBadge) and the count pill (shadcn Badge)
-- [x] ImageList (no shadcn twin - standard variant)
+- [x] ImageList (no shadcn twin - standard variant, with caption bar)
 - [x] TablePagination (no shadcn twin - caption and actions)
 - [x] FormHelperText (shadcn FieldDescription / FieldError) + InputAdornment (via InputGroup)
 
@@ -148,13 +148,13 @@ That fallback is deliberate and, where it matters, defensive: `Fab`'s size rules
 | --- | --- | --- |
 | AppBar / Toolbar | The default static bar | `position="fixed"` and `"sticky"`, elevation above 0, the dense variant, non-default `color` |
 | Badge | The dot anchored to an avatar; the count pill in primary and error | `showZero`, the `invisible` transition, `overlap="circular"`. The pill's *placement* is MUI's own, not shadcn's, because shadcn ships no anchored count to copy |
-| BottomNavigation | The resting bar with one item selected | `showLabels={false}`, the selection animation |
+| BottomNavigation | The resting bar with one item selected, with labels on and off | The selection animation |
 | Dialog | The open dialog with a header and footer | Nothing in the theme. The pair turns off shadcn's corner close button, but that button is a `size="icon-sm"` ghost IconButton, which `iconbutton-small` already covers - only where an app puts it is untested, and the theme does not own that |
 | Drawer | All four anchors, with a header | Its corner close button, on the same terms as Dialog above |
 | Fab | The circular 56px default, `size="small"`, and `variant="extended"` | `size="medium"` |
-| ImageList | The standard variant at a fixed column count | `variant="masonry"`, `"quilted"` and `"woven"`, `ImageListItemBar`, per-item row and column spans |
+| ImageList | The standard variant at a fixed column count, with and without a caption bar | `variant="masonry"`, `"quilted"` and `"woven"`, per-item row and column spans, and the bar's `subtitle` and `actionIcon` slots and `"top"`/`"below"` positions |
 | List | Plain items; items with an icon, a description, or both; and `dense`, which maps to shadcn's `xs` size | `ItemSeparator`, `ItemActions`, `ItemHeader`, `ItemFooter`. Item's `outline` and `muted` variants and its `sm` size are not gaps the theme can close: MUI's ListItem has no variant prop and only one density flag, so those are app-level work, not theming |
-| Rating | Read-only display at whole-number values | Hover preview, click to set, `precision` below 1, the `size` ladder |
+| Rating | Read-only display at whole and half values | Hover preview and click to set. The `size` ladder is not a gap the theme can close: shadcn ships no rating, so there is nothing to extract a ladder from, and the sizing is scoped so the uncovered sizes keep MUI's own geometry |
 | Snackbar | A message alone, with an action, and with a description | The cancel and close buttons, placement |
 | SpeedDial | Closed, and open with its actions | The tooltips an action can show |
 | Stepper | Horizontal, on the first step | Completed steps, the vertical orientation, error and disabled steps |
