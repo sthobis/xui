@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "outDir": "dist",
+    "rootDir": "src",
+    // The theme is mostly provenance comments - every value cites the shadcn class it came from -
+    // which is the point of the file but is dead weight in the built JS. Stripping them takes
+    // dist/themes/shadcn.js from 379kB to a fraction of that. `src` still ships in the package with
+    // every comment intact, because copying that file into an app is a supported way to use this.
+    "removeComments": true
+  },
+  "include": ["src"]
+}

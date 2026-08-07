@@ -1,0 +1,94 @@
+name: Verify
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+# A newer push to the same branch supersedes an in-flight run; the parity suite takes a couple of
+# minutes and there is nothing to learn from a result that is already out of date.
+concurrency:
+  group: verify-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # The gate. macOS, because that is the platform every threshold in e2e/thresholds.ts was measured
+  # on, and a pixel budget is only meaningful on the rasterizer it was calibrated against. Free for
+  # public repositories.
+  verify:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Unit tests
+        run: pnpm test:unit
+
+      # Only chromium: both Playwright projects run on it, and the parity numbers are meaningful
+      # only within one engine anyway. `--with-deps` pulls the system libraries the runner lacks.
+      - name: Install Playwright chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      # parity + preflight + behavior. GitHub sets CI=true, which is what makes playwright.config
+      # start its own dev server instead of reusing one - see reuseExistingServer there.
+      #
+      # Geist is bundled through @fontsource-variable/geist rather than fetched from a CDN, so the
+      # runner rasterizes the same font files a developer's machine does. That matters more here
+      # than it looks: a webfont that resolved differently on Linux would move text on BOTH sides of
+      # every pair, and the suite would still pass while measuring something nobody ships.
+      - name: Parity, preflight and behavior suites
+        run: pnpm verify
+
+      # The diff triptych (shadcn / mui / diff per failing pair) plus the run's report. Without this
+      # a red run tells you a pair moved but not how, and pixel failures are not diagnosable from a
+      # log line.
+      - name: Upload diffs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: parity-diffs
+          path: e2e/results/
+          retention-days: 7
+
+  # NOT a gate, on purpose. Linux rasterizes antialiasing and subpixel coverage differently from
+  # macOS, and seven pairs that are an exact match on macOS differ here by Δ67-121 over tens to
+  # hundreds of pixels: badgecount-basic, badgecount-max, buttongroup-basic, menu-open,
+  # stepper-horizontal, textfield-error-focus, tooltip-open.
+  #
+  # Whether that is harmless rasterizer noise or real sub-pixel geometry that macOS happens to round
+  # away is NOT yet known, and the difference matters: the second would mean those pairs are wrong
+  # everywhere and only look right on one platform. Until someone measures it, blocking every push
+  # on an unexplained number would be false precision, and deleting the job would hide a finding
+  # about the project's central claim. So it runs, uploads its diffs, and does not block.
+  linux-advisory:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm verify
+      - name: Upload diffs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-parity-diffs
+          path: e2e/results/
+          retention-days: 7
