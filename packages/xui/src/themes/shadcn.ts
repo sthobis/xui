@@ -5157,11 +5157,17 @@ export const shadcnTheme = createTheme({
     // bg oklch(0.205 0 0) / border oklch(1 0 0 / 0.1) / text oklch(0.985 0 0) - exactly the
     // popover and border tokens, so both schemes come from one definition below.
     //
-    // SCOPE: single-line message. sonner splits its body into [data-title] and [data-description]
-    // inside a [data-content] column; MUI's SnackbarContent has one opaque `message` slot with no
-    // counterpart for either, so only the title-only toast is expressible in idiomatic MUI. With
-    // a title alone, [data-content] collapses to the title box and `message` maps onto it exactly
-    // - which is why `message` below carries BOTH the content column and the title's weight.
+    // SCOPE: the toast body, with or without a description, and the action button. sonner splits
+    // its body into [data-title] and [data-description] inside a [data-content] column, where MUI's
+    // SnackbarContent has one opaque `message` slot and no counterpart for either. The column and
+    // the title's own weight therefore live on `message` itself - with a title alone [data-content]
+    // collapses to the title box and the two are the same thing - and a description is written as a
+    // plain div carrying `data-slot="toast-description"`, styled from inside the message slot. Same
+    // arrangement the Alert block uses for its title and description.
+    //
+    // Still uncovered: `[data-cancel]`, `[data-close-button]`, and toast PLACEMENT, which the pixel
+    // diff structurally cannot see - the open state captures the toast box alone and normalizes its
+    // position.
     MuiSnackbarContent: {
       styleOverrides: {
         root: ({ theme }) => ({
@@ -5238,14 +5244,35 @@ export const shadcnTheme = createTheme({
             },
           },
         }),
-        message: {
+        message: ({ theme }) => ({
           padding: 0, // MUI ships `padding: 8px 0`; sonner's [data-content] has none
           display: "flex", // sonner: [data-content] display:flex
           flexDirection: "column", // sonner: [data-content] flex-direction:column
           gap: "0.125rem", // sonner: [data-content] gap:2px
+          // The TITLE's own values, carried here rather than on a slot of their own. With a
+          // title-only toast - the common case - [data-content] collapses to the title box and the
+          // two are indistinguishable, so a title needs no markup; add a description and the title
+          // div simply inherits these.
           fontWeight: 500, // sonner: [data-title] font-weight:500
           lineHeight: 1.5, // sonner: [data-title] line-height:1.5
-        },
+          // The DESCRIPTION is a real second node in sonner and has to be one here too, since MUI's
+          // `message` is a single opaque slot with no counterpart for it. Same arrangement the
+          // MuiAlert block uses: the gallery puts a `data-slot` on a plain div, mirroring the
+          // attribute the real component sets on itself, and the theme styles it from in here. A
+          // consumer writes the same two divs and gets a real sonner toast.
+          '& [data-slot="toast-description"]': {
+            fontWeight: 400, // sonner: [data-description] font-weight:400
+            lineHeight: 1.4, // sonner: [data-description] line-height:1.4
+            // A RAW HEX, and not a mistake to tidy up. sonner hardcodes #3f3f3f here and ignores the
+            // theme entirely, so a real shadcn toast's description is this colour whatever the app's
+            // tokens say. Transcribed as found, like the 13px font-size and the non-shadcn shadow
+            // above - the point of the pair is to match what a user actually sees.
+            color: "#3f3f3f", // sonner: [data-description] color:#3f3f3f
+            ...theme.applyStyles("dark", {
+              color: "#e8e8e8", // sonner: [data-sonner-theme=dark] [data-description] color:#e8e8e8
+            }),
+          },
+        }),
       },
     },
     // -----------------------------------------------------------------------

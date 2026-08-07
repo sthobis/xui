@@ -8,7 +8,9 @@ import type { Section } from "../types"
 const MESSAGE = "Event has been created"
 const PAIR_ID = "snackbar-message"
 const ACTION_PAIR_ID = "snackbar-action"
+const DESCRIPTION_PAIR_ID = "snackbar-description"
 const ACTION_LABEL = "Undo"
+const DESCRIPTION = "Monday, January 6 at 6:00 PM"
 
 // WHERE THE GROUND TRUTH FOR THIS PAIR COMES FROM, AND WHY IT IS WEAKER THAN EVERY OTHER PAIR'S.
 //
@@ -30,13 +32,19 @@ const ACTION_LABEL = "Undo"
 // If a later change makes these track shadcn tokens instead, this pair stops matching the thing a
 // shadcn user actually sees. Ground truth wins, including when the ground truth is inconsistent.
 
-// SCOPE: single-line message only.
+// SCOPE: the toast body, with and without a description, plus the action button.
 //
 // sonner's toast body is [data-content] (a flex column) holding [data-title] and [data-description]
 // as separate styled nodes. MUI's SnackbarContent has ONE opaque `message` slot and no counterpart
-// for either, so a title+description toast cannot be expressed in idiomatic MUI - it would need
-// wrapper elements in the gallery, which this repo does not allow. With a title alone, [data-content]
-// collapses to just the title box and `message` maps onto it exactly, so that is what ships.
+// for either. With a title alone [data-content] collapses to just the title box and `message` maps
+// onto it exactly, which is the simple case; with a description, the two nodes are passed as
+// content to `message` and the theme styles them through `data-slot` hooks.
+//
+// An earlier note here called that impossible, on the grounds that it "would need wrapper elements
+// in the gallery, which this repo does not allow". That conflated two different things. What the
+// repo bans is a wrapper AROUND the MUI component, or a prop that exists to compensate for the
+// theme. Passing content to a content prop is neither, and popover.tsx and drawer.tsx already do
+// exactly this for their own composition slots.
 //
 // The ACTION button is now covered too, by its own pair. sonner's [data-button] is a 24px-tall,
 // 4px-radius, inverted-colour pill - not shadcn's Button, which MuiButton is already themed onto -
@@ -86,7 +94,15 @@ function startStamping() {
 // overlay opens on click and closes on Escape, and never on a timer. resetState waits for every
 // [data-portal-target] to detach before moving on, so a toast that auto-dismissed mid-capture - or
 // one that never dismissed at all - would stall or flake the whole run after this pair.
-function ShadcnToastDemo({ pairId, action }: { pairId: string; action?: boolean }) {
+function ShadcnToastDemo({
+  pairId,
+  action,
+  description,
+}: {
+  pairId: string
+  action?: boolean
+  description?: boolean
+}) {
   useEffect(() => {
     startStamping()
   }, [])
@@ -106,6 +122,7 @@ function ShadcnToastDemo({ pairId, action }: { pairId: string; action?: boolean 
         toast(MESSAGE, {
           duration: Infinity,
           ...(action ? { action: { label: ACTION_LABEL, onClick: () => {} } } : {}),
+          ...(description ? { description: DESCRIPTION } : {}),
         })
       }}
     >
@@ -122,8 +139,24 @@ interface PortalTargetProps extends HTMLAttributes<HTMLDivElement> {
 }
 const portalTargetContent: PortalTargetProps = { "data-portal-target": PAIR_ID }
 const portalTargetActionContent: PortalTargetProps = { "data-portal-target": ACTION_PAIR_ID }
+const portalTargetDescriptionContent: PortalTargetProps = { "data-portal-target": DESCRIPTION_PAIR_ID }
 
-function MuiSnackbarDemo({ action }: { action?: boolean }) {
+// sonner splits a toast body into [data-title] and [data-description]; MUI's `message` is one
+// opaque slot with no counterpart for either. So the two nodes are written out here as plain divs
+// carrying `data-slot` hooks that mirror sonner's own attributes, and the THEME styles them from
+// inside the message slot - the same arrangement the Alert pairs use for their title/description.
+//
+// This is content passed to a prop, not a wrapper around the component and not a prop compensating
+// for the theme: nothing here sets a colour, a weight or a size. A consumer writes these same two
+// divs and gets a real sonner toast.
+const messageWithDescription = (
+  <>
+    <div data-slot="toast-title">{MESSAGE}</div>
+    <div data-slot="toast-description">{DESCRIPTION}</div>
+  </>
+)
+
+function MuiSnackbarDemo({ action, description }: { action?: boolean; description?: boolean }) {
   const [open, setOpen] = useState(false)
   return (
     <>
@@ -133,7 +166,7 @@ function MuiSnackbarDemo({ action }: { action?: boolean }) {
       <MuiSnackbar
         open={open}
         onClose={() => setOpen(false)}
-        message={MESSAGE}
+        message={description ? messageWithDescription : MESSAGE}
         // A plain MUI Button in the action slot - no size or variant props compensating for the
         // theme. Everything that makes it sonner's pill comes from the theme's action-slot rules.
         action={action ? <MuiButton>{ACTION_LABEL}</MuiButton> : undefined}
@@ -142,7 +175,13 @@ function MuiSnackbarDemo({ action }: { action?: boolean }) {
         // live showcase honest, not to pass the harness. Toast PLACEMENT is not covered by this
         // pair; only the box is.
         anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-        slotProps={{ content: action ? portalTargetActionContent : portalTargetContent }}
+        slotProps={{
+          content: description
+            ? portalTargetDescriptionContent
+            : action
+              ? portalTargetActionContent
+              : portalTargetContent,
+        }}
       />
     </>
   )
@@ -163,6 +202,14 @@ export const snackbarSection: Section = {
       states: ["open"],
       shadcn: <ShadcnToastDemo pairId={ACTION_PAIR_ID} action />,
       mui: <MuiSnackbarDemo action />,
+    },
+    {
+      // Title plus description - the shape sonner's own docs lead with, and the one where
+      // [data-content] stops being indistinguishable from the title box.
+      id: DESCRIPTION_PAIR_ID,
+      states: ["open"],
+      shadcn: <ShadcnToastDemo pairId={DESCRIPTION_PAIR_ID} description />,
+      mui: <MuiSnackbarDemo description />,
     },
   ],
 }

@@ -103,7 +103,7 @@ A checked box means the component has at least one pair that reaches zero differ
 - [x] Dialog
 - [x] Drawer (shadcn Sheet, all four anchors)
 - [x] Popover
-- [x] Snackbar (shadcn Sonner, single-line message)
+- [x] Snackbar (shadcn Sonner)
 - [x] Accordion
 - [x] Tabs
 - [x] Breadcrumbs
@@ -155,7 +155,7 @@ That fallback is deliberate and, where it matters, defensive: `Fab`'s size rules
 | ImageList | The standard variant at a fixed column count | `variant="masonry"`, `"quilted"` and `"woven"`, `ImageListItemBar`, per-item row and column spans |
 | List | Plain items, and items with an icon, a description, or both | Item's `outline` and `muted` variants, its `sm` and `xs` sizes, `ItemSeparator`, `ItemActions`, `ItemHeader`, `ItemFooter` |
 | Rating | Read-only display at whole-number values | Hover preview, click to set, `precision` below 1, the `size` ladder |
-| Snackbar | A single-line message, with and without an action | Title plus description, the cancel and close buttons, placement |
+| Snackbar | A message alone, with an action, and with a description | The cancel and close buttons, placement |
 | SpeedDial | Closed, and open with its actions | The tooltips an action can show |
 | Stepper | Horizontal, on the first step | Completed steps, the vertical orientation, error and disabled steps |
 | TablePagination | Caption, actions, the rows-per-page control, and the first and last page buttons | The rows-per-page menu when open, which the `select-*` pairs cover instead |
