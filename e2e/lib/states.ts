@@ -86,82 +86,146 @@ export async function applyState(page: Page, cell: Locator, state: PairState, pa
   await page.waitForTimeout(300)
 }
 
+/** The sub-pixel position an overlay rasterizes at: the fractional part of its top-left corner. */
+export interface OverlayPhase {
+  x: number
+  y: number
+}
+
 /**
- * Snaps a portalled overlay's rendered top-left to integer CSS pixels via a measurement-only
- * `transform: translate(...)` nudge, so Playwright's `element.screenshot()` clip (which rounds
- * outward to the nearest device pixel when the element's box starts at a fractional position)
- * lands on the exact same sub-pixel phase for both sides of a pair.
+ * Makes both sides of a pair rasterize at the same sub-pixel PHASE, by leaving the reference
+ * overlay exactly where its own library put it and moving only the MUI one onto that phase.
  *
- * Why this is needed: shadcn's Select overlay (Radix/Floating UI) positions its content with a
- * fractional `left`/`top` (e.g. 275.125px), while MUI's Popover always resolves to an integer
- * (e.g. 490px) - so two DOM-identical overlays get clipped to PNGs of different pixel widths and
- * different glyph sub-pixel phases, a pure capture artifact rather than a real style difference
- * (see e2e/parity.spec.ts's "open" branch and the select-open task brief for the full diagnosis).
+ * WHY A PHASE AND NOT A WHOLE PIXEL. An element whose box starts at a fraction is drawn with its
+ * glyph edges, curves and hairlines resolved against that fraction, and Playwright's element
+ * capture rounds the clip outward from it - so two DOM-identical overlays at different fractions
+ * produce different PNGs, and sometimes different PNG sizes. The two libraries land on different
+ * fractions routinely and for reasons neither is wrong about: Floating UI rounds a position to the
+ * device grid (half a CSS pixel at this harness's deviceScaleFactor of 2), MUI's Popover rounds it
+ * with `Math.round` to whole CSS pixels, and Base UI's item-aligned Select does not round at all.
  *
- * Only ever called on the element about to be screenshotted (never the cell, never inline
- * default/hover/focus states), and only shifts by the fractional remainder (< 1px), so it cannot
- * mask a genuine multi-pixel style difference - a real difference in size/position/color still
- * changes every pixel beyond that sub-pixel remainder and still fails the diff.
+ * This used to force BOTH sides onto whole pixels, which is a stricter thing to ask and turned out
+ * to be the wrong one. Every mechanism for moving an overlay damages what is inside it:
+ *
+ *   - a TRANSFORM promotes the overlay to its own compositing layer, where Chrome switches text
+ *     from subpixel to grayscale antialiasing. Harmless while both sides need a nudge - which is
+ *     why forcing whole pixels worked for so long - and ruinous the moment only one does. kumo's
+ *     Select popup lays out at y=626.375 against MUI's 626.000, so only the reference side was
+ *     transformed: the boxes agreed exactly and every label in the list ghosted with colour
+ *     fringes, 1858 pixels at Δ232.
+ *   - a MARGIN re-lays-out properly but changes the element's outer size, and Base UI and Floating
+ *     UI watch an overlay with a ResizeObserver and re-run positioning when that changes. Measured
+ *     on kumo's tooltip: identical rects immediately after the write, one device pixel apart by
+ *     the time the capture was taken.
+ *   - an OFFSET (top/left/bottom/right) re-lays-out and leaves the size alone, which is why it is
+ *     what this uses - but it has to be written to the edge the library actually positioned from.
+ *
+ * Matching the phase asks for the minimum: when the two sides already agree - which is most pairs,
+ * most of the time - NOTHING is written to either side, so the majority of overlays are now
+ * captured exactly as their libraries rendered them.
+ *
+ * This cannot hide a placement bug, because it never claims to check placement: the `open` capture
+ * frames the overlay alone, so where that overlay sits is invisible to it either way. Anchoring is
+ * proved by the `anchored` capture and the `anchored-to-trigger` behavior, neither of which goes
+ * through here. The shift is also always under half a pixel, so nothing about the overlay's size or
+ * content can survive it unchanged.
  */
-export async function normalizeOverlayPosition(target: Locator): Promise<void> {
-  await target.evaluate((el) => {
+export async function matchOverlayPhase(
+  target: Locator,
+  wanted: OverlayPhase | null,
+): Promise<OverlayPhase> {
+  return target.evaluate((el, want: OverlayPhase | null) => {
     const node = el as HTMLElement
     // Radix's tailwindcss-animate enter/exit classes leave a *finished* CSS Transition on
     // `transform` sitting on the node; a CSS Transition outranks a plain (non-!important) inline
-    // style in the cascade, and - worse - setting `transform` while one is still wired up makes
-    // the browser animate FROM the old value TOWARD ours over the transition's duration, so a
-    // synchronous re-measure right after setting it would still observe the pre-nudge position.
-    // Kill the transition first (with a forced reflow so it actually commits before anything else)
-    // and set the transform with `!important` so both the animation-cascade priority and the
-    // timing race are neutralized - the nudge then takes effect instantly and synchronously.
+    // style in the cascade, and - worse - writing a property while one is still wired up makes the
+    // browser animate FROM the old value TOWARD ours over the transition's duration, so a
+    // synchronous re-measure right after would still observe the pre-nudge position. Kill the
+    // transition first, with a forced reflow so it commits before anything else happens.
     node.style.setProperty("transition", "none", "important")
-    void node.offsetWidth // force reflow: commit transition:none before measuring or writing
+    void node.offsetWidth
 
-    // MEASURE AFTER killing the transition, never before. An overlay caught with a transform
-    // transition still in flight reports an interpolated position, so a dx/dy computed from it
-    // aims at where the element WAS rather than where it comes to rest - it lands off-integer and
-    // the capture clip rounds outward by an extra device pixel. Found on sonner's toast, which
-    // still had `matrix(1, 0, 0, 1, 0, 0.209426)` on it 400ms after opening: normalizing moved it
-    // to y=922.88 instead of 923, so its capture came out 110 device px tall against MUI's 108 and
-    // every glyph ghosted (6.27% mismatch on a pair whose every computed style already matched).
-    const rect = node.getBoundingClientRect()
-    const dx = Math.round(rect.left) - rect.left
-    const dy = Math.round(rect.top) - rect.top
+    // MEASURE AFTER killing the transition, never before. An overlay caught with a transition still
+    // in flight reports an interpolated position, so a delta computed from it aims at where the
+    // element WAS rather than where it comes to rest. Found on sonner's toast, which still had
+    // `matrix(1, 0, 0, 1, 0, 0.209426)` on it 400ms after opening.
+    const fraction = (v: number) => v - Math.floor(v)
+    const phaseOf = () => {
+      const rect = node.getBoundingClientRect()
+      return { x: fraction(rect.left), y: fraction(rect.top) }
+    }
+    const current = phaseOf()
+    // The FIRST side of a pair is snapped onto whole CSS pixels rather than left where it landed.
+    // A capture is clipped from the element's box, and Playwright expands that clip outward to
+    // whole pixels - so an overlay resting on a fraction has a sliver of the PAGE in its capture,
+    // and the two cells are 240px apart with different content behind them. Measured on kumo's
+    // tooltip at a .5 phase: seven pixels of unrelated page content in the top row, at Δ121.
+    const target = want ?? { x: 0, y: 0 }
 
-    if (dx === 0 && dy === 0) return
+    // Take the SHORTEST route to the wanted fraction, so the overlay never travels more than half a
+    // pixel: matching 0.9 from 0.1 means moving back 0.2, not forward 0.8.
+    const shortest = (to: number, from: number) => {
+      const d = to - from
+      return d > 0.5 ? d - 1 : d < -0.5 ? d + 1 : d
+    }
+    const dx = shortest(target.x, current.x)
+    const dy = shortest(target.y, current.y)
+    // An overlay already on a whole pixel is left ALONE, layer and all. Rewriting it anyway - so
+    // that both sides are de-layered symmetrically - was tried and is worse: it changes nothing for
+    // the kumo pairs (byte-identical numbers) and breaks shadcn's, because folding a transform away
+    // is only safe on an element the harness has a reason to move. The rule stays "touch as little
+    // as possible": no delta, no write.
+    if (dx === 0 && dy === 0) return current
 
-    // Compose against the COMPUTED transform, not the inline one. Radix and MUI both write their
-    // overlay transform inline, so reading `node.style.transform` happened to work for them; a
-    // library that sets it from a stylesheet instead (sonner: `transform: var(--y)`) reports ""
-    // there, and the nudge then REPLACED that transform rather than adding to it - silently
-    // moving the element by the wrong amount. getComputedStyle returns a matrix that already
-    // includes whatever the stylesheet contributed, and `matrix(...) translate(dx, dy)` adds the
-    // nudge on top of it. dx/dy are measured from a rect that already reflects the base
-    // transform, so adding is the correct composition.
+    // Move the nearest POSITIONED element, which for a popup is its positioner wrapper.
     //
-    // Caveat, unexercised today: a base transform carrying a scale/rotate applies to the appended
-    // translate too, so the nudge would be scaled. Every overlay here rests at scale 1 by capture
-    // time (MUI's Grow settles to `transform: none`), and this only ever shifts by a sub-pixel
-    // remainder, so it cannot mask a real difference either way.
-    // `transform: none` cannot be combined with a translate() in the same value list (`none` must
-    // be the sole value), so treat "none"/unset the same as "no existing transform to preserve".
+    // Every popup here is a statically positioned box inside an absolutely positioned one - that is
+    // how Base UI, Radix and MUI's Popper all build them - and making the popup itself `relative`
+    // so it could take an offset changes the containing block for everything absolutely positioned
+    // INSIDE it. Its arrow is exactly that, so the popup would shift half a pixel and the arrow
+    // would jump: 535 pixels at Δ241 on the shadcn tooltip. Nudging the positioner moves the popup
+    // and its arrow together and re-parents nothing.
+    let moved: HTMLElement = node
+    while (getComputedStyle(moved).position === "static" && moved.parentElement) {
+      moved = moved.parentElement
+    }
+    // ...and keep climbing while a PARENT still carries a transform, so the element that gets
+    // rewritten is the one holding the compositing layer rather than something inside it. MUI's
+    // Popper puts its translate on the popper root and the tooltip sits inside it; neutralizing the
+    // tooltip alone leaves the whole subtree in its parent's layer, which is the state this is
+    // trying to get out of (1202 pixels at Δ230 on kumo's tooltip in dark).
+    while (moved.parentElement && getComputedStyle(moved.parentElement).transform !== "none") {
+      moved = moved.parentElement
+    }
+    const style = getComputedStyle(moved)
+
+    // Then rewrite that element's position as PURE LAYOUT: fold whatever translate it carries into
+    // `left`/`top` and drop the transform.
     //
-    // KNOWN LIMIT, and the reason kumo's Select has no `open` pixel state: a transform moves an
-    // already-rasterized subtree rather than re-laying it out, and it promotes the overlay to its
-    // own compositing layer, where Chrome draws text with grayscale rather than subpixel
-    // antialiasing. When both sides need the same nudge that cancels out exactly; when only one
-    // side needs a nudge at all, every glyph in it is drawn differently. Two other implementations
-    // were measured and are worse: a MARGIN re-lays-out correctly but changes the element's outer
-    // size, which Base UI's and Floating UI's ResizeObservers feed straight back into positioning
-    // (kumo's tooltip landed a device pixel out by capture time); writing `top`/`left` leaves the
-    // size alone and fixed kumo's Select and dropdown outright, but cost the shadcn tooltip 535
-    // pixels at Δ241, so it is not a safe swap either. Matching the two sides' sub-pixel PHASE to
-    // each other, instead of forcing both onto whole pixels, is the design that would fix all
-    // three, and it needs the capture order to carry the first side's fraction to the second.
-    const existing = getComputedStyle(node).transform
-    const base = existing && existing !== "none" ? `${existing} ` : ""
-    node.style.setProperty("transform", `${base}translate(${dx}px, ${dy}px)`, "important")
-  })
+    // A positioner is almost always placed with a transform - it is what Floating UI and Popper
+    // both emit - and a transform makes it a compositing layer, where the subtree is rasterized in
+    // layer space and then composited. Moving that layer by a fraction resamples what is already
+    // drawn instead of redrawing it, which is the whole reason this function stopped using a
+    // transform of its own; inheriting one from the positioner is the same mistake one level up
+    // (measured on kumo's tooltip: 532 pixels at Δ216, the entire label ghosted). With the
+    // translate folded into the offsets there is no layer left, and the popup rasterizes at its
+    // final position the way any ordinary box does.
+    //
+    // The opposite edges are pinned to `auto` deliberately. getComputedStyle resolves an `auto`
+    // offset on a positioned element to its USED value, so there is no way to tell from it which
+    // edge the library actually anchored to - and writing `top` on something anchored by `bottom`
+    // leaves both specified, which stretches a height-auto box instead of moving it. Anchoring
+    // explicitly to top/left at the position it already occupies is unambiguous and cannot stretch.
+    const translate = new DOMMatrixReadOnly(style.transform === "none" ? undefined : style.transform)
+    const left = parseFloat(style.left) || 0
+    const top = parseFloat(style.top) || 0
+    moved.style.setProperty("transform", "none", "important")
+    moved.style.setProperty("left", `${left + translate.e + dx}px`, "important")
+    moved.style.setProperty("right", "auto", "important")
+    moved.style.setProperty("top", `${top + translate.f + dy}px`, "important")
+    moved.style.setProperty("bottom", "auto", "important")
+    return phaseOf()
+  }, wanted)
 }
 
 /**

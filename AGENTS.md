@@ -124,7 +124,13 @@ No theme can reconcile that, so such a pair drops `anchored` and declares `ancho
 A pair that needs `anchored` anyway - kumo's popover, whose arrow hangs outside every other capture - uses an unstyled trigger so there is no hover to differ.
 
 Popper and MUI's Popover round an overlay's position to different grids than Floating UI does (`Math.round` to whole CSS pixels against the device grid), so an overlay anchored to a trigger at a fractional position lands half a pixel out.
-`applyState` snaps a cell onto whole pixels before opening for this reason; a pair whose own dimensions are odd can still land on a half pixel, and kumo's Select does - see its section for why that pair has no pixel state at all.
+`applyState` snaps a cell onto whole pixels before opening for this reason, and `matchOverlayPhase` then puts the overlay itself on a whole pixel before it is captured.
+
+That last step is the one to read before touching it (`e2e/lib/states.ts`).
+An overlay has to be moved onto a whole pixel or its capture picks up a sliver of the page behind the cell, and the two cells have different content behind them.
+But every obvious way to move it damages what is inside: a transform promotes the overlay to a compositing layer, where Chrome draws text with grayscale rather than subpixel antialiasing, so a nudge on one side alone re-rasterizes every glyph in it; a margin changes the element's outer size, which Base UI's and Floating UI's ResizeObservers feed straight back into positioning.
+What works is rewriting the position as pure layout - fold whatever translate the positioner carries into `left`/`top`, drop the transform, and pin the opposite edges to `auto` so a height-auto box cannot stretch instead of moving.
+Two details are load-bearing and each cost a real failure: the element rewritten is the outermost one carrying a transform, not the popup (making a static popup `relative` re-parents its absolutely positioned ARROW - 535 pixels at Δ241 on shadcn's tooltip; leaving the transform on an ancestor keeps the whole subtree in a layer - 1202 at Δ230 on kumo's), and an overlay already on a whole pixel is left completely alone.
 
 Decoration painted OUTSIDE an overlay's border box - an outline band, a shadow's reach - is what the `overlay-matches` behavior exists for; the `open` capture clips at that box and the `anchored` capture's union box is only the overlay's and the trigger's.
 That check compares colours in sRGB, because `getComputedStyle` preserves the space a value was authored in and Tailwind routes every shadow colour through an `oklab` `color-mix` - the same colour, spelled two ways.
