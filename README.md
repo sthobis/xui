@@ -124,7 +124,7 @@ Each such block says so at the top.
 AppBar / Toolbar above is the first of these.
 
 - [x] Rating (no shadcn twin - read-only, whole and half values)
-- [x] Stepper (no shadcn twin - horizontal, first step)
+- [x] Stepper (no shadcn twin - horizontal and vertical, first step)
 - [x] Fab (no shadcn twin - composed from Button; circular and extended)
 - [x] SpeedDial (no shadcn twin - closed state)
 - [x] BottomNavigation (no shadcn twin - labels on and off)
@@ -144,23 +144,39 @@ A component's theme block only styles what a gallery pair proves, because a valu
 So the components below are themed for the surfaces listed as covered, and fall back to MUI's own look outside them.
 That fallback is deliberate and, where it matters, defensive: `Fab`'s size rules are written so an untreated size keeps MUI's geometry instead of being forced to the one size that is covered.
 
-| Component | Covered | Not covered |
+The two tables below say different things, and running them together made the second look like a backlog.
+The first is work not done yet.
+The second is work that is not the theme's to do, and listing it as a gap only invites someone to try closing it.
+
+#### Not covered yet
+
+| Component | Covered | Still to do |
 | --- | --- | --- |
-| AppBar / Toolbar | The default static bar | `position="fixed"` and `"sticky"`, elevation above 0, the dense variant, non-default `color` |
-| Badge | The dot anchored to an avatar; the count pill in primary and error | `showZero`, the `invisible` transition, `overlap="circular"`. The pill's *placement* is MUI's own, not shadcn's, because shadcn ships no anchored count to copy |
+| AppBar / Toolbar | The default static bar | The dense variant, non-default `color` |
+| Badge | The dot anchored to an avatar; the count pill in primary and error | `showZero`, the `invisible` transition |
 | BottomNavigation | The resting bar with one item selected, with labels on and off | The selection animation |
-| Dialog | The open dialog with a header and footer | Nothing in the theme. The pair turns off shadcn's corner close button, but that button is a `size="icon-sm"` ghost IconButton, which `iconbutton-small` already covers - only where an app puts it is untested, and the theme does not own that |
-| Drawer | All four anchors, with a header | Its corner close button, on the same terms as Dialog above |
 | Fab | The circular 56px default, `size="small"`, and `variant="extended"` | `size="medium"` |
 | ImageList | The standard variant at a fixed column count, with and without a caption bar | `variant="masonry"`, `"quilted"` and `"woven"`, per-item row and column spans, and the bar's `subtitle` and `actionIcon` slots and `"top"`/`"below"` positions |
-| List | Plain items; items with an icon, a description, or both; and `dense`, which maps to shadcn's `xs` size | `ItemSeparator`, `ItemActions`, `ItemHeader`, `ItemFooter`. Item's `outline` and `muted` variants and its `sm` size are not gaps the theme can close: MUI's ListItem has no variant prop and only one density flag, so those are app-level work, not theming |
-| Rating | Read-only display at whole and half values | Hover preview and click to set. The `size` ladder is not a gap the theme can close: shadcn ships no rating, so there is nothing to extract a ladder from, and the sizing is scoped so the uncovered sizes keep MUI's own geometry |
+| List | Plain items; items with an icon, a description, or both; and `dense`, which maps to shadcn's `xs` size | `ItemSeparator`, `ItemActions`, `ItemHeader`, `ItemFooter` |
+| Rating | Read-only display at whole and half values | Hover preview, click to set |
 | Snackbar | A message alone, with an action, and with a description | The cancel and close buttons, placement |
 | SpeedDial | Closed, and open with its actions | The tooltips an action can show |
-| Stepper | Horizontal, on the first step | Completed steps, the vertical orientation, error and disabled steps |
-| TablePagination | Caption, actions, the rows-per-page control, and the first and last page buttons | The rows-per-page menu when open, which the `select-*` pairs cover instead |
+| Stepper | Horizontal and vertical, on the first step | Completed steps, error and disabled steps |
+| TablePagination | Caption, actions, the rows-per-page control, and the first and last page buttons | Nothing outstanding; the rows-per-page menu when open is covered by the `select-*` pairs |
 
-Components not listed here have no recorded gap, which means the pairs cover the surfaces we set out to cover, not that every prop MUI exposes has been exercised.
+#### Not the theme's to close
+
+| Surface | Why it stays open |
+| --- | --- |
+| `Dialog` and `Drawer`'s corner close button | It is a `size="icon-sm"` ghost IconButton, which `iconbutton-small` already covers. Only where an app positions it is untested, and a theme does not own layout |
+| `List` Item's `outline` and `muted` variants, and its `sm` size | MUI's `ListItem` has no variant prop and only one density flag, so reaching these means `sx` or a styled component - app work |
+| `Rating`'s `size` ladder | shadcn ships no rating, so there is no ladder to extract. The sizing is scoped so the uncovered sizes keep MUI's own geometry rather than being pinned to the covered one |
+| `Badge`'s `overlap="circular"`, and the count pill's placement | shadcn ships no anchored count anywhere, so nothing grounds a position. The theme styles the pill and leaves MUI's placement alone |
+| `AppBar`'s elevation above 0 | shadcn's header has no shadow at any depth, so there is no value to extract |
+| `AppBar`'s `position="fixed"` and `"sticky"` | A fixed bar escapes its gallery cell, so the harness cannot frame it without a new capture mode. A limitation of the check, not of the theme |
+| `Stepper`'s completed-step glyph | MUI hardcodes its own check vector and no CSS reshapes it. Closing it means the theme shipping a `stepIcon` component, which is a design decision rather than an extraction |
+
+Components in neither table have no recorded gap, which means the pairs cover the surfaces we set out to cover, not that every prop MUI exposes has been exercised.
 
 Anything unchecked in either section still renders.
 It just renders in MUI's default look rather than the shadcn look, which is a cosmetic gap and never a broken component.
