@@ -508,11 +508,57 @@ export const shadcnTheme = createTheme({
         },
       },
     },
+    // ---- ButtonGroup ----
+    //
+    // Ground truth: apps/showcase/src/components/ui/button-group.tsx, whose horizontal orientation
+    // is `[&>*:not(:first-child)]:border-l-0` plus the rounding resets.
+    //
+    // THE SEAM IS BUILT DIFFERENTLY BY EACH LIBRARY, and the two are not interchangeable even though
+    // they measure the same from outside. shadcn REMOVES the left border of every button after the
+    // first, so a seam is one 1px line. MUI keeps both borders and pulls the buttons together with
+    // `margin-left: -1px`, so a seam is two 1px lines stacked on the same pixel. The group's overall
+    // width and every button's content position come out identical either way - which is exactly why
+    // this survived: on macOS the pair measured a clean zero for months.
+    //
+    // Linux disagreed, at Δ31 over fourteen pixels sitting in two column pairs, and those columns
+    // were the seams. Two stacked borders composite differently from one - visibly so in dark, where
+    // the button carries a translucent `dark:bg-input/30` fill behind them - and macOS's rasterizer
+    // happened to round the two to the same value. The pixel diff could not see it; a second
+    // platform could. Matching shadcn's construction removes the difference at the source rather
+    // than granting the pair a threshold it only needs on one operating system.
     MuiButtonGroup: {
       defaultProps: {
         disableRipple: true, // see layer 2 in the "No ripple, anywhere" banner above - a group
         // otherwise pushes `disableRipple: false` onto every child Button through its context,
         // which outranks MuiButtonBase's default.
+      },
+      styleOverrides: {
+        // Written from the ROOT rather than on the `grouped` slot, and that is not stylistic. MUI v9
+        // splits these buttons across `firstButton`/`middleButton`/`lastButton` slots and sets the
+        // seam there, so a plain `grouped` override is a single class against their two and loses.
+        // Reaching down from the root puts two classes plus a pseudo on the left-hand side, which
+        // wins without an `!important`.
+        root: ({ theme }) => ({
+          "& .MuiButtonGroup-grouped:not(:first-of-type)": {
+            marginLeft: 0, // shadcn: no negative margin - the border is removed, not overlapped
+            borderLeftWidth: 0, // shadcn: [&>*:not(:first-child)]:border-l-0
+          },
+          // The other half of the swap, and the half that is easy to miss. MUI does not just
+          // overlap the borders, it also makes the RIGHT border of every non-last button
+          // transparent, so its seam is drawn entirely by the next button's left border. Removing
+          // that left border without restoring this colour deletes the seam instead of moving it -
+          // measured, the line simply vanished and the pair went from 0 to 244 differing pixels.
+          "& .MuiButtonGroup-grouped:not(:last-of-type)": {
+            borderRightColor: theme.vars.palette.border, // shadcn: border-border
+            ...theme.applyStyles("dark", {
+              // shadcn's outline Button swaps tokens in dark - `dark:border-input`, not
+              // border-border - and this seam has to follow it or the line is the right shape in
+              // the wrong colour. It read as 236 pixels at Δ13, which is small enough to look like
+              // antialiasing and is actually a different token.
+              borderRightColor: theme.vars.palette.input, // shadcn: dark:border-input
+            }),
+          },
+        }),
       },
     },
     // -----------------------------------------------------------------------
