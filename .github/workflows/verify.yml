@@ -62,16 +62,27 @@ jobs:
           path: e2e/results/
           retention-days: 7
 
-  # NOT a gate, on purpose. Linux rasterizes antialiasing and subpixel coverage differently from
-  # macOS, and seven pairs that are an exact match on macOS differ here by Δ67-121 over tens to
-  # hundreds of pixels: badgecount-basic, badgecount-max, buttongroup-basic, menu-open,
-  # stepper-horizontal, textfield-error-focus, tooltip-open.
+  # NOT a gate, on purpose - but the reason has changed, and the answer is worth keeping.
   #
-  # Whether that is harmless rasterizer noise or real sub-pixel geometry that macOS happens to round
-  # away is NOT yet known, and the difference matters: the second would mean those pairs are wrong
-  # everywhere and only look right on one platform. Until someone measures it, blocking every push
-  # on an unexplained number would be false precision, and deleting the job would hide a finding
-  # about the project's central claim. So it runs, uploads its diffs, and does not block.
+  # This job used to fail seven pairs at Δ67-121 that are an exact match on macOS, which left an
+  # uncomfortable question open: harmless rasterizer noise, or real sub-pixel geometry that macOS
+  # rounds away and Linux exposes? The second would have meant those pairs were wrong everywhere and
+  # only looked right on one platform.
+  #
+  # Measured from this job's own artifacts, it was neither a theme bug nor mere noise: no capture
+  # differed in SIZE, every differing pixel sat inside a text band, and the signed difference
+  # averaged about zero against a large absolute one - a positional shift of glyphs, not a colour or
+  # layout difference. Font HINTING was the amplifier, quantising two texts a fraction of a pixel
+  # apart onto different grids. Disabling it in playwright.config.ts took tooltip-open from 1311px
+  # at Δ103 to 43px at Δ1, textfield-error from 2834px at Δ123 to 20px at Δ1, and badgecount-basic
+  # to zero, with the macOS gate still green.
+  #
+  # What is left is one pair: dark-buttongroup-basic. At a threshold above Δ2 it is FOURTEEN pixels,
+  # in two column pairs, on the vertical seams between adjacent buttons - the rest of its 248 count
+  # is sub-Δ2 noise. It is deliberately NOT given a maxDeltaOverrides entry, because that file is
+  # platform-independent: an override bought for Linux would loosen this pair on macOS, where it
+  # measures exactly zero. A non-blocking job carrying one invisible seam artifact is the cheaper
+  # trade.
   linux-advisory:
     runs-on: ubuntu-latest
     continue-on-error: true
