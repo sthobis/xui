@@ -4698,6 +4698,28 @@ export const shadcnTheme = createTheme({
         },
       },
     },
+    // ItemActions -> MuiListItemSecondaryAction.
+    //
+    // These are different objects that look alike. shadcn's ItemActions is an ordinary flex child at
+    // the end of the item (`flex items-center gap-2`), pushed right by ItemContent's flex-1 and
+    // counting toward the row's height like anything else. MUI's secondaryAction is taken OUT of the
+    // flow - absolutely positioned against the row's right edge and lifted with a translate - so it
+    // contributes no height at all: measured, the same row came out 41.3px on MUI's side against
+    // shadcn's 50, and the button sat 4px further right because it anchors to `right: 16px` rather
+    // than to the item's own 12px padding.
+    MuiListItemSecondaryAction: {
+      styleOverrides: {
+        root: {
+          // Back into the flow. Everything below follows from that: the row regains the action's
+          // height, and the button lands on the item's padding edge instead of a hardcoded inset.
+          position: "static", // shadcn: ItemActions is an in-flow child, not an overlay
+          transform: "none", // shadcn: no vertical lift - `items-center` on the item does that
+          display: "flex", // shadcn: flex
+          alignItems: "center", // shadcn: items-center
+          gap: "0.5rem", // shadcn: gap-2
+        },
+      },
+    },
     MuiListItemText: {
       styleOverrides: {
         root: {
@@ -5384,10 +5406,17 @@ export const shadcnTheme = createTheme({
       },
       styleOverrides: {
         root: ({ theme }) => ({
-          backgroundColor: theme.vars.palette.background.default, // shadcn: bg-background
-          color: theme.vars.palette.text.primary, // shadcn: ambient foreground (no text class)
           backgroundImage: "none", // kills MUI Paper's dark-mode elevation overlay - see the MuiMenu banner
           borderBottom: `1px solid ${theme.vars.palette.border}`, // shadcn: border-b
+          // THE SURFACE IS SCOPED AWAY FROM `transparent` AND `inherit`. Setting it on the root
+          // unconditionally reached every colour, so `color="transparent"` - a bar deliberately
+          // showing what is behind it - rendered opaque. Same shape as the Fab and Rating size
+          // ladders and the Toolbar's density: a rule written for the covered case quietly breaking
+          // an uncovered one, and the only reason it lasted is that no pair asked for it.
+          "&:not(.MuiAppBar-colorTransparent):not(.MuiAppBar-colorInherit)": {
+            backgroundColor: theme.vars.palette.background.default, // shadcn: bg-background
+            color: theme.vars.palette.text.primary, // shadcn: ambient foreground (no text class)
+          },
           // MUI's AppBar picks its surface from a `color`-keyed variant class rather than from the
           // root, and `color="primary"` is its default - so the surface above has to be restated at
           // that variant's own specificity or the Material primary fill wins. colorDefault gets the

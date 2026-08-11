@@ -99,5 +99,35 @@ export const appBarSection: Section = {
         </div>
       ),
     },
+    {
+      // `color="transparent"`: a bar that shows whatever is behind it, keeping only its border and
+      // its layout. This is the one non-default colour with a meaning shadcn's surface language can
+      // express - `color="primary"` and `"secondary"` would be asking for a coloured header, which
+      // shadcn does not have, so those stay untreated and land on the same neutral surface.
+      id: "appbar-transparent",
+      shadcn: (
+        <div style={wrapStyle}>
+          {/* No bg class at all, so the cell shows through - which is exactly what transparent means. */}
+          <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
+            <Button variant="ghost" size="icon" aria-label="Toggle sidebar">
+              <PanelLeft />
+            </Button>
+            <span className="text-base font-medium">{TITLE}</span>
+          </header>
+        </div>
+      ),
+      mui: (
+        <div style={wrapStyle}>
+          <MuiAppBar position="static" color="transparent">
+            <MuiToolbar>
+              <MuiIconButton aria-label="Toggle sidebar">
+                <PanelLeft />
+              </MuiIconButton>
+              <MuiTypography variant="subtitle1">{TITLE}</MuiTypography>
+            </MuiToolbar>
+          </MuiAppBar>
+        </div>
+      ),
+    },
   ],
 }

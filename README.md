@@ -152,12 +152,12 @@ The second is work that is not the theme's to do, and listing it as a gap only i
 
 | Component | Covered | Still to do |
 | --- | --- | --- |
-| AppBar / Toolbar | The default static bar and the dense one | Non-default `color` |
+| AppBar / Toolbar | The default static bar, the dense one, and `color="transparent"` | Nothing outstanding |
 | Badge | The dot anchored to an avatar; the count pill in primary and error, including `showZero` | Nothing outstanding |
 | BottomNavigation | The resting bar with one item selected, with labels on and off | Nothing outstanding |
 | Fab | The circular ladder (56px default, `size="small"`, `size="medium"`) and `variant="extended"` | Nothing outstanding |
 | ImageList | The standard variant at a fixed column count, with and without a caption bar | `variant="masonry"`, `"quilted"` and `"woven"`, per-item row and column spans, and the bar's `subtitle` and `actionIcon` slots and `"top"`/`"below"` positions |
-| List | Plain items; items with an icon, a description, or both; `dense`, which maps to shadcn's `xs` size; and `ItemSeparator` | `ItemActions`, `ItemHeader`, `ItemFooter` |
+| List | Plain items; items with an icon, a description, or both; `dense`, which maps to shadcn's `xs` size; `ItemSeparator`; and `ItemActions` | Nothing outstanding |
 | Rating | Read-only display at whole and half values | Hover preview, click to set - both need a harness state that hovers a specific child rather than the pair's `data-target` |
 | Snackbar | A message alone, with an action, and with a description | The cancel and close buttons |
 | SpeedDial | Closed, and open with its actions | The tooltips an action can show, on the same terms as Rating's hover above |
@@ -170,6 +170,7 @@ The second is work that is not the theme's to do, and listing it as a gap only i
 | --- | --- |
 | `Dialog` and `Drawer`'s corner close button | It is a `size="icon-sm"` ghost IconButton, which `iconbutton-small` already covers. Only where an app positions it is untested, and a theme does not own layout |
 | `List` Item's `outline` and `muted` variants, and its `sm` size | MUI's `ListItem` has no variant prop and only one density flag, so reaching these means `sx` or a styled component - app work |
+| `List` Item's `ItemHeader` and `ItemFooter` | Pure composition slots - a `basis-full` row inside the item, which a consumer writes as a div. MUI has no counterpart slot, so there is nothing for a theme to style |
 | `Rating`'s `size` ladder | shadcn ships no rating, so there is no ladder to extract. The sizing is scoped so the uncovered sizes keep MUI's own geometry rather than being pinned to the covered one |
 | `Badge`'s `overlap="circular"`, and the count pill's placement | shadcn ships no anchored count anywhere, so nothing grounds a position. The theme styles the pill and leaves MUI's placement alone |
 | `AppBar`'s elevation above 0 | shadcn's header has no shadow at any depth, so there is no value to extract |

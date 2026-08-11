@@ -2,10 +2,13 @@ import MuiList from "@mui/material/List"
 import MuiListItem from "@mui/material/ListItem"
 import MuiListItemIcon from "@mui/material/ListItemIcon"
 import MuiListItemText from "@mui/material/ListItemText"
-import { Inbox, Send } from "lucide-react"
 import MuiDivider from "@mui/material/Divider"
+import MuiIconButton from "@mui/material/IconButton"
+import { Ellipsis, Inbox, Send } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import {
   Item,
+  ItemActions,
   ItemContent,
   ItemDescription,
   ItemGroup,
@@ -199,6 +202,46 @@ export const listSection: Section = {
                 <Send />
               </MuiListItemIcon>
               <MuiListItemText primary="Sent" secondary="Last week" />
+            </MuiListItem>
+          </MuiList>
+        </div>
+      ),
+    },
+    {
+      // A trailing action. shadcn's ItemActions is an ordinary flex child at the end of the item,
+      // pushed right by ItemContent's flex-1; MUI's `secondaryAction` is positioned ABSOLUTELY at
+      // the row's right edge and lifted with a translate. Those are different objects that happen to
+      // look alike, and the theme has to make MUI's the shadcn one - see the MuiListItem block.
+      id: "list-actions",
+      states: ["default"],
+      shadcn: (
+        <div style={wrapStyle}>
+          <ItemGroup>
+            <Item data-target>
+              <ItemContent>
+                <ItemTitle>Inbox</ItemTitle>
+              </ItemContent>
+              <ItemActions>
+                <Button variant="ghost" size="icon-sm" aria-label="More">
+                  <Ellipsis />
+                </Button>
+              </ItemActions>
+            </Item>
+          </ItemGroup>
+        </div>
+      ),
+      mui: (
+        <div style={wrapStyle}>
+          <MuiList>
+            <MuiListItem
+              data-target
+              secondaryAction={
+                <MuiIconButton size="small" aria-label="More">
+                  <Ellipsis />
+                </MuiIconButton>
+              }
+            >
+              <MuiListItemText primary="Inbox" />
             </MuiListItem>
           </MuiList>
         </div>
