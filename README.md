@@ -152,16 +152,16 @@ The second is work that is not the theme's to do, and listing it as a gap only i
 
 | Component | Covered | Still to do |
 | --- | --- | --- |
-| AppBar / Toolbar | The default static bar | The dense variant, non-default `color` |
-| Badge | The dot anchored to an avatar; the count pill in primary and error | `showZero`, the `invisible` transition |
-| BottomNavigation | The resting bar with one item selected, with labels on and off | The selection animation |
-| Fab | The circular 56px default, `size="small"`, and `variant="extended"` | `size="medium"` |
+| AppBar / Toolbar | The default static bar and the dense one | Non-default `color` |
+| Badge | The dot anchored to an avatar; the count pill in primary and error, including `showZero` | Nothing outstanding |
+| BottomNavigation | The resting bar with one item selected, with labels on and off | Nothing outstanding |
+| Fab | The circular ladder (56px default, `size="small"`, `size="medium"`) and `variant="extended"` | Nothing outstanding |
 | ImageList | The standard variant at a fixed column count, with and without a caption bar | `variant="masonry"`, `"quilted"` and `"woven"`, per-item row and column spans, and the bar's `subtitle` and `actionIcon` slots and `"top"`/`"below"` positions |
-| List | Plain items; items with an icon, a description, or both; and `dense`, which maps to shadcn's `xs` size | `ItemSeparator`, `ItemActions`, `ItemHeader`, `ItemFooter` |
-| Rating | Read-only display at whole and half values | Hover preview, click to set |
-| Snackbar | A message alone, with an action, and with a description | The cancel and close buttons, placement |
-| SpeedDial | Closed, and open with its actions | The tooltips an action can show |
-| Stepper | Horizontal and vertical, on the first step | Completed steps, error and disabled steps |
+| List | Plain items; items with an icon, a description, or both; `dense`, which maps to shadcn's `xs` size; and `ItemSeparator` | `ItemActions`, `ItemHeader`, `ItemFooter` |
+| Rating | Read-only display at whole and half values | Hover preview, click to set - both need a harness state that hovers a specific child rather than the pair's `data-target` |
+| Snackbar | A message alone, with an action, and with a description | The cancel and close buttons |
+| SpeedDial | Closed, and open with its actions | The tooltips an action can show, on the same terms as Rating's hover above |
+| Stepper | Horizontal and vertical, on the first step | Disabled steps |
 | TablePagination | Caption, actions, the rows-per-page control, and the first and last page buttons | Nothing outstanding; the rows-per-page menu when open is covered by the `select-*` pairs |
 
 #### Not the theme's to close
@@ -174,9 +174,15 @@ The second is work that is not the theme's to do, and listing it as a gap only i
 | `Badge`'s `overlap="circular"`, and the count pill's placement | shadcn ships no anchored count anywhere, so nothing grounds a position. The theme styles the pill and leaves MUI's placement alone |
 | `AppBar`'s elevation above 0 | shadcn's header has no shadow at any depth, so there is no value to extract |
 | `AppBar`'s `position="fixed"` and `"sticky"` | A fixed bar escapes its gallery cell, so the harness cannot frame it without a new capture mode. A limitation of the check, not of the theme |
-| `Stepper`'s completed-step glyph | MUI hardcodes its own check vector and no CSS reshapes it. Closing it means the theme shipping a `stepIcon` component, which is a design decision rather than an extraction |
+| `Stepper`'s completed and error step glyphs | MUI hardcodes its own check and warning vectors and no CSS reshapes them. Closing either means the theme shipping a `stepIcon` component, which is a design decision rather than an extraction |
+| `BottomNavigation`'s selection animation, and `Badge`'s `invisible` transition | The harness disables animations so a capture is deterministic. Anything whose whole content is the transition is invisible to it by construction, not by omission |
+| `Snackbar`'s placement | The open state captures the toast alone and normalizes its position, precisely so a pair measures the box rather than where the library parked it. That makes placement unmeasurable here by the same decision |
 
 Components in neither table have no recorded gap, which means the pairs cover the surfaces we set out to cover, not that every prop MUI exposes has been exercised.
+
+The second table is not a to-do list, and the distinction is the point.
+An entry there is closed as far as this project is concerned - by a missing prop in MUI, a missing component in shadcn, or a deliberate property of the harness.
+The first table is the only one worth picking work from.
 
 Anything unchecked in either section still renders.
 It just renders in MUI's default look rather than the shadcn look, which is a cosmetic gap and never a broken component.
