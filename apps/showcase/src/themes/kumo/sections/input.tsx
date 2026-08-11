@@ -61,6 +61,35 @@ export const inputSection: Section = {
       ref: <Input data-target aria-label="Name" disabled />,
       mui: <MuiTextField data-target disabled slotProps={{ htmlInput: { "aria-label": "Name" } }} />,
     },
+    // MUI's other two input shells, judged against the SAME Kumo Input. Kumo ships one input, so
+    // `variant="standard"` and `variant="filled"` have no look of their own to replicate - the
+    // theme normalises both onto Kumo's control, and the only way to prove that worked is to
+    // measure them against it. An unthemed shell fails these loudly: standard renders as a bare
+    // underline, filled as a grey top-rounded box.
+    {
+      id: "input-standard",
+      states: s,
+      ref: <Input data-target aria-label="Name" />,
+      mui: (
+        <MuiTextField
+          data-target
+          variant="standard"
+          slotProps={{ htmlInput: { "aria-label": "Name" } }}
+        />
+      ),
+    },
+    {
+      id: "input-filled",
+      states: s,
+      ref: <Input data-target aria-label="Name" />,
+      mui: (
+        <MuiTextField
+          data-target
+          variant="filled"
+          slotProps={{ htmlInput: { "aria-label": "Name" } }}
+        />
+      ),
+    },
     {
       id: "inputarea-basic",
       states: s,

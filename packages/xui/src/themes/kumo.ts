@@ -622,6 +622,106 @@ function toolbarControlChrome(line: string, tint: string) {
   }
 }
 
+/** The Kumo tokens the input shells read. Structural, so `theme.vars.palette.kumo` satisfies it. */
+type KumoInputTokens = {
+  textDefault: string
+  control: string
+  line: string
+  danger: string
+  focus: string
+  textPlaceholder: string
+}
+
+/**
+ * kumo: the Input box - dist/chunks/input-o3mtvvtqf69j5k10.js. See the Input banner below for the
+ * full class rows and the two ways it differs from Button.
+ *
+ * MUI ships THREE input shells for three Material looks - `Input` (underlined), `FilledInput`
+ * (filled + underlined) and `OutlinedInput`. Kumo has exactly ONE input, so all three resolve to
+ * this same box and the underline variants additionally clear their ::before/::after rules. That
+ * is the same call shadcn's theme makes, and for the same reason: a drop-in theme should never
+ * leave a variant rendering as Material.
+ */
+function kumoInputBox(k: KumoInputTokens, multiline: boolean) {
+  return {
+    boxSizing: "border-box" as const,
+    ...TEXT_BASE, // kumo: text-base
+    fontWeight: 400,
+    letterSpacing: "normal",
+    color: k.textDefault, // kumo: text-kumo-default
+    backgroundColor: k.control, // kumo: bg-kumo-control
+    borderRadius: "8px", // kumo: rounded-lg
+    border: 0, // kumo: border-0
+    padding: 0, // the padding belongs to the control itself, as it does in Kumo
+    // kumo: ring ring-kumo-line - and NO shadow-xs, unlike every Button variant.
+    boxShadow: `0 0 0 1px ${k.line}`,
+    ...(multiline ? { height: "auto" } : { height: "36px" }), // kumo: InputArea's h-auto / h-9
+  }
+}
+
+/** kumo: the Input box's focus, error and disabled rows - shared by all three MUI shells. */
+function kumoInputBoxStates(k: KumoInputTokens) {
+  return {
+    // kumo: focus:ring-[1.5px] focus:ring-kumo-focus/50. Plain :focus on the control, so
+    // `:has(:focus)` rather than MUI's `.Mui-focused` (which also fires for programmatic focus)
+    // and rather than :focus-visible (which a click would not match).
+    "&:has(:focus)": {
+      boxShadow: `0 0 0 1.5px color-mix(in oklab, ${k.focus} 50%, transparent)`,
+    },
+    "&.Mui-error": {
+      boxShadow: `0 0 0 1px ${k.danger}`, // kumo: !ring-kumo-danger
+      "&:has(:focus)": {
+        // kumo: `focus:ring-kumo-danger/50 focus:ring-[1.5px]` - but the `!` on the resting
+        // `!ring-kumo-danger` makes that colour !important, so it BEATS the /50 tint while the
+        // width still widens. A focused error ring is therefore solid danger at 1.5px, not a 50%
+        // wash of it. Taking the class list at face value renders a visibly paler outline (Δ103).
+        boxShadow: `0 0 0 1.5px ${k.danger}`,
+      },
+    },
+    "&.Mui-disabled": {
+      // Kumo's own `disabled:text-kumo-disabled` names a token the package does not define, so it
+      // resolves to nothing and a disabled field keeps its normal colours. Restated here because
+      // MUI otherwise greys both the text and the outline.
+      color: k.textDefault,
+      backgroundColor: k.control,
+      boxShadow: `0 0 0 1px ${k.line}`,
+    },
+  }
+}
+
+/** kumo: the control inside the box - `px-3`, plus `py-2` when it is an InputArea. */
+function kumoInputControl(k: KumoInputTokens, multiline: boolean) {
+  return {
+    padding: multiline ? "8px 12px" : "0 12px", // kumo: px-3, plus py-2 on InputArea
+    // kumo: InputGroup tightens the field's padding on the side an addon sits, from 12px to 8px,
+    // and the addon carries the rest of the gap itself.
+    ".MuiInputBase-adornedEnd &": { paddingRight: "8px" },
+    ".MuiInputBase-adornedStart &": { paddingLeft: "8px" },
+    height: multiline ? "auto" : "100%",
+    boxSizing: "border-box" as const,
+    // Kumo's InputArea is a plain <textarea>, so it keeps the UA's vertical resize grip. MUI sets
+    // `resize: none` on its own, which erased the grip - Δ153 over the ~40 corner pixels it takes.
+    ...(multiline && { resize: "vertical" as const }),
+    "&::placeholder": {
+      color: k.textPlaceholder, // kumo: the `kumo-input-placeholder` class
+      opacity: 1, // MUI dims its placeholder with opacity; Kumo sets a colour outright
+    },
+    "&.Mui-disabled": {
+      WebkitTextFillColor: k.textDefault, // MUI greys disabled text via this
+    },
+  }
+}
+
+/**
+ * MUI draws `Input` and `FilledInput` with an underline built from ::before / ::after, and
+ * FilledInput additionally fills its box and rounds only the top corners. Kumo's input has no
+ * underline in any state, so every one of those rules is cleared rather than restyled.
+ */
+const KUMO_NO_UNDERLINE = {
+  "&::before, &::after": { borderBottom: "none", content: '""' },
+  "&:hover:not(.Mui-disabled, .Mui-error)::before": { borderBottom: "none" },
+} as const
+
 /**
  * MUI TRAP - `disableElevation` erases the ring on hover, active and focus-visible.
  *
@@ -1077,17 +1177,7 @@ export const kumoTheme = createTheme({
         root: ({ theme, ownerState }) => {
           const k = theme.vars.palette.kumo
           return {
-            boxSizing: "border-box" as const,
-            ...TEXT_BASE, // kumo: text-base
-            fontWeight: 400,
-            letterSpacing: "normal",
-            color: k.textDefault, // kumo: text-kumo-default
-            backgroundColor: k.control, // kumo: bg-kumo-control
-            borderRadius: "8px", // kumo: rounded-lg
-            border: 0, // kumo: border-0
-            padding: 0, // the padding belongs to the control itself, as it does in Kumo
-            // kumo: ring ring-kumo-line - and NO shadow-xs, unlike every Button variant.
-            boxShadow: `0 0 0 1px ${k.line}`,
+            ...kumoInputBox(k, Boolean(ownerState.multiline)),
             // ...except when the control is a SELECT. kumo does not build its Select trigger from
             // its Input at all - `selectVariants` is `cn(buttonVariants({ size }), "justify-between
             // font-normal", "focus:ring-kumo-focus/50 focus-visible:ring-inset")`, so the trigger is
@@ -1111,55 +1201,96 @@ export const kumoTheme = createTheme({
                 outline: "none",
               },
             },
-            ...(ownerState.multiline
-              ? { height: "auto" } // kumo: InputArea's h-auto
-              : { height: "36px" }), // kumo: h-9
-            // kumo: focus:ring-[1.5px] focus:ring-kumo-focus/50. Plain :focus on the control, so
-            // `:has(:focus)` rather than MUI's `.Mui-focused` (which also fires for programmatic
-            // focus) and rather than :focus-visible (which a click would not match).
-            "&:has(:focus)": {
-              boxShadow: `0 0 0 1.5px color-mix(in oklab, ${k.focus} 50%, transparent)`,
-            },
-            "&.Mui-error": {
-              boxShadow: `0 0 0 1px ${k.danger}`, // kumo: !ring-kumo-danger
-              "&:has(:focus)": {
-                // kumo: `focus:ring-kumo-danger/50 focus:ring-[1.5px]` - but the `!` on the resting
-                // `!ring-kumo-danger` makes that colour !important, so it BEATS the /50 tint while
-                // the width still widens. A focused error ring is therefore solid danger at 1.5px,
-                // not a 50% wash of it. Taking the class list at face value renders a visibly paler
-                // outline (Δ103).
-                boxShadow: `0 0 0 1.5px ${k.danger}`,
-              },
-            },
-            "&.Mui-disabled": {
-              // Kumo's own `disabled:text-kumo-disabled` names a token the package does not define,
-              // so it resolves to nothing and a disabled field keeps its normal colours. Restated
-              // here because MUI otherwise greys both the text and the outline.
-              color: k.textDefault,
-              backgroundColor: k.control,
-              boxShadow: `0 0 0 1px ${k.line}`,
-            },
+            ...kumoInputBoxStates(k),
           }
         },
-        input: ({ theme, ownerState }) => ({
-          padding: ownerState.multiline ? "8px 12px" : "0 12px", // kumo: px-3, plus py-2 on InputArea
-          // kumo: InputGroup tightens the field's padding on the side an addon sits, from 12px to
-          // 8px, and the addon carries the rest of the gap itself.
-          ".MuiInputBase-adornedEnd &": { paddingRight: "8px" },
-          ".MuiInputBase-adornedStart &": { paddingLeft: "8px" },
-          height: ownerState.multiline ? "auto" : "100%",
-          boxSizing: "border-box" as const,
-          // Kumo's InputArea is a plain <textarea>, so it keeps the UA's vertical resize grip. MUI
-          // sets `resize: none` on its own, which erased the grip - Δ153 over the ~40 corner pixels
-          // it occupies.
-          ...(ownerState.multiline && { resize: "vertical" as const }),
-          "&::placeholder": {
-            // kumo: the `kumo-input-placeholder` class
-            color: theme.vars.palette.kumo.textPlaceholder,
-            opacity: 1, // MUI dims its placeholder with opacity; Kumo sets a colour outright
-          },
-          "&.Mui-disabled": {
-            WebkitTextFillColor: theme.vars.palette.kumo.textDefault, // MUI greys disabled text via this
+        input: ({ theme, ownerState }) =>
+          kumoInputControl(theme.vars.palette.kumo, Boolean(ownerState.multiline)),
+      },
+    },
+
+    // MUI's other two input shells. Kumo has one input, so both resolve to the same box as
+    // OutlinedInput above (see kumoInputBox) with their Material underline cleared. Without these
+    // a `<TextField variant="standard">` or `variant="filled"` in a Kumo app still renders as
+    // Material - an underlined, grey-filled control next to Kumo's ringed ones.
+    MuiInput: {
+      styleOverrides: {
+        root: ({ theme, ownerState }) => {
+          const k = theme.vars.palette.kumo
+          return {
+            ...kumoInputBox(k, Boolean(ownerState.multiline)),
+            ...KUMO_NO_UNDERLINE,
+            // MUI offsets a standard input to leave room for the label that floats above it; the
+            // Kumo label is a static block in normal flow, so the offset has to go.
+            "label + &, .MuiInputLabel-root + &": { marginTop: 0 },
+            ...kumoInputBoxStates(k),
+          }
+        },
+        input: ({ theme, ownerState }) =>
+          kumoInputControl(theme.vars.palette.kumo, Boolean(ownerState.multiline)),
+      },
+    },
+    MuiFilledInput: {
+      styleOverrides: {
+        root: ({ theme, ownerState }) => {
+          const k = theme.vars.palette.kumo
+          return {
+            ...kumoInputBox(k, Boolean(ownerState.multiline)),
+            ...KUMO_NO_UNDERLINE,
+            // MUI rounds only a filled input's TOP corners, so the bottom two have to be restored
+            // or the box reads as a Material text field even once the underline is gone.
+            borderRadius: "8px", // kumo: rounded-lg on all four corners
+            "label + &, .MuiInputLabel-root + &": { marginTop: 0 },
+            "&:hover, &.Mui-focused": { backgroundColor: k.control }, // MUI darkens its fill on hover; Kumo does not
+            ...kumoInputBoxStates(k),
+          }
+        },
+        input: ({ theme, ownerState }) =>
+          kumoInputControl(theme.vars.palette.kumo, Boolean(ownerState.multiline)),
+      },
+    },
+    MuiInputBase: {
+      styleOverrides: {
+        // The shells above each carry the box; InputBase itself only has to stop MUI's own
+        // adornment spacing from reaching a Kumo InputGroup, whose addon owns that gap.
+        root: {
+          "&.MuiInputBase-adornedStart .MuiInputBase-input": { paddingLeft: "8px" },
+          "&.MuiInputBase-adornedEnd .MuiInputBase-input": { paddingRight: "8px" },
+        },
+      },
+    },
+
+    // ---- InputLabel ----
+    //
+    // Same Kumo Label as MuiFormLabel below (`m-0 text-base font-medium text-kumo-default`,
+    // `inline-flex items-center gap-1`). MUI's InputLabel is the FLOATING variant of that label: it
+    // is absolutely positioned over the control and animates a translate+scale on focus. Kumo has
+    // no floating label at all - Field stacks a static Label above its control in a `grid gap-2` -
+    // so the float is switched off rather than restyled.
+    MuiInputLabel: {
+      defaultProps: {
+        // Pinning `shrink` sidesteps InputBase's `data-shrink=false` selector, which hides a
+        // placeholder until the field is focused. With a static label there is nothing to shrink
+        // INTO, so an unshrunk label would sit on top of the control's own text.
+        shrink: true,
+      },
+      styleOverrides: {
+        root: ({ theme }) => ({
+          position: "static" as const, // kumo: Field's label is a grid row, not an overlay
+          transform: "none", // kills MUI's float/shrink translate+scale
+          maxWidth: "100%",
+          margin: 0, // kumo: m-0 - the Field grid's gap-2 does the spacing
+          display: "inline-flex", // kumo: inline-flex
+          alignItems: "center", // kumo: items-center
+          gap: "4px", // kumo: gap-1
+          ...TEXT_BASE, // kumo: text-base
+          fontWeight: 500, // kumo: font-medium
+          letterSpacing: "normal",
+          color: theme.vars.palette.kumo.textDefault, // kumo: text-kumo-default
+          userSelect: "none" as const, // kumo: Field's label adds select-none
+          // Kumo's Label has no focus, error or disabled reaction; MUI recolours on all three.
+          "&.Mui-focused, &.Mui-error, &.Mui-disabled": {
+            color: theme.vars.palette.kumo.textDefault,
           },
         }),
       },
