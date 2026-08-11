@@ -5756,6 +5756,11 @@ export const shadcnTheme = createTheme({
           "&.MuiStepConnector-vertical": {
             marginLeft: "0.75rem", // half the 24px counter, so the rule is centred under it
             padding: 0, // MUI adds 8px below the line; shadcn's column is flush
+            // shadcn: w-px. The width has to come off the ROOT, not the line - the root is a
+            // block-level child of the Step and stretches to its full width, and the line then
+            // fills it. Both were 324px wide while painting a 1px border, which reads as a rule and
+            // measures as a box across the whole row.
+            width: "1px",
           },
         },
         line: ({ theme }) => ({
@@ -5766,6 +5771,11 @@ export const shadcnTheme = createTheme({
           "&.MuiStepConnector-lineVertical": {
             borderLeftWidth: "1px", // shadcn: w-px
             minHeight: "1.5rem", // shadcn: h-6, matching the counter it spans between
+            // shadcn: w-px. MUI lets the vertical line stretch to the stepper's full width and
+            // paints only its left border, so it LOOKS like a 1px rule while being a 324px box.
+            // The pixel diff cannot see that - the rest of the box is transparent - and it was the
+            // painted-geometry check that caught it, which is the reason that check exists.
+            width: "1px",
           },
         }),
       },
