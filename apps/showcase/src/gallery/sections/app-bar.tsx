@@ -71,5 +71,33 @@ export const appBarSection: Section = {
         </div>
       ),
     },
+    {
+      // The dense toolbar - MUI's compact bar, 48px against the default 64. Everything else about
+      // the bar is unchanged, so this pair is only about the height.
+      id: "appbar-dense",
+      shadcn: (
+        <div style={wrapStyle}>
+          {/* h-12, less the border-b the bar draws itself - the same arithmetic the default uses. */}
+          <header className="flex h-12 shrink-0 items-center gap-2 border-b bg-background px-4">
+            <Button variant="ghost" size="icon" aria-label="Toggle sidebar">
+              <PanelLeft />
+            </Button>
+            <span className="text-base font-medium">{TITLE}</span>
+          </header>
+        </div>
+      ),
+      mui: (
+        <div style={wrapStyle}>
+          <MuiAppBar position="static">
+            <MuiToolbar variant="dense">
+              <MuiIconButton aria-label="Toggle sidebar">
+                <PanelLeft />
+              </MuiIconButton>
+              <MuiTypography variant="subtitle1">{TITLE}</MuiTypography>
+            </MuiToolbar>
+          </MuiAppBar>
+        </div>
+      ),
+    },
   ],
 }

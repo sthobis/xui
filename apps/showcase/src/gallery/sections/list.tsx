@@ -3,12 +3,14 @@ import MuiListItem from "@mui/material/ListItem"
 import MuiListItemIcon from "@mui/material/ListItemIcon"
 import MuiListItemText from "@mui/material/ListItemText"
 import { Inbox, Send } from "lucide-react"
+import MuiDivider from "@mui/material/Divider"
 import {
   Item,
   ItemContent,
   ItemDescription,
   ItemGroup,
   ItemMedia,
+  ItemSeparator,
   ItemTitle,
 } from "@/components/ui/item"
 import type { Section } from "../types"
@@ -197,6 +199,44 @@ export const listSection: Section = {
                 <Send />
               </MuiListItemIcon>
               <MuiListItemText primary="Sent" secondary="Last week" />
+            </MuiListItem>
+          </MuiList>
+        </div>
+      ),
+    },
+    {
+      // A rule between items. shadcn's ItemSeparator is its Separator with `my-2`; MUI's equivalent
+      // inside a list is a Divider rendered as an `li`, which is what a consumer writes so the list
+      // markup stays valid. Both are the same 1px rule the Divider pairs already cover - what is new
+      // here is the 8px it takes above and below.
+      id: "list-separator",
+      states: ["default"],
+      shadcn: (
+        <div style={wrapStyle}>
+          <ItemGroup>
+            <Item data-target>
+              <ItemContent>
+                <ItemTitle>Inbox</ItemTitle>
+              </ItemContent>
+            </Item>
+            <ItemSeparator />
+            <Item>
+              <ItemContent>
+                <ItemTitle>Sent</ItemTitle>
+              </ItemContent>
+            </Item>
+          </ItemGroup>
+        </div>
+      ),
+      mui: (
+        <div style={wrapStyle}>
+          <MuiList>
+            <MuiListItem data-target>
+              <MuiListItemText primary="Inbox" />
+            </MuiListItem>
+            <MuiDivider component="li" />
+            <MuiListItem>
+              <MuiListItemText primary="Sent" />
             </MuiListItem>
           </MuiList>
         </div>

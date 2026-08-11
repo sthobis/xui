@@ -54,6 +54,10 @@ const maxPixelOverrides: Record<string, number> = {
   // maxDeltaOverrides below. The artifact is a 1/255 rail rounding step spread over more than a
   // thousand pixels, which is exactly the shape a count cannot describe.
   "slider-disabled": Number.POSITIVE_INFINITY,
+
+  // fab-primary: same shape of artifact as slider-disabled, in a soft shadow rather than a rail, so
+  // the count is again the wrong invariant - see the proof in maxDeltaOverrides below.
+  "fab-primary": Number.POSITIVE_INFINITY,
 }
 
 // Per-pair(+state) channel-error allowances. Use this when a residual is provably NOT misplaced
@@ -93,6 +97,26 @@ const maxDeltaOverrides: Record<string, number> = {
   // The count cap is deliberately left at the default, so this allows a slightly wrong-looking glyph
   // edge but still fails the moment anything MOVES.
   "stepper-horizontal": 60,
+
+  // fab-primary: `shadow-lg` is two translucent black layers spread over ~150x150 device pixels, and
+  // compositing them lands a level apart across part of that spread. Every one of the 8169 differing
+  // pixels in dark is off by 1 or 2, none by more, and they sit entirely inside the shadow's falloff.
+  //
+  // Geometry was proved identical before this entry was written, not assumed: width, height,
+  // background, padding, box-sizing, position, z-index and the sub-pixel phase of the bounding box
+  // all match exactly on both sides. Two textual differences remain and neither can account for it -
+  // the radius reads 1.67772e+07px against 9999px, which clamps to the same 28px on a 56px box, and
+  // shadcn's shadow carries four fully transparent Tailwind ring layers in front of the two real
+  // ones. That second one was tested directly by giving MUI the identical six-layer string: the
+  // measurement did not move by a single pixel, so the layer count is not the cause.
+  //
+  // It is POSITION-DEPENDENT, which is what rules out a style regression and rules in rounding. The
+  // pair measured a clean zero for weeks, then adding an unrelated Fab row above it moved this one
+  // down the page and the rounding flipped. A genuine difference does not care where the row sits.
+  //
+  // The delta arm stays at 2 - the measured worst - so anything that actually changes the shadow
+  // (a different colour, offset, blur or spread moves channels by tens of levels) still fails.
+  "fab-primary": 2,
 }
 
 export interface ParityRule {

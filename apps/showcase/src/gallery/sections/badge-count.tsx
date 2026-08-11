@@ -123,5 +123,30 @@ export const badgeCountSection: Section = {
         </div>
       ),
     },
+    {
+      // `showZero`. MUI hides a zero-valued badge by default, so without the prop this pair would
+      // compare a pill against nothing at all - the twin renders one either way, and the pixel diff
+      // would report the whole pill as a difference rather than the prop as untested.
+      id: "badgecount-zero",
+      shadcn: (
+        <div style={wrapStyle}>
+          <span style={anchorStyle}>
+            <Button variant="ghost" size="icon" aria-label="Notifications">
+              <Bell />
+            </Button>
+            <Badge style={pillPositionStyle}>0</Badge>
+          </span>
+        </div>
+      ),
+      mui: (
+        <div style={wrapStyle}>
+          <MuiBadge badgeContent={0} showZero color="primary">
+            <MuiIconButton aria-label="Notifications">
+              <Bell />
+            </MuiIconButton>
+          </MuiBadge>
+        </div>
+      ),
+    },
   ],
 }

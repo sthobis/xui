@@ -52,6 +52,31 @@ export const fabSection: Section = {
       ),
     },
     {
+      // The middle rung of MUI's 40/48/56 ladder. `size-12` is 3rem, and the shadow and radius are
+      // the same recipe the default uses - only the box changes.
+      id: "fab-medium",
+      states: ["default", "hover"],
+      shadcn: (
+        <div style={wrapStyle}>
+          <Button
+            data-target
+            size="icon"
+            className="relative z-[1050] size-12 rounded-full shadow-lg"
+            aria-label="Add"
+          >
+            <Plus />
+          </Button>
+        </div>
+      ),
+      mui: (
+        <div style={wrapStyle}>
+          <MuiFab data-target size="medium" color="primary" aria-label="Add">
+            <Plus />
+          </MuiFab>
+        </div>
+      ),
+    },
+    {
       // variant="extended": a pill with the icon and a label side by side. Same composition rule as
       // the circular pair - MUI's geometry, dressed in real shadcn utilities - because there is no
       // shadcn extended FAB to extract from either.

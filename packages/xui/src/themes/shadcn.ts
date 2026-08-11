@@ -4636,6 +4636,13 @@ export const shadcnTheme = createTheme({
             "&.MuiList-dense": {
               gap: "0.5rem", // shadcn: ItemGroup has-data-[size=xs]:gap-2
             },
+            // ItemSeparator is shadcn's Separator plus `my-2`, and that margin is on top of the
+            // group's own gap rather than instead of it. Scoped to a divider INSIDE a standalone
+            // list so the divider-* pairs, which measure a bare rule, keep their zero margin.
+            "& > .MuiDivider-root": {
+              marginTop: "0.5rem", // shadcn: ItemSeparator my-2
+              marginBottom: "0.5rem",
+            },
           },
         },
       },
@@ -5417,13 +5424,27 @@ export const shadcnTheme = createTheme({
             // it: the cell centres its content, and the resulting half-pixel offset put the border
             // and every glyph back on the same device rows. The painted-geometry sweep in
             // e2e/behavior.spec.ts is what caught it.
-            minHeight: "calc(4rem - 1px)", // shadcn: h-16, less the AppBar's own border-b
             paddingLeft: "1rem", // shadcn: px-4
             paddingRight: "1rem",
             "@media (min-width:600px)": {
-              minHeight: "calc(4rem - 1px)",
               paddingLeft: "1rem",
               paddingRight: "1rem",
+            },
+            // HEIGHT IS SCOPED BY DENSITY as well as away from TablePagination. MUI has two
+            // toolbars, 64px and a dense 48px, and a single minHeight here reached both - the dense
+            // bar was rendering at the regular height, which is the same "one rule written for the
+            // covered case breaks the uncovered one" shape as the Fab and Rating size ladders.
+            "&:not(.MuiToolbar-dense)": {
+              minHeight: "calc(4rem - 1px)", // shadcn: h-16, less the AppBar's own border-b
+              "@media (min-width:600px)": {
+                minHeight: "calc(4rem - 1px)",
+              },
+            },
+            "&.MuiToolbar-dense": {
+              minHeight: "calc(3rem - 1px)", // shadcn: h-12, less the AppBar's own border-b
+              "@media (min-width:600px)": {
+                minHeight: "calc(3rem - 1px)",
+              },
             },
           },
         },
@@ -5439,10 +5460,8 @@ export const shadcnTheme = createTheme({
     // cites for `variant="contained" color="primary"`. The utilities are real; assembling them into
     // a FAB is a decision taken here. See apps/showcase/src/gallery/sections/fab.tsx.
     //
-    // SCOPE: the circular 56px default, `size="small"` by way of the speeddial-open pair whose
-    // action buttons are small Fabs, and `variant="extended"`. `size="medium"` has no pair and gets
-    // no treatment - the size ladder below is written so that leaves it at MUI's own geometry
-    // rather than silently forcing it to 56px.
+    // SCOPE: the whole circular ladder (56px default, `size="small"` by way of the speeddial-open
+    // pair whose action buttons are small Fabs, and `size="medium"`), plus `variant="extended"`.
     MuiFab: {
       styleOverrides: {
         root: {
@@ -5467,6 +5486,10 @@ export const shadcnTheme = createTheme({
           "&.MuiFab-circular.MuiFab-sizeSmall": {
             width: "2.5rem", // shadcn: size-10
             height: "2.5rem",
+          },
+          "&.MuiFab-circular.MuiFab-sizeMedium": {
+            width: "3rem", // shadcn: size-12
+            height: "3rem",
           },
           // The extended pill. MUI already gets its 48px height and its 16px side padding right, so
           // only the icon/label gap is restated - MUI leaves it to the caller, shadcn's Button owns
