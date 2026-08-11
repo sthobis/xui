@@ -578,6 +578,51 @@ function ringWith(color: string, width = 1) {
 }
 
 /**
+ * kumo: Toolbar's bar chrome - `inline-flex w-fit items-stretch rounded-lg bg-kumo-control
+ * shadow-xs ring ring-kumo-line` (dist/chunks/toolbar-gwd1orc8yl7lzaou.js, the `Root` className).
+ *
+ * ONE definition, two MUI shapes. MUI splits across two components what Kumo ships as one: a joined
+ * bar of actions is `ButtonGroup`, a joined bar of selectable segments is `ToggleButtonGroup`, and
+ * Kumo's answer to both is `Toolbar`. So both MUI blocks read this helper rather than one of them
+ * copying values off the other - the thing this repo has been bitten by every time.
+ */
+function toolbarBarChrome(control: string, line: string) {
+  return {
+    display: "inline-flex", // kumo: inline-flex
+    width: "fit-content", // kumo: w-fit
+    alignItems: "stretch", // kumo: items-stretch
+    borderRadius: "8px", // kumo: rounded-lg
+    backgroundColor: control, // kumo: bg-kumo-control
+    boxShadow: ringWith(line), // kumo: ring ring-kumo-line + shadow-xs
+  }
+}
+
+/**
+ * kumo: `toolbarControlClassName` in the same chunk - what a Toolbar puts on each child.
+ *
+ *   relative min-w-0 border-0 bg-transparent shadow-none ring-0
+ *   not-first:border-l not-first:border-kumo-line
+ *
+ * The ring, the shadow and the fill all live on the BAR; a child is transparent and unringed, and
+ * meets its neighbour over a single left rule rather than over two collapsed borders.
+ */
+function toolbarControlChrome(line: string, tint: string) {
+  return {
+    backgroundColor: "transparent", // kumo: bg-transparent
+    boxShadow: "none", // kumo: shadow-none ring-0
+    minWidth: 0, // kumo: min-w-0
+    "&:hover, &:active, &.Mui-focusVisible": { boxShadow: "none" },
+    "&:hover": { backgroundColor: tint }, // kumo: the ghost control's hover:bg-kumo-tint
+    // kumo: neighbours are divided by a single rule rather than by each child's own ring
+    "&:not(:first-of-type)": { borderLeft: `1px solid ${line}` },
+    // MUI pulls each child 1px into its neighbour so their two borders collapse into one. Kumo has
+    // only one border to begin with, so the bar came out 2px narrow.
+    "&:not(:last-of-type)": { marginRight: 0 },
+    marginLeft: 0,
+  }
+}
+
+/**
  * MUI TRAP - `disableElevation` erases the ring on hover, active and focus-visible.
  *
  * The prop is switched on because Kumo's shadow is a flat `shadow-xs`, not a Material elevation.
@@ -720,35 +765,73 @@ export const kumoTheme = createTheme({
     // its own outlined-button chrome - so both halves have to move.
     MuiButtonGroup: {
       styleOverrides: {
-        root: ({ theme }) => ({
-          display: "inline-flex", // kumo: inline-flex
-          width: "fit-content", // kumo: w-fit
-          alignItems: "stretch", // kumo: items-stretch
-          borderRadius: "8px", // kumo: rounded-lg
-          backgroundColor: theme.vars.palette.kumo.control, // kumo: bg-kumo-control
-          boxShadow: ringWith(theme.vars.palette.kumo.line), // kumo: ring ring-kumo-line + shadow-xs
-        }),
-        grouped: ({ theme }) => ({
-          // kumo: the child is border-0 bg-transparent shadow-none ring-0
-          backgroundColor: "transparent",
-          boxShadow: "none",
-          minWidth: 0, // kumo: min-w-0
-          "&:hover, &:active, &.Mui-focusVisible": { boxShadow: "none" },
-          "&:hover": { backgroundColor: theme.vars.palette.kumo.tint },
-          // kumo: neighbours are divided by a single rule rather than by each button's own ring
-          "&:not(:first-of-type)": {
-            borderLeft: `1px solid ${theme.vars.palette.kumo.line}`,
-          },
-          // MUI pulls each child 1px into its neighbour so their two borders collapse into one.
-          // Kumo has only one border to begin with, so the bar came out 2px narrow.
-          "&:not(:last-of-type)": { marginRight: 0 },
-          marginLeft: 0,
-        }),
+        root: ({ theme }) =>
+          toolbarBarChrome(theme.vars.palette.kumo.control, theme.vars.palette.kumo.line),
+        grouped: ({ theme }) =>
+          toolbarControlChrome(theme.vars.palette.kumo.line, theme.vars.palette.kumo.tint),
       },
       defaultProps: {
         // A group publishes its resolved disableRipple through ButtonGroupContext, and Button reads
         // context at higher priority than theme defaults - so without this it hands the ripple back
         // to every child.
+        disableRipple: true,
+      },
+    },
+
+    // ---- ToggleButton / ToggleButtonGroup ----
+    //
+    // Same Kumo Toolbar as the ButtonGroup above (see toolbarBarChrome / toolbarControlChrome),
+    // because MUI splits into two components what Kumo ships as one bar.
+    //
+    // One thing here is NOT ground truth and is marked as such: Kumo's Toolbar.Button has no
+    // pressed or selected state at all - there is no `data-selected` or `aria-pressed` styling
+    // anywhere in the toolbar chunk. So the SELECTED look is derived rather than extracted, from
+    // `bg-kumo-tint`, which is Kumo's own selected semantic elsewhere in the package (Table's
+    // `selected` row variant is exactly `bg-kumo-tint`). The unselected bar is a real pixel pair
+    // against Toolbar; the selected segment is a look-match with no reference to diff against.
+    MuiToggleButtonGroup: {
+      styleOverrides: {
+        root: ({ theme }) =>
+          toolbarBarChrome(theme.vars.palette.kumo.control, theme.vars.palette.kumo.line),
+        grouped: ({ theme }) =>
+          toolbarControlChrome(theme.vars.palette.kumo.line, theme.vars.palette.kumo.tint),
+      },
+      // No `disableRipple` here: unlike ButtonGroup, ToggleButtonGroup does not publish one through
+      // context, and its props type has no such key. MuiToggleButton restates it instead.
+    },
+    MuiToggleButton: {
+      styleOverrides: {
+        root: ({ theme }) => {
+          const k = theme.vars.palette.kumo
+          return {
+            ...buttonBase("medium"), // kumo: Toolbar.Button resolves to a Kumo Button at the bar's size, default `base`
+            color: k.textDefault, // kumo: text-kumo-default - MUI's own default is a 54%-alpha black
+            textTransform: "none" as const, // MUI uppercases a ToggleButton's label; Kumo never does
+            borderRadius: 0, // kumo: rounded-none, with the bar's ends restored by the group below
+            ...toolbarControlChrome(k.line, k.tint),
+            // DERIVED, not extracted - see the banner above.
+            "&.Mui-selected": {
+              backgroundColor: k.tint,
+              color: k.textDefault,
+              "&:hover": { backgroundColor: k.tint },
+            },
+            // kumo: focus:ring-[1.5px] focus:ring-kumo-focus/50, widened by
+            // focus-visible:ring-2 focus-visible:ring-kumo-brand
+            "&:focus": {
+              boxShadow: `0 0 0 1.5px color-mix(in oklab, ${k.focus} 50%, transparent)`,
+              zIndex: 2, // kumo: focus:z-2 - the ring draws over the neighbouring seam
+            },
+            "&.Mui-focusVisible": {
+              boxShadow: `0 0 0 2px ${k.brand}`,
+              outline: "none", // kumo: focus:outline-none
+              zIndex: 2, // kumo: focus-visible:z-2
+            },
+          }
+        },
+      },
+      defaultProps: {
+        // MuiButtonBase's global disableRipple does not reach ToggleButton for the same reason it
+        // misses Checkbox/Radio/Switch: it resolves its own default and forwards it.
         disableRipple: true,
       },
     },

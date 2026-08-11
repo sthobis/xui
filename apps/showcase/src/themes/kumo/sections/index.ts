@@ -16,6 +16,7 @@ import { collapsibleSection } from "./collapsible"
 import { tableSection } from "./table"
 import { breadcrumbsSection } from "./breadcrumbs"
 import { toolbarSection } from "./toolbar"
+import { toggleSection } from "./toggle"
 import { inputGroupSection } from "./input-group"
 import { tooltipSection } from "./tooltip"
 import { dropdownSection } from "./dropdown"
@@ -48,4 +49,4 @@ import { toastSection } from "./toast"
 //                 SMIL, so a captured frame has no stable phase and a pixel pair could not be
 //                 meaningful. MUI's CircularProgress also has no track ring to pair against.
 //
-export const sections: Section[] = [buttonSection, textSection, labelSection, linkSection, inputSection, checkboxSection, switchSection, radioSection, badgeSection, bannerSection, meterSection, layerCardSection, tabsSection, collapsibleSection, tableSection, breadcrumbsSection, toolbarSection, inputGroupSection, tooltipSection, dropdownSection, selectSection, popoverSection, dialogSection, toastSection]
+export const sections: Section[] = [buttonSection, textSection, labelSection, linkSection, inputSection, checkboxSection, switchSection, radioSection, badgeSection, bannerSection, meterSection, layerCardSection, tabsSection, collapsibleSection, tableSection, breadcrumbsSection, toolbarSection, toggleSection, inputGroupSection, tooltipSection, dropdownSection, selectSection, popoverSection, dialogSection, toastSection]
