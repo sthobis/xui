@@ -1735,14 +1735,92 @@ export const kumoTheme = createTheme({
         elevation: 0,
       },
       styleOverrides: {
+        root: ({ theme }) => {
+          const k = theme.vars.palette.kumo
+          return {
+            overflow: "hidden", // kumo: overflow-hidden
+            borderRadius: "8px", // kumo: rounded-lg
+            backgroundColor: k.base, // kumo: bg-kumo-base
+            backgroundImage: "none", // MUI overlays a lightness gradient on an elevated dark Paper
+            border: 0,
+            boxShadow: ringWith(k.line), // kumo: ring ring-kumo-line + shadow-xs
+            // kumo: LAYER_CARD_LAYERED_ROOT_CLASSES = "flex w-full flex-col overflow-hidden
+            // rounded-lg bg-kumo-elevated text-base ring ring-kumo-hairline".
+            //
+            // LayerCard swaps its root classes at RUNTIME, in `hasLayerCardSections`: a card whose
+            // children include a Primary or Secondary section is the layered form, a card without
+            // them is the plain surface above. A theme cannot inspect children - but it does not
+            // need to, because that condition is exactly what `:has()` expresses. A Card carrying
+            // a CardHeader is the layered form, and switches the same two things Kumo switches:
+            // the elevated fill and the hairline ring.
+            "&:has(> .MuiCardHeader-root)": {
+              display: "flex", // kumo: flex
+              width: "100%", // kumo: w-full
+              flexDirection: "column" as const, // kumo: flex-col
+              backgroundColor: k.elevated, // kumo: bg-kumo-elevated
+              ...TEXT_BASE, // kumo: text-base
+              // kumo: `ring ring-kumo-hairline` and NOTHING else - the layered root drops the
+              // plain surface's `shadow-xs`. Reading it as ringWith() (which stacks shadow-xs
+              // behind the ring, correct everywhere else) left a drop shadow the reference does
+              // not paint: 393 pixels at Δ4 around the card's edge.
+              boxShadow: `0 0 0 1px ${k.hairline}`,
+            },
+          }
+        },
+      },
+    },
+    // kumo: LAYER_CARD_SECONDARY_CLASSES = "-my-2 flex items-center gap-2 bg-kumo-elevated p-4
+    // text-base font-medium text-kumo-subtle" - the label band above a layered card's panel.
+    MuiCardHeader: {
+      styleOverrides: {
         root: ({ theme }) => ({
+          margin: "-8px 0", // kumo: -my-2
+          display: "flex", // kumo: flex
+          alignItems: "center", // kumo: items-center
+          gap: "8px", // kumo: gap-2
+          backgroundColor: theme.vars.palette.kumo.elevated, // kumo: bg-kumo-elevated
+          padding: "16px", // kumo: p-4
+        }),
+        // MUI renders the title through a Typography whose own variant would win over the root's
+        // colour and weight, so the band's type is set on the title slot itself.
+        title: ({ theme }) => ({
+          ...TEXT_BASE, // kumo: text-base
+          fontWeight: 500, // kumo: font-medium
+          letterSpacing: "normal",
+          color: theme.vars.palette.kumo.textSubtle, // kumo: text-kumo-subtle
+        }),
+      },
+    },
+    // kumo: LAYER_CARD_PRIMARY_CLASSES = "relative flex flex-col gap-2 overflow-hidden rounded-lg
+    // bg-kumo-base p-4 pr-3 text-inherit no-underline ring ring-kumo-fill" - the inset panel.
+    MuiCardContent: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          position: "relative" as const, // kumo: relative
+          display: "flex", // kumo: flex
+          flexDirection: "column" as const, // kumo: flex-col
+          gap: "8px", // kumo: gap-2
           overflow: "hidden", // kumo: overflow-hidden
           borderRadius: "8px", // kumo: rounded-lg
           backgroundColor: theme.vars.palette.kumo.base, // kumo: bg-kumo-base
-          backgroundImage: "none", // MUI overlays a lightness gradient on an elevated dark Paper
-          border: 0,
-          boxShadow: ringWith(theme.vars.palette.kumo.line), // kumo: ring ring-kumo-line + shadow-xs
+          padding: "16px 12px 16px 16px", // kumo: p-4 pr-3
+          // MUI adds 24px of bottom padding to the LAST CardContent; Kumo's panel is evenly padded.
+          "&:last-child": { paddingBottom: "16px" },
+          boxShadow: `0 0 0 1px ${theme.vars.palette.kumo.fill}`, // kumo: ring ring-kumo-fill
         }),
+      },
+    },
+    // DERIVED, not extracted. Kumo's LayerCard has no actions row - its two sections are the label
+    // band and the panel, and nothing else. So this only neutralises MUI's Material spacing (8px
+    // all round plus an 8px gap between buttons) down to the panel's own 16px padding and the
+    // gap-2 its sections use, so a CardActions sits on the card's grid instead of its own.
+    MuiCardActions: {
+      styleOverrides: {
+        root: {
+          padding: "16px", // matches CardContent's p-4 rather than MUI's 8px
+          gap: "8px", // kumo: the gap-2 both LayerCard sections use
+          "& > :not(style) ~ :not(style)": { marginLeft: 0 }, // MUI spaces children with a margin as well
+        },
       },
     },
 

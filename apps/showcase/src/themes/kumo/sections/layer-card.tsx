@@ -1,4 +1,6 @@
 import MuiCard from "@mui/material/Card"
+import MuiCardHeader from "@mui/material/CardHeader"
+import MuiCardContent from "@mui/material/CardContent"
 import { LayerCard } from "@cloudflare/kumo/components/layer-card"
 import type { Section } from "../../../gallery/types"
 
@@ -24,6 +26,29 @@ export const layerCardSection: Section = {
       mui: (
         <MuiCard>
           <div style={BOX} />
+        </MuiCard>
+      ),
+    },
+    // The LAYERED form. LayerCard swaps its root classes at runtime once its children include a
+    // Primary or Secondary section, and MUI's Card + CardHeader + CardContent is the same
+    // composition: a label band over an inset panel. The theme reproduces the swap with `:has()`,
+    // so this pair is what proves that condition fires.
+    {
+      id: "layercard-layered",
+      ref: (
+        <LayerCard>
+          <LayerCard.Secondary>Getting started</LayerCard.Secondary>
+          <LayerCard.Primary>
+            <div style={BOX} />
+          </LayerCard.Primary>
+        </LayerCard>
+      ),
+      mui: (
+        <MuiCard>
+          <MuiCardHeader title="Getting started" />
+          <MuiCardContent>
+            <div style={BOX} />
+          </MuiCardContent>
         </MuiCard>
       ),
     },
