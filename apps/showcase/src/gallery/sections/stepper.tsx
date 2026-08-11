@@ -70,5 +70,56 @@ export const stepperSection: Section = {
         </div>
       ),
     },
+    {
+      // The vertical orientation, still on the FIRST step so every counter shows a number and the
+      // check glyph stays out of scope. The connector turns into a vertical rule offset to sit under
+      // the counter rather than a horizontal one filling the gap, so this is a different layout
+      // rather than the same one rotated.
+      id: "stepper-vertical",
+      shadcn: (
+        <div style={wrapStyle}>
+          <div className="flex flex-col">
+            {STEPS.map((label, i) => (
+              <Fragment key={label}>
+                {i > 0 && (
+                  // The rule sits centred under the 24px counter (`ml-3` is half of it, less half
+                  // the rule's own width), which is what MUI's vertical connector does too.
+                  <span className="ml-3 h-6 w-px bg-border" />
+                )}
+                <span className="flex items-center gap-2">
+                  <span
+                    className={`flex size-6 shrink-0 items-center justify-center rounded-full text-xs ${
+                      i === ACTIVE
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted text-muted-foreground"
+                    }`}
+                  >
+                    {i + 1}
+                  </span>
+                  <span
+                    className={`text-sm ${
+                      i === ACTIVE ? "font-medium text-foreground" : "text-muted-foreground"
+                    }`}
+                  >
+                    {label}
+                  </span>
+                </span>
+              </Fragment>
+            ))}
+          </div>
+        </div>
+      ),
+      mui: (
+        <div style={wrapStyle}>
+          <MuiStepper activeStep={ACTIVE} orientation="vertical">
+            {STEPS.map((label) => (
+              <MuiStep key={label}>
+                <MuiStepLabel>{label}</MuiStepLabel>
+              </MuiStep>
+            ))}
+          </MuiStepper>
+        </div>
+      ),
+    },
   ],
 }

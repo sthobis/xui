@@ -5722,7 +5722,12 @@ export const shadcnTheme = createTheme({
     MuiStepper: {
       styleOverrides: {
         root: {
-          gap: "0.5rem", // shadcn: gap-2 on the row, which spaces steps from connectors
+          // Horizontal only. The gap is what separates a step from the rule beside it in a ROW; a
+          // vertical stepper stacks counter and rule directly, so the same 8px became an extra gap
+          // above every connector and pushed the steps 56px apart instead of 48.
+          "&.MuiStepper-horizontal": {
+            gap: "0.5rem", // shadcn: gap-2 on the row, which spaces steps from connectors
+          },
         },
       },
     },
@@ -5738,13 +5743,30 @@ export const shadcnTheme = createTheme({
     },
     MuiStepConnector: {
       styleOverrides: {
+        // SCOPED BY ORIENTATION. The two connectors are different objects, not one rotated: a
+        // horizontal one is a rule filling the gap between steps, a vertical one is a rule indented
+        // to sit under the counter. Zeroing the margin unconditionally - which is what this did when
+        // only the horizontal pair existed - left the vertical line hard against the counter's left
+        // edge instead of centred beneath it.
         root: {
-          marginLeft: 0, // the root gap owns the spacing
-          marginRight: 0,
+          "&.MuiStepConnector-horizontal": {
+            marginLeft: 0, // the root gap owns the spacing
+            marginRight: 0,
+          },
+          "&.MuiStepConnector-vertical": {
+            marginLeft: "0.75rem", // half the 24px counter, so the rule is centred under it
+            padding: 0, // MUI adds 8px below the line; shadcn's column is flush
+          },
         },
         line: ({ theme }) => ({
-          borderTopWidth: "1px", // shadcn: h-px
           borderColor: theme.vars.palette.border, // shadcn: bg-border
+          "&.MuiStepConnector-lineHorizontal": {
+            borderTopWidth: "1px", // shadcn: h-px
+          },
+          "&.MuiStepConnector-lineVertical": {
+            borderLeftWidth: "1px", // shadcn: w-px
+            minHeight: "1.5rem", // shadcn: h-6, matching the counter it spans between
+          },
         }),
       },
     },
@@ -5752,6 +5774,11 @@ export const shadcnTheme = createTheme({
       styleOverrides: {
         root: {
           gap: "0.5rem", // shadcn: gap-2 between counter and label
+          // MUI pads a vertical label 8px top and bottom, which stretched each step to 40px and put
+          // the steps 72px apart where the composition is 48 - counter plus connector, nothing else.
+          "&.MuiStepLabel-vertical": {
+            padding: 0,
+          },
         },
         iconContainer: {
           paddingRight: 0, // the gap above replaces MUI's own 8px
