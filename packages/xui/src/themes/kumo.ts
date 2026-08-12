@@ -3057,25 +3057,35 @@ export const kumoTheme = createTheme({
     // depends on a `group/sidebar` ancestor's data-state. A standalone MUI List has neither, so
     // there is no honest way to pixel-pair the two - the reference cannot be rendered in the same
     // context the MUI side lives in. The values below are the resolved ones.
+    // SCOPED AWAY FROM OVERLAYS, and that scoping is load-bearing. MUI builds Menu's and Select's
+    // popups out of a MuiList too - a Menu's <ul> is `MuiList-root MuiMenu-list role="menu"` - so
+    // an unscoped List block silently restyles both, and those two ARE extracted pairs held at
+    // zero against Kumo's Dropdown and Select. Unscoped, this stripped the popup's own padding and
+    // inserted a 1px gap between its items; the `anchored-to-trigger` behavior check failed before
+    // the pixel suite ever got to it. Same reason MuiMenuItem above keys off `[role]`.
     MuiList: {
       styleOverrides: {
         root: {
-          margin: 0, // kumo: m-0
-          padding: 0, // kumo: p-0
-          display: "flex",
-          flexDirection: "column" as const, // kumo: flex-col
-          alignItems: "stretch" as const, // kumo: items-stretch
-          minWidth: 0, // kumo: min-w-0
-          listStyle: "none" as const, // kumo: list-none
-          gap: "1px", // kumo: gap-y-px
+          "&:not([role='menu']):not([role='listbox'])": {
+            margin: 0, // kumo: m-0
+            padding: 0, // kumo: p-0
+            display: "flex",
+            flexDirection: "column" as const, // kumo: flex-col
+            alignItems: "stretch" as const, // kumo: items-stretch
+            minWidth: 0, // kumo: min-w-0
+            listStyle: "none" as const, // kumo: list-none
+            gap: "1px", // kumo: gap-y-px
+          },
         },
       },
     },
     MuiListItem: {
       styleOverrides: {
         root: {
-          position: "relative" as const, // kumo: relative
-          padding: 0, // the padding belongs to the button, as it does in Kumo
+          "&:not([role='menu'] *):not([role='listbox'] *)": {
+            position: "relative" as const, // kumo: relative
+            padding: 0, // the padding belongs to the button, as it does in Kumo
+          },
         },
       },
     },
@@ -3124,6 +3134,326 @@ export const kumoTheme = createTheme({
           fontWeight: 500, // kumo: font-medium
           letterSpacing: "normal",
         },
+      },
+    },
+
+    // Sidebar's shell - `flex h-full shrink-0 grow-0 flex-col overflow-hidden bg-(--sidebar-bg)
+    // text-kumo-default`, with `--sidebar-bg: var(--color-kumo-base)`. The edge is the header's
+    // own `border-b border-kumo-line`; the panel itself carries no Material elevation shadow.
+    MuiDrawer: {
+      styleOverrides: {
+        paper: ({ theme }) => ({
+          display: "flex",
+          flexDirection: "column" as const, // kumo: flex-col
+          overflow: "hidden", // kumo: overflow-hidden
+          backgroundColor: theme.vars.palette.kumo.base, // kumo: --sidebar-bg
+          backgroundImage: "none",
+          color: theme.vars.palette.kumo.textDefault, // kumo: text-kumo-default
+          borderColor: theme.vars.palette.kumo.line, // kumo: the shell's rule is border-kumo-line
+          boxShadow: "none",
+        }),
+      },
+    },
+
+    // Kumo's Autocomplete popup, extracted (dist/chunks/autocomplete-m8n1c775n0iilomf.js):
+    //   popup   bg-kumo-control text-kumo-default rounded-lg shadow-lg ring ring-kumo-line py-1.5
+    //   option  mx-1.5 px-2 py-1.5 text-sm text-kumo-strong
+    // Derived only in that the pair is not built: Kumo's popup is a Base UI positioner and MUI's
+    // is a Popper, and the listbox is virtualised differently, so the two cannot be opened into
+    // the same geometry the way the Select pair could.
+    MuiAutocomplete: {
+      styleOverrides: {
+        paper: ({ theme }) => ({
+          backgroundColor: theme.vars.palette.kumo.control, // kumo: bg-kumo-control
+          backgroundImage: "none",
+          color: theme.vars.palette.kumo.textDefault, // kumo: text-kumo-default
+          borderRadius: "8px", // kumo: rounded-lg
+          boxShadow: `0 0 0 1px ${theme.vars.palette.kumo.line}, ${SHADOW_LG}`, // kumo: ring ring-kumo-line + shadow-lg
+        }),
+        listbox: { padding: "6px 0" }, // kumo: py-1.5
+        option: ({ theme }) => ({
+          margin: "0 6px", // kumo: mx-1.5
+          padding: "6px 8px", // kumo: px-2 py-1.5
+          borderRadius: "4px", // kumo: the option radius the Select popup uses
+          ...TEXT_SM, // kumo: text-sm
+          letterSpacing: "normal",
+          color: theme.vars.palette.kumo.textStrong, // kumo: text-kumo-strong
+          minHeight: 0, // MUI floors an option at 48px; Kumo sizes from content
+          '&[aria-selected="true"], &.Mui-focused, &.Mui-focusVisible': {
+            backgroundColor: theme.vars.palette.kumo.tint, // kumo: the highlight the Select option uses
+          },
+        }),
+      },
+    },
+
+    // A circular emphasis button. Kumo has no FAB, but it does have both halves this needs: the
+    // Button `circle` shape and the brand emphasis recipe (see `emphasis()`), so the two are
+    // composed rather than invented. Sized to the large row (h-10) instead of MUI's 56px, so a Fab
+    // matches the controls beside it.
+    MuiFab: {
+      styleOverrides: {
+        root: ({ theme }) => {
+          const e = emphasis(theme.vars.palette.kumo.brand)
+          return {
+            width: "40px", // kumo: the large size row's h-10
+            height: "40px",
+            minHeight: 0,
+            borderRadius: "9999px", // kumo: the circle shape's rounded-full
+            color: "#ffffff", // kumo: !text-white on both emphasis variants
+            backgroundColor: e.bg, // kumo: bg-(--kumo-button-emphasis-bg)
+            backgroundImage: `linear-gradient(${e.gradientStart} 0%, ${e.gradientEnd} 100%)`,
+            boxShadow: ringWith(e.ring), // kumo: ring + shadow-xs, not a Material elevation
+            textTransform: "none" as const, // MUI uppercases an extended Fab's label
+            letterSpacing: "normal",
+            fontWeight: 500, // kumo: font-medium
+            "&:hover, &:active": {
+              backgroundImage: `linear-gradient(${e.bg} 0%, ${e.gradientEnd} 100%)`, // kumo: only the top stop moves
+              boxShadow: ringWith(e.ring),
+            },
+            "&:focus-visible": { boxShadow: ringWith(e.ring, 2), outline: "none" },
+            // Pinned for the same reason BottomNavigationAction's is: a Phosphor icon is inline and
+            // sizes at 1em, so left alone it inherits a font-size that differs with and without
+            // Tailwind. 20px is the `size-5` Kumo pairs with its large (h-10) row.
+            "& > svg": { display: "block", width: "20px", height: "20px", fontSize: "20px" },
+          }
+        },
+      },
+    },
+    // SpeedDial is a Fab plus a stack of small ones; only the Material elevation needs clearing,
+    // since the Fab block above already gives every button its look.
+    MuiSpeedDial: {
+      styleOverrides: {
+        fab: { boxShadow: "none" },
+      },
+    },
+
+    // Kumo's Loader is a hand-rolled SVG: a brand-coloured arc over a SECOND static ring drawn at
+    // `opacity: .1`. MUI's CircularProgress has no track element, so only the arc's colour and the
+    // round cap carry over; the 10% ring has nowhere to go.
+    MuiCircularProgress: {
+      styleOverrides: {
+        root: ({ theme }) => ({ color: theme.vars.palette.kumo.brand }), // kumo: the arc is brand
+        circle: { strokeLinecap: "round" as const }, // kumo: strokeLinecap on the arc
+      },
+    },
+
+    // Kumo has no slider, but it has a Meter, and a slider IS a meter with a handle: the rail and
+    // fill below are the Meter block's own values (`h-2 rounded-full bg-kumo-fill` over a flat
+    // `bg-kumo-brand` indicator). Only the thumb is new - built as a base surface inside a ring,
+    // the same recipe every other Kumo handle uses.
+    MuiSlider: {
+      styleOverrides: {
+        rail: ({ theme }) => ({
+          height: "8px", // kumo: the Meter track's h-2
+          borderRadius: "9999px", // kumo: rounded-full
+          backgroundColor: theme.vars.palette.kumo.fill, // kumo: bg-kumo-fill
+          opacity: 1, // MUI dims its rail to 0.38; Kumo's track is a solid token
+        }),
+        track: ({ theme }) => ({
+          height: "8px",
+          border: 0,
+          borderRadius: "9999px",
+          backgroundColor: theme.vars.palette.kumo.brand, // kumo: the Meter indicator's brand fill
+        }),
+        thumb: ({ theme }) => ({
+          width: "16px",
+          height: "16px",
+          backgroundColor: theme.vars.palette.kumo.base, // kumo: a handle is the base surface...
+          boxShadow: ringWith(theme.vars.palette.kumo.line), // ...inside a ring, like every other control
+          "&:hover, &.Mui-focusVisible": { boxShadow: ringWith(theme.vars.palette.kumo.line) },
+          "&.Mui-active": { boxShadow: ringWith(theme.vars.palette.kumo.brand, 2) },
+        }),
+      },
+    },
+
+    // Kumo has no rating. The filled star takes the WARNING token rather than brand - Kumo reserves
+    // brand for interactive emphasis, and warning is the amber it already ships - over the inert
+    // `kumo-fill` used for every empty placeholder shape.
+    MuiRating: {
+      styleOverrides: {
+        iconFilled: ({ theme }) => ({ color: theme.vars.palette.kumo.warning }),
+        iconEmpty: ({ theme }) => ({ color: theme.vars.palette.kumo.fill }), // kumo: bg-kumo-fill
+        iconHover: ({ theme }) => ({ color: theme.vars.palette.kumo.warning }),
+      },
+    },
+
+    // MUI's Badge is a dot or count pinned to a corner - NOT Kumo's Badge, which is a standalone
+    // pill and is already themed as MuiChip. The dot takes the `inline-block size-2 rounded-full`
+    // shape Kumo uses for its own status dots; a count badge takes the danger token and the pill's
+    // `text-xs font-medium`.
+    MuiBadge: {
+      styleOverrides: {
+        badge: ({ theme }) => ({
+          ...TEXT_XS, // kumo: the badge pill's text-xs
+          fontWeight: 500, // kumo: font-medium
+          letterSpacing: "normal",
+          backgroundColor: theme.vars.palette.kumo.danger,
+          color: theme.vars.palette.kumo.textInverse,
+        }),
+        dot: ({ theme }) => ({
+          width: "8px", // kumo: size-2
+          height: "8px",
+          minWidth: 0,
+          borderRadius: "9999px", // kumo: rounded-full
+          backgroundColor: theme.vars.palette.kumo.danger,
+        }),
+      },
+    },
+
+    // Kumo's Pagination is an InputGroup of first/prev/page-input/next/last - numbered page buttons
+    // are a MUI shape it has no equivalent for. So each item is given Kumo's GHOST button instead
+    // (transparent, `hover:bg-kumo-tint`, `rounded-lg`, the base h-9 row), which is what a
+    // low-emphasis square control looks like everywhere else in the system.
+    MuiPagination: {
+      styleOverrides: {
+        ul: { gap: "4px" }, // kumo: the toolbar row's gap-1
+      },
+    },
+    MuiPaginationItem: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          minWidth: "36px", // kumo: the base size row's h-9, kept square
+          height: "36px",
+          margin: 0,
+          borderRadius: "8px", // kumo: rounded-lg
+          ...TEXT_BASE, // kumo: text-base
+          fontWeight: 500, // kumo: font-medium
+          letterSpacing: "normal",
+          color: theme.vars.palette.kumo.textDefault, // kumo: ghost is text-kumo-default
+          backgroundColor: "transparent", // kumo: ghost has no fill and no ring
+          "&:hover": { backgroundColor: theme.vars.palette.kumo.tint }, // kumo: hover:bg-kumo-tint
+          "&.Mui-selected, &.Mui-selected:hover": {
+            backgroundColor: theme.vars.palette.kumo.tint, // kumo: the selected semantic used elsewhere
+          },
+          "&.Mui-focusVisible": {
+            boxShadow: `0 0 0 2px ${theme.vars.palette.kumo.brand}`, // kumo: focus-visible:ring-2 ring-kumo-brand
+            outline: "none",
+          },
+        }),
+      },
+    },
+    // The one part of Kumo's Pagination that DOES map: its `Pagination.Info` readout is
+    // `text-sm text-kumo-subtle`, and it pairs a page-size Select the same way MUI does.
+    MuiTablePagination: {
+      styleOverrides: {
+        root: ({ theme }) => ({ color: theme.vars.palette.kumo.textSubtle }),
+        selectLabel: ({ theme }) => ({
+          ...TEXT_SM, // kumo: Pagination.Info's text-sm
+          letterSpacing: "normal",
+          color: theme.vars.palette.kumo.textSubtle, // kumo: text-kumo-subtle
+        }),
+        displayedRows: ({ theme }) => ({
+          ...TEXT_SM,
+          letterSpacing: "normal",
+          color: theme.vars.palette.kumo.textSubtle,
+        }),
+      },
+    },
+
+    // Kumo's Flow is a scrollable canvas, not a step indicator - its docs example only looks like
+    // one - so the Stepper is built from primitives instead: the connector is the 1px kumo-line
+    // rule every divider uses, and a step icon is the fill token until it is active or done, when
+    // it takes brand. Labels use text-sm, the size Kumo gives secondary row text.
+    MuiStepper: {
+      styleOverrides: {
+        root: { padding: 0 },
+      },
+    },
+    MuiStep: {
+      styleOverrides: {
+        root: { paddingLeft: "8px", paddingRight: "8px" }, // kumo: the gap-2 its rows use
+      },
+    },
+    MuiStepConnector: {
+      styleOverrides: {
+        line: ({ theme }) => ({
+          borderColor: theme.vars.palette.kumo.line, // kumo: border-kumo-line
+          borderTopWidth: "1px", // kumo: every rule in the system is 1px
+        }),
+      },
+    },
+    MuiStepIcon: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          color: theme.vars.palette.kumo.fill, // kumo: bg-kumo-fill for an inert shape
+          "&.Mui-active, &.Mui-completed": { color: theme.vars.palette.kumo.brand },
+        }),
+        text: ({ theme }) => ({
+          fill: theme.vars.palette.kumo.textDefault,
+          ...TEXT_XS, // kumo: text-xs
+        }),
+      },
+    },
+    MuiStepLabel: {
+      styleOverrides: {
+        label: ({ theme }) => ({
+          ...TEXT_SM, // kumo: text-sm
+          fontWeight: 400,
+          letterSpacing: "normal",
+          color: theme.vars.palette.kumo.textSubtle, // kumo: text-kumo-subtle for a pending step
+          "&.Mui-active, &.Mui-completed": {
+            color: theme.vars.palette.kumo.textDefault, // kumo: text-kumo-default once reached
+            fontWeight: 500, // kumo: font-medium
+          },
+        }),
+      },
+    },
+
+    // Sidebar's FOOTER bar - `flex h-12 shrink-0 items-center gap-4 overflow-hidden border-t
+    // border-kumo-line whitespace-nowrap` - which is the only bottom-anchored bar Kumo ships.
+    MuiBottomNavigation: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          height: "48px", // kumo: h-12
+          flexShrink: 0, // kumo: shrink-0
+          alignItems: "center", // kumo: items-center
+          gap: "16px", // kumo: gap-4
+          overflow: "hidden", // kumo: overflow-hidden
+          backgroundColor: theme.vars.palette.kumo.base,
+          borderTop: `1px solid ${theme.vars.palette.kumo.line}`, // kumo: border-t border-kumo-line
+        }),
+      },
+    },
+    MuiBottomNavigationAction: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          minWidth: 0, // MUI floors an action at 80px; Kumo's row is a plain flex gap
+          padding: 0,
+          whiteSpace: "nowrap" as const, // kumo: whitespace-nowrap
+          color: theme.vars.palette.kumo.textSubtle, // kumo: an unselected row is text-kumo-subtle
+          "&.Mui-selected": { color: theme.vars.palette.kumo.textDefault },
+          // TWO Tailwind dependencies here, both found by preflight at Δ223 across 240 pixels, and
+          // the first one masked the second:
+          //
+          //  1. a bare Phosphor svg is an INLINE element, so it sits on the text baseline and drags
+          //     the row's height around. It looked right on the gallery page only because
+          //     Tailwind's reset blocks every svg. (The Breadcrumbs block records the same trap.)
+          //  2. a Phosphor icon sizes itself at `1em`, so with no explicit size it follows whatever
+          //     font-size the page's base sets - which measured 14px on the gallery page against
+          //     13px on the Tailwind-free one. Fixing only the display left the icon a pixel
+          //     smaller there and the numbers did not move at all.
+          //
+          // Pinned to 16px, the `size-4` Kumo gives its own sidebar row icons.
+          "& > svg": { display: "block", width: "16px", height: "16px", fontSize: "16px" },
+        }),
+        label: {
+          ...TEXT_SM, // kumo: text-sm
+          letterSpacing: "normal",
+          "&.Mui-selected": { ...TEXT_SM, fontWeight: 500 }, // MUI grows the label on selection; Kumo does not
+        },
+      },
+    },
+
+    // Pure layout - Kumo has no image list, and there is nothing to colour. Only the gap is set,
+    // to the gap-2 its stacked compositions use, so a grid of tiles is spaced like the rest.
+    MuiImageList: {
+      styleOverrides: {
+        root: { gap: "8px" }, // kumo: gap-2
+      },
+    },
+    MuiImageListItem: {
+      styleOverrides: {
+        root: { overflow: "hidden", borderRadius: "8px" }, // kumo: rounded-lg, the surface radius
       },
     },
   },

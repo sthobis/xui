@@ -1,6 +1,19 @@
 import MuiAppBar from "@mui/material/AppBar"
+import MuiAutocomplete from "@mui/material/Autocomplete"
 import MuiAvatar from "@mui/material/Avatar"
+import MuiBadge from "@mui/material/Badge"
+import MuiBottomNavigation from "@mui/material/BottomNavigation"
+import MuiBottomNavigationAction from "@mui/material/BottomNavigationAction"
+import MuiCircularProgress from "@mui/material/CircularProgress"
 import MuiDivider from "@mui/material/Divider"
+import MuiFab from "@mui/material/Fab"
+import MuiPagination from "@mui/material/Pagination"
+import MuiRating from "@mui/material/Rating"
+import MuiSlider from "@mui/material/Slider"
+import MuiStep from "@mui/material/Step"
+import MuiStepLabel from "@mui/material/StepLabel"
+import MuiStepper from "@mui/material/Stepper"
+import MuiTextField from "@mui/material/TextField"
 import MuiList from "@mui/material/List"
 import MuiListItem from "@mui/material/ListItem"
 import MuiListItemButton from "@mui/material/ListItemButton"
@@ -83,6 +96,82 @@ export const derivedSection: Section = {
         <MuiAppBar position="static" style={{ width: 220 }}>
           <MuiToolbar>Workers</MuiToolbar>
         </MuiAppBar>
+      ),
+    },
+    {
+      id: "derived-fab",
+      mui: (
+        <MuiStack direction="row" spacing={1}>
+          <MuiFab>
+            <HouseIcon />
+          </MuiFab>
+          {/* determinate on purpose: an indeterminate spinner is a moving target for preflight,
+              which screenshots the same cell on two pages and compares them */}
+          <MuiCircularProgress variant="determinate" value={65} />
+        </MuiStack>
+      ),
+    },
+    {
+      id: "derived-slider",
+      mui: (
+        <div style={{ width: 200 }}>
+          <MuiSlider defaultValue={40} />
+        </div>
+      ),
+    },
+    {
+      id: "derived-rating-badge",
+      mui: (
+        <MuiStack direction="row" spacing={3}>
+          <MuiRating defaultValue={3} readOnly />
+          <MuiBadge badgeContent={4}>
+            <MuiAvatar variant="rounded">KU</MuiAvatar>
+          </MuiBadge>
+          <MuiBadge variant="dot">
+            <MuiAvatar variant="rounded">MO</MuiAvatar>
+          </MuiBadge>
+        </MuiStack>
+      ),
+    },
+    {
+      id: "derived-pagination",
+      mui: <MuiPagination count={5} page={2} />,
+    },
+    {
+      id: "derived-stepper",
+      mui: (
+        <div style={{ width: 300 }}>
+          <MuiStepper activeStep={1}>
+            <MuiStep>
+              <MuiStepLabel>Plan</MuiStepLabel>
+            </MuiStep>
+            <MuiStep>
+              <MuiStepLabel>Build</MuiStepLabel>
+            </MuiStep>
+            <MuiStep>
+              <MuiStepLabel>Ship</MuiStepLabel>
+            </MuiStep>
+          </MuiStepper>
+        </div>
+      ),
+    },
+    {
+      id: "derived-bottom-navigation",
+      mui: (
+        <MuiBottomNavigation value={0} style={{ width: 240 }}>
+          <MuiBottomNavigationAction label="Overview" icon={<HouseIcon />} />
+          <MuiBottomNavigationAction label="Settings" icon={<GearIcon />} />
+        </MuiBottomNavigation>
+      ),
+    },
+    {
+      id: "derived-autocomplete",
+      mui: (
+        <MuiAutocomplete
+          style={{ width: 220 }}
+          options={["Workers", "Pages", "R2"]}
+          renderInput={(params) => <MuiTextField {...params} />}
+        />
       ),
     },
     {
