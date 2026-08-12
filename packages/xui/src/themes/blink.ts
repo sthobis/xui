@@ -65,6 +65,18 @@ declare module "@mui/material/styles" {
   }
 }
 
+// The kit's Button axes are wider than MUI's on both sides: five variants against three, and four
+// sizes against three. `light` is the tinted fill (tonal, and destructive when `color="error"`);
+// `xs` is the kit's 24px control height, which MUI has no step for.
+declare module "@mui/material/Button" {
+  interface ButtonPropsVariantOverrides {
+    light: true
+  }
+  interface ButtonPropsSizeOverrides {
+    xs: true
+  }
+}
+
 /**
  * The kit's light token set, transcribed from reference/tokens.css exactly as written there -
  * `#5a63b0` stays hex, `rgb(229, 49, 10)` stays rgb(). Both parse; neither is converted, because a
@@ -200,6 +212,260 @@ export const blinkTheme = createTheme({
   // primitive that proves it. `mui-themed` made the same call.
 
   components: {
+    // ---- Button ----
+    //
+    // Ground truth: reference/primitives/Button/Button.module.css, quoted per line below.
+    // Ported from mui-themed/components/button.ts, with four corrections the primitive forced:
+    //
+    //   1. `ghost` and `tonal` carry `border: 1px solid transparent`, not `border: none`. With
+    //      border-box sizing the outer height is the same either way, so this is invisible until
+    //      you look at the LABEL: a 1px border eats 1px of the content box, so the text sits one
+    //      pixel further in. The port's `border: none` moved it.
+    //   2. No `defaultProps.size`. The port pinned `size: "large"`, which came from the older
+    //      PulseButton whose default was 42px. The kit's Button defaults to `md`, and MUI's own
+    //      default `medium` already maps to it - so pinning it made every default-size button 40px
+    //      instead of 36px.
+    //   3. The focus ring is spelled with the kit's own `color-mix(in srgb, ...)` rather than the
+    //      port's `rgba(<channel> / 0.5)`. The two agree numerically, but transcribing the
+    //      expression keeps it greppable back to tokens.css.
+    //   4. `secondary`'s hover is a 4% tint of TEXT colour (`--color-text-default`), which the port
+    //      had right, but as a channel-alpha; same treatment as 3.
+    //
+    // `disableElevation` is NOT set, on purpose - see the boxShadow note on the root below.
+    MuiButton: {
+      defaultProps: {
+        // The kit's Button signature is `variant = "secondary"`, which is this. MUI's own default
+        // is `text`, i.e. the kit's `ghost` - a transparent button where the design system expects
+        // a bordered one.
+        variant: "outlined", // blink: Button/index.tsx `variant = "secondary"`
+        // The kit passes `disableRipple` to ButtonBase directly. Restated here rather than left to
+        // the global MuiButtonBase default, because that default does not reach every component
+        // that forwards its own.
+        disableRipple: true, // blink: Button/index.tsx `disableRipple`
+      },
+      styleOverrides: {
+        root: ({ theme }) => ({
+          display: "flex", // blink: .root `display: flex`
+          alignItems: "center", // blink: .root `align-items: center`
+          justifyContent: "center", // blink: .root `justify-content: center`
+          gap: 8, // blink: .root `gap: var(--space-2)`
+          borderRadius: 8, // blink: .root `border-radius: var(--radius-3)`
+          // The kit says `font-family: inherit`. MUI would otherwise apply
+          // `theme.typography.button`, and a <button> does not inherit font-family on its own -
+          // this is the same trap that made an AccordionSummary measure wider on the shadcn and
+          // kumo themes than on their reset-free preflight page.
+          fontFamily: "inherit", // blink: .root `font-family: inherit`
+          fontWeight: 600, // blink: .root `font-weight: 600`
+          // blink: reset.css `body { line-height: 1.5 }`, inherited. Button.module.css sets no
+          // line-height at all, so the kit's label takes the document's.
+          //
+          // Stated explicitly rather than left as `inherit` for two reasons. A consumer of this
+          // theme has MUI but not the kit's reset, and `inherit` would hand them whatever their own
+          // body line-height happens to be; and MUI's `typography.button` defaults to 1.75, so
+          // leaving this out is not neutral - it is 1.75.
+          //
+          // Found by the font-metrics sweep, not the pixel diff: every button here has a FIXED
+          // height and centres its label, so a wrong line-height moves nothing and all 30 button
+          // pair-states sat at exactly 0 differing pixels while the label box was 3.75px too tall.
+          lineHeight: 1.5,
+          whiteSpace: "nowrap", // blink: .root `white-space: nowrap`
+          position: "relative", // blink: .root `position: relative`
+          transition: "background-color 0.2s, border-color 0.2s, color 0.2s, opacity 0.2s", // blink: .root
+          // MUI's `contained` ships an elevation shadow that the kit has nowhere. The obvious fix
+          // is `disableElevation: true`, and it is a trap here: that prop injects
+          // `&:hover, &:active, &.Mui-focusVisible { box-shadow: none }` at a specificity a root
+          // override does not reach - and the kit's FOCUS RING IS A BOX-SHADOW, so every focused
+          // button would silently lose its ring while the default state looked perfect. Killing the
+          // shadow by hand instead leaves the focus-visible rule free to put one back.
+          boxShadow: "none",
+          "&:hover": { boxShadow: "none" },
+          "&:active": { boxShadow: "none" },
+          "&.Mui-disabled": {
+            opacity: 0.6, // blink: .root:disabled:not(.loading) `opacity: 0.6`
+            // MUI greys a disabled button out - its own `action.disabled` on the label and
+            // `action.disabledBackground` on the border. The kit does not: `.root:disabled` sets
+            // opacity and nothing else, so every variant keeps its own colours and is simply
+            // dimmed. Handing them back cannot be done here, because there is no value that means
+            // "whatever the variant set" - `inherit` takes the PARENT's colour, which made a
+            // disabled ghost button's label #262626 instead of brand indigo. Each variant restates
+            // its own skin under `.Mui-disabled` instead; see `skin` in each block below.
+          },
+          "&.Mui-focusVisible": {
+            outline: "2px solid transparent", // blink: .root:focus-visible
+            outlineOffset: 2, // blink: .root:focus-visible `outline-offset: 2px`
+            // blink: tokens.css --focus-ring, spelled as the kit spells it. `--focus-ring-opacity`
+            // is 50% in the light scheme and is inlined; it only varies in dark, which this theme
+            // does not cover yet.
+            boxShadow: `color-mix(in srgb, ${theme.vars.palette.primary.main} 50%, transparent) 0px 0px 0px 4px`,
+          },
+        }),
+      },
+      variants: [
+        // Each variant's three colours are named once as `skin` and spread into both the resting
+        // state and `.Mui-disabled`. The repetition is the point: it is what stops MUI's disabled
+        // greying from replacing them, and writing the colour twice is cheaper than a reader
+        // wondering which of them the disabled state uses. Borders are set long-hand so `skin` can
+        // carry `borderColor` on its own.
+        {
+          props: { variant: "contained" },
+          style: ({ theme }) => {
+            const skin = {
+              background: theme.vars.palette.primary.main, // blink: .primary `background: var(--color-primary)`
+              color: theme.vars.palette.primary.contrastText, // blink: .primary `color: var(--color-primary-text)`
+              borderColor: theme.vars.palette.primary.main, // blink: .primary `border: 1px solid var(--color-primary)`
+            }
+            return {
+              ...skin,
+              borderWidth: 1,
+              borderStyle: "solid",
+              "&:hover": {
+                background: theme.vars.palette.primary.dark, // blink: .primary:hover `var(--color-primary-hover)`
+                borderColor: theme.vars.palette.primary.dark, // blink: .primary:hover `border-color`
+              },
+              "&.Mui-disabled": skin,
+            }
+          },
+        },
+        {
+          props: { variant: "outlined" },
+          style: ({ theme }) => {
+            const skin = {
+              background: theme.vars.palette.surface, // blink: .secondary `background: var(--color-surface)`
+              color: theme.vars.palette.text.primary, // blink: .secondary `color: var(--color-text-default)`
+              borderColor: theme.vars.palette.borderStrong, // blink: .secondary `1px solid var(--color-border-strong)`
+            }
+            return {
+              ...skin,
+              borderWidth: 1,
+              borderStyle: "solid",
+              "&:hover": {
+                // blink: .secondary:hover `color-mix(in srgb, var(--color-text-default) 4%, transparent)`
+                background: `color-mix(in srgb, ${theme.vars.palette.text.primary} 4%, transparent)`,
+                borderColor: theme.vars.palette.borderStrong,
+              },
+              "&.Mui-disabled": skin,
+            }
+          },
+        },
+        {
+          props: { variant: "text" },
+          style: ({ theme }) => {
+            const skin = {
+              background: "transparent", // blink: .ghost `background: transparent`
+              color: theme.vars.palette.primary.main, // blink: .ghost `color: var(--color-primary)`
+              // NOT `border: none` - see correction 1 in the block note.
+              borderColor: "transparent", // blink: .ghost `border: 1px solid transparent`
+            }
+            return {
+              ...skin,
+              borderWidth: 1,
+              borderStyle: "solid",
+              "&:hover": {
+                // blink: .ghost:hover `color-mix(in srgb, var(--color-primary) 15%, transparent)`
+                background: `color-mix(in srgb, ${theme.vars.palette.primary.main} 15%, transparent)`,
+              },
+              "&.Mui-disabled": skin,
+            }
+          },
+        },
+        {
+          props: { variant: "light", color: "primary" },
+          style: ({ theme }) => {
+            const skin = {
+              // blink: .tonal `background: var(--color-primary-bg)`, which tokens.css defines as
+              // `color-mix(in srgb, var(--color-primary) var(--color-tint-opacity), transparent)`
+              // with the tint opacity at 10% in light.
+              background: `color-mix(in srgb, ${theme.vars.palette.primary.main} 10%, transparent)`,
+              color: theme.vars.palette.primary.main, // blink: .tonal `color: var(--color-primary)`
+              borderColor: "transparent", // blink: .tonal `border: 1px solid transparent`
+            }
+            return {
+              ...skin,
+              borderWidth: 1,
+              borderStyle: "solid",
+              "&:hover": {
+                // blink: .tonal:hover `color-mix(in srgb, var(--color-primary) 15%, transparent)`
+                background: `color-mix(in srgb, ${theme.vars.palette.primary.main} 15%, transparent)`,
+              },
+              "&.Mui-disabled": skin,
+            }
+          },
+        },
+        {
+          props: { variant: "light", color: "error" },
+          style: ({ theme }) => {
+            const skin = {
+              // blink: .destructive `background: var(--color-error-bg)` (10% tint, as above)
+              background: `color-mix(in srgb, ${theme.vars.palette.error.main} 10%, transparent)`,
+              // The AA text cut, not the accent: tokens.css reserves the plain accent for icons,
+              // borders and fills, and this is a label.
+              color: theme.vars.palette.errorText, // blink: .destructive `color: var(--color-error-text)`
+              // blink: .destructive `border: 1px solid color-mix(in srgb, var(--color-error) 20%, transparent)`
+              borderColor: `color-mix(in srgb, ${theme.vars.palette.error.main} 20%, transparent)`,
+            }
+            return {
+              ...skin,
+              borderWidth: 1,
+              borderStyle: "solid",
+              "&:hover": {
+                // blink: .destructive:hover
+                background: `color-mix(in srgb, ${theme.vars.palette.error.main} 15%, transparent)`,
+                borderColor: `color-mix(in srgb, ${theme.vars.palette.error.main} 30%, transparent)`,
+              },
+              "&.Mui-focusVisible": {
+                // blink: .destructive:focus-visible `box-shadow: var(--focus-ring-destructive)`,
+                // which tokens.css fixes at 35% (it has no themed opacity var, unlike --focus-ring).
+                boxShadow: `color-mix(in srgb, ${theme.vars.palette.error.main} 35%, transparent) 0px 0px 0px 4px`,
+              },
+              "&.Mui-disabled": skin,
+            }
+          },
+        },
+        {
+          // blink: .xs - the kit's fourth size, reached through the custom `xs` declared above.
+          props: { size: "xs" },
+          style: {
+            height: 24, // blink: .xs `height: var(--control-h-xs)`
+            minWidth: 24, // blink: .xs `min-width: var(--control-h-xs)`
+            padding: "0 8px", // blink: .xs `padding: 0 var(--space-2)`
+            gap: 4, // blink: .xs `gap: var(--space-1)`
+            fontSize: 13, // blink: .xs `font-size: var(--text-xs)`
+            borderRadius: 6, // blink: .xs `border-radius: var(--radius-2)`
+          },
+        },
+        {
+          props: { size: "small" },
+          style: {
+            height: 32, // blink: .sm `height: var(--control-h-sm)`
+            minWidth: 32, // blink: .sm `min-width: var(--control-h-sm)`
+            padding: "0 12px", // blink: .sm `padding: 0 var(--space-3)`
+            gap: 4, // blink: .sm `gap: var(--space-1)`
+            fontSize: 14, // blink: .sm `font-size: var(--text-sm)`
+            borderRadius: 6, // blink: .sm `border-radius: var(--radius-2)`
+          },
+        },
+        {
+          props: { size: "medium" },
+          style: {
+            height: 36, // blink: .md `height: var(--control-h-md)`
+            minWidth: 36, // blink: .md `min-width: var(--control-h-md)`
+            padding: "0 12px", // blink: .md `padding: 0 var(--space-3)`
+            fontSize: 15, // blink: .md `font-size: var(--text-md)`
+            // gap and radius deliberately absent: .md adds neither, so both come from .root.
+          },
+        },
+        {
+          props: { size: "large" },
+          style: {
+            height: 40, // blink: .lg `height: var(--control-h-lg)`
+            minWidth: 40, // blink: .lg `min-width: var(--control-h-lg)`
+            padding: "0 16px", // blink: .lg `padding: 0 var(--space-4)`
+            fontSize: 15, // blink: .lg `font-size: var(--text-md)`
+          },
+        },
+      ],
+    },
+
     // ---- Link ----
     //
     // The kit has no Link primitive. Links are styled globally, by one rule in global.css:
