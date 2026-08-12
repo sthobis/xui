@@ -86,7 +86,15 @@ async function captureCell(page: Page, cell: Locator, id: string): Promise<Buffe
   })
 }
 
-test("mui renders identically with and without tailwind", async ({ page }) => {
+test("mui renders identically with and without tailwind", async ({ page }, testInfo) => {
+  // Duration budget, NOT a correctness threshold - the same distinction parity.spec.ts records.
+  // This test screenshots EVERY pair on two pages, so its runtime grows with the gallery, and it
+  // had been riding Playwright's 30s default: measured at 30.2s for shadcn (101 pairs, failed) and
+  // 27.1s for kumo (77, passed). A timeout there reports as `locator.scrollIntoViewIfNeeded` on
+  // whichever pair the clock happened to run out on, which reads exactly like a missing element -
+  // it cost a real diagnostic detour chasing a `type-h2` cell that was present on both pages the
+  // whole time. Raised with headroom so a slow machine reports real numbers instead.
+  testInfo.setTimeout(300_000)
   const { theme, mode } = targetOf(test.info().project.name)
   test.skip(mode === "dark", "mode covered by parity suite; preflight is mode-independent")
   await page.goto(GALLERY_PAGE[theme])
