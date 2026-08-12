@@ -19,8 +19,14 @@ Everything below applies to both. Where they differ, the theme name is called ou
   `src/gallery/` holds the theme-agnostic plumbing (`PairGrid`, `Sidebar`, `ThemePanel`, `types`).
   `src/themes/<name>/` is one theme's own page: its entry, App, Providers, CSS, Tailwind-free `pure` entry, and `sections/`.
   A section renders each variant/size/state as a pair: the real component (`ref`) next to the themed MUI one (`mui`).
-- Each theme is its OWN Vite page, and that isolation is the point: the two design systems' Tailwind themes, base layers and fonts must never load together, or a 0-threshold pixel harness would be measuring whichever won the cascade.
-  `index.html` + `pure.html` are shadcn's; `kumo.html` + `kumo-pure.html` are kumo's.
+- Each theme's PARITY page is its own Vite page, and that isolation is the point: the two design systems' Tailwind themes, base layers and fonts must never load together, or a 0-threshold pixel harness would be measuring whichever won the cascade.
+  `shadcn.html` + `pure.html` are shadcn's; `kumo.html` + `kumo-pure.html` are kumo's.
+  Those four are where the real components live and where every pixel claim is made.
+- `index.html` is the SHOWCASE, and it is the one page that may hold both themes at once - one row per component, three columns: stock MUI, shadcn-themed, kumo-themed.
+  It can do that precisely because it renders no reference component, so it loads neither system's Tailwind and there is no cascade to fight over.
+  It reads the kumo gallery's `mui` nodes as its component list, since that theme now covers everything shadcn's does.
+  Two things there are load-bearing and are commented at the code: each column re-declares its theme's CSS custom properties inline (both themes emit `--mui-palette-*` on `:root`, so without that you get one theme, whichever wrote `:root` last), and each column uses `ScopedCssBaseline` rather than the global one (which would otherwise hand the whole page one theme's typography).
+  The showcase is light-only: the two systems' dark conventions (`.dark` against `data-mode`) cannot both be driven by one toggle, so dark mode stays on the per-theme pages.
 - Ground truth per theme:
   - shadcn - `apps/showcase/src/components/ui/<name>.tsx`, the real source installed by the shadcn CLI.
   - kumo - the installed `@cloudflare/kumo` package, pinned to an exact version. The real component source is in `node_modules/@cloudflare/kumo/dist/chunks/<name>-<hash>.js` (the files under `dist/components/` are 200-byte re-exports), and the tokens are in `dist/styles/`.
@@ -137,7 +143,7 @@ That check compares colours in sRGB, because `getComputedStyle` preserves the sp
 
 ## Commands
 
-- `pnpm dev` runs the showcase.
+- `pnpm dev` runs the showcase at `/` (three themes side by side); the parity galleries are at `/shadcn.html` and `/kumo.html`.
 - `pnpm verify:parity` runs the full pixel-parity suite (every theme, light and dark, all pairs).
   Playwright projects are named `<theme>-<mode>`: `shadcn-light`, `shadcn-dark`, `kumo-light`, `kumo-dark`, and each writes its own `e2e/results/report-<project>.md`.
 - While iterating on ONE component, filter to it for a ~5s loop instead of the full suite: `PARITY_PAIR=slider pnpm exec playwright test e2e/parity.spec.ts --project=shadcn-light` (comma-separated id prefixes; swap in `kumo-light` for the kumo gallery, or pass both projects). Run the full `pnpm verify:parity` once at the end to confirm no regressions.

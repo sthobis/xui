@@ -31,8 +31,13 @@ export default defineConfig(({ command }) => ({
       // independent CSS graph, which is the point: the two design systems' Tailwind themes, base
       // layers and fonts must never load together, or a 0-threshold pixel harness would be
       // measuring whichever one won the cascade.
+      //
+      // `index` is the exception that proves it: the showcase renders only MUI, under all three
+      // themes side by side, so it pulls in NEITHER design system's stylesheet and the two themes
+      // can share a page safely. The real components live on the parity pages.
       input: {
-        main: path.resolve(__dirname, "index.html"),
+        index: path.resolve(__dirname, "index.html"),
+        shadcn: path.resolve(__dirname, "shadcn.html"),
         pure: path.resolve(__dirname, "pure.html"),
         kumo: path.resolve(__dirname, "kumo.html"),
         kumoPure: path.resolve(__dirname, "kumo-pure.html"),

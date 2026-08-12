@@ -9,8 +9,13 @@ import { expect, type Page } from "@playwright/test"
  */
 export type ThemeName = "shadcn" | "kumo"
 
+// Each theme's own isolated page, carrying that design system's Tailwind and nothing else. `/` is
+// NOT one of them: it is the showcase, which renders only MUI under all three themes at once and
+// therefore loads no design-system stylesheet at all. The parity pages have to stay separate for
+// the reason AGENTS.md gives - two Tailwind graphs on one page and a 0-threshold diff is measuring
+// whichever won the cascade.
 export const GALLERY_PAGE: Record<ThemeName, string> = {
-  shadcn: "/",
+  shadcn: "/shadcn.html",
   kumo: "/kumo.html",
 }
 

@@ -1,0 +1,5 @@
+/* Both themes' fonts, and NOTHING else - no Tailwind, no design-system base layer.
+   That absence is the point: this page renders only MUI, so it needs neither system's stylesheet,
+   which is exactly what lets the two themes share a page (see the note in Showcase.tsx). */
+@import "@fontsource-variable/inter";
+@import "@fontsource-variable/geist";
