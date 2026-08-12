@@ -131,7 +131,7 @@ AppBar / Toolbar above is the first of these.
 - [x] Backdrop (shadcn Dialog/Sheet overlay)
 - [x] Modal (the primitive under Dialog/Drawer)
 - [x] Badge - the dot (shadcn AvatarBadge) and the count pill (shadcn Badge)
-- [x] ImageList (no shadcn twin - standard, masonry and quilted, with caption bar)
+- [x] ImageList (no shadcn twin - all four variants, with caption bar)
 - [x] TablePagination (no shadcn twin - caption and actions)
 - [x] FormHelperText (shadcn FieldDescription / FieldError) + InputAdornment (via InputGroup)
 
@@ -156,10 +156,10 @@ The second is work that is not the theme's to do, and listing it as a gap only i
 | Badge | The dot anchored to an avatar; the count pill in primary and error, including `showZero` | Nothing outstanding |
 | BottomNavigation | The resting bar with one item selected, with labels on and off | Nothing outstanding |
 | Fab | The circular ladder (56px default, `size="small"`, `size="medium"`) and `variant="extended"` | Nothing outstanding |
-| ImageList | `variant="standard"`, `"masonry"` and `"quilted"`; per-item row and column spans; the caption bar at `"bottom"` and `"top"`, with `title`, `subtitle` and `actionIcon` | `variant="woven"`, and the bar's `"below"` position |
+| ImageList | Every variant (`standard`, `masonry`, `quilted`, `woven`); per-item row and column spans; the caption bar at all three positions, with `title`, `subtitle` and `actionIcon` | Nothing outstanding |
 | List | Plain items; items with an icon, a description, or both; `dense`, which maps to shadcn's `xs` size; `ItemSeparator`; and `ItemActions` | Nothing outstanding |
 | Rating | Read-only display at whole and half values | Hover preview, click to set - both need a harness state that hovers a specific child rather than the pair's `data-target` |
-| Snackbar | A message alone, with an action, and with a description | The cancel and close buttons |
+| Snackbar | A message alone, with an action, with a description, and with a cancel button | Nothing outstanding |
 | SpeedDial | Closed, and open with its actions | The tooltips an action can show, on the same terms as Rating's hover above |
 | Stepper | Horizontal and vertical, on the first step | Disabled steps |
 | TablePagination | Caption, actions, the rows-per-page control, and the first and last page buttons | Nothing outstanding; the rows-per-page menu when open is covered by the `select-*` pairs |
@@ -176,6 +176,7 @@ The second is work that is not the theme's to do, and listing it as a gap only i
 | `AppBar`'s elevation above 0 | shadcn's header has no shadow at any depth, so there is no value to extract |
 | `AppBar`'s `position="fixed"` and `"sticky"` | A fixed bar escapes its gallery cell, so the harness cannot frame it without a new capture mode. A limitation of the check, not of the theme |
 | `Stepper`'s completed and error step glyphs | MUI hardcodes its own check and warning vectors and no CSS reshapes them. Closing either means the theme shipping a `stepIcon` component, which is a design decision rather than an extraction |
+| `Snackbar`'s close button | sonner positions it from the Toaster's own `--toast-close-button-start/end/transform` variables, so a faithful twin would depend on Toaster configuration rather than on anything the theme can reach |
 | `BottomNavigation`'s selection animation, and `Badge`'s `invisible` transition | The harness disables animations so a capture is deterministic. Anything whose whole content is the transition is invisible to it by construction, not by omission |
 | `Snackbar`'s placement | The open state captures the toast alone and normalizes its position, precisely so a pair measures the box rather than where the library parked it. That makes placement unmeasurable here by the same decision |
 
