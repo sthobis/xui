@@ -108,5 +108,46 @@ export const ratingSection: Section = {
         </div>
       ),
     },
+    {
+      // The HOVER PREVIEW, which is the one thing a Rating does that a static pair cannot show.
+      //
+      // The harness hovers the LAST star deliberately. MUI previews the value you are pointing at,
+      // so hovering star five fills all five - a state the twin can express as one `group-hover`
+      // rule over every star. Hovering a middle star would preview a partial fill, which needs a
+      // per-star rule on the shadcn side and proves nothing extra about the theme.
+      //
+      // Not `readOnly`: MUI suppresses the preview entirely on a read-only Rating, so the pair would
+      // have compared two resting ratings and passed without exercising anything.
+      id: "rating-hover",
+      states: ["hover-child"],
+      shadcn: (
+        <div style={wrapStyle}>
+          <div className="group inline-flex gap-0.5">
+            {Array.from({ length: MAX }, (_, i) => (
+              <Star
+                key={i}
+                data-hover-target
+                className={`size-4 group-hover:fill-current group-hover:text-primary ${
+                  i < VALUE ? "fill-current text-primary" : "text-muted-foreground"
+                }`}
+              />
+            ))}
+          </div>
+        </div>
+      ),
+      mui: (
+        <div style={wrapStyle}>
+          <MuiRating
+            value={VALUE}
+            max={MAX}
+            // Every star carries the harness's hover hook and the harness takes the last one - see
+            // applyState("hover-child"). MUI reuses this one element for all five stars, which is
+            // exactly why the state is defined that way rather than nominating a single child.
+            icon={<Star data-hover-target />}
+            emptyIcon={<Star data-hover-target />}
+          />
+        </div>
+      ),
+    },
   ],
 }

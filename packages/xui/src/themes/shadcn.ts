@@ -5696,6 +5696,14 @@ export const shadcnTheme = createTheme({
             height: "1em",
           },
         },
+        // MUI pops the hovered star to `scale(1.2)`. That is a Material affordance and not shadcn's
+        // language - its interactive elements change colour or background on hover and never size -
+        // so it comes off, for the same reason the ripple and the elevation overlay do. The hover
+        // still reads: the preview fills the stars up to the pointer, which is the part that
+        // carries the meaning.
+        iconHover: {
+          transform: "none",
+        },
         iconFilled: ({ theme }) => ({
           color: theme.vars.palette.primary.main, // shadcn: text-primary (MUI's own is a Material amber)
           // shadcn: fill-current. lucide paths ship `fill: none` and stroke themselves with

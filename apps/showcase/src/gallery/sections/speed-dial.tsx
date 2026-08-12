@@ -20,8 +20,14 @@ import type { Section } from "../types"
 // stepper.tsx makes: actions stacked column-reverse above the trigger with a 16px gap between the
 // group and the trigger, and 8px between actions.
 //
-// NOT covered: the tooltips a SpeedDialAction can show (they need a hover the open state never
-// performs), the staggered enter transition, and `direction` other than up.
+// NOT covered, and only one of these is a gap: the staggered enter transition and `direction` other
+// than up have no pair.
+//
+// The action TOOLTIPS are deliberately not paired. SpeedDialAction renders MUI's own Tooltip - it
+// imports the component and its props extend TooltipProps - so the surface a theme owns there is
+// already verified at zero by the tooltip-* pairs. What a pair here would add is the tooltip's
+// PLACEMENT beside an action, and shadcn ships no speed dial, so nothing grounds where that sits.
+// Adding a pair would assert MUI's placement is correct rather than test anything.
 const wrapStyle = { width: 96 } as const
 
 // The OPEN pair needs its own wrapper height. An open speed dial is 184px tall but a gallery cell is

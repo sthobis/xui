@@ -2,7 +2,17 @@ import type { ReactNode } from "react"
 
 // Duplicated from e2e/lib/states.ts (the showcase app cannot import e2e/ source, and vice
 // versa - keep these two PairState unions in sync by hand).
-export type PairState = "default" | "hover" | "focus" | "open" | "active" | "anchored"
+export type PairState =
+  | "default"
+  | "hover"
+  | "focus"
+  | "open"
+  | "active"
+  | "anchored"
+  // Hovers the cell's `[data-hover-target]` instead of its `[data-target]`, for components whose
+  // appearance depends on WHICH child the pointer is over - a Rating's value preview, a SpeedDial
+  // action's tooltip. Both sides must mark the same child.
+  | "hover-child"
 
 /** Non-pixel behaviors asserted by e2e/behavior.spec.ts (declarative discovery via `data-behaviors`). */
 export type PairBehavior = "animates" | "hover-opens" | "escape-closes" | "overlay-matches" | "item-hover-highlights" | "filters-on-type"

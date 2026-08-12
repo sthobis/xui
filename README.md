@@ -123,7 +123,7 @@ For these there is no installed component to extract from, so the twin in the ga
 Each such block says so at the top.
 AppBar / Toolbar above is the first of these.
 
-- [x] Rating (no shadcn twin - read-only, whole and half values)
+- [x] Rating (no shadcn twin - whole and half values, and the hover preview)
 - [x] Stepper (no shadcn twin - horizontal and vertical, first step)
 - [x] Fab (no shadcn twin - composed from Button; circular and extended)
 - [x] SpeedDial (no shadcn twin - closed state)
@@ -158,9 +158,9 @@ The second is work that is not the theme's to do, and listing it as a gap only i
 | Fab | The circular ladder (56px default, `size="small"`, `size="medium"`) and `variant="extended"` | Nothing outstanding |
 | ImageList | Every variant (`standard`, `masonry`, `quilted`, `woven`); per-item row and column spans; the caption bar at all three positions, with `title`, `subtitle` and `actionIcon` | Nothing outstanding |
 | List | Plain items; items with an icon, a description, or both; `dense`, which maps to shadcn's `xs` size; `ItemSeparator`; and `ItemActions` | Nothing outstanding |
-| Rating | Read-only display at whole and half values | Hover preview, click to set - both need a harness state that hovers a specific child rather than the pair's `data-target` |
+| Rating | Read-only display at whole and half values, and the hover preview | Nothing outstanding |
 | Snackbar | A message alone, with an action, with a description, and with a cancel button | Nothing outstanding |
-| SpeedDial | Closed, and open with its actions | The tooltips an action can show, on the same terms as Rating's hover above |
+| SpeedDial | Closed, and open with its actions | Nothing outstanding |
 | Stepper | Horizontal and vertical, on the first step | Disabled steps |
 | TablePagination | Caption, actions, the rows-per-page control, and the first and last page buttons | Nothing outstanding; the rows-per-page menu when open is covered by the `select-*` pairs |
 
@@ -176,6 +176,7 @@ The second is work that is not the theme's to do, and listing it as a gap only i
 | `AppBar`'s elevation above 0 | shadcn's header has no shadow at any depth, so there is no value to extract |
 | `AppBar`'s `position="fixed"` and `"sticky"` | A fixed bar escapes its gallery cell, so the harness cannot frame it without a new capture mode. A limitation of the check, not of the theme |
 | `Stepper`'s completed and error step glyphs | MUI hardcodes its own check and warning vectors and no CSS reshapes them. Closing either means the theme shipping a `stepIcon` component, which is a design decision rather than an extraction |
+| `SpeedDial`'s action tooltips | `SpeedDialAction` renders MUI's own Tooltip, so the surface a theme owns is already verified by the `tooltip-*` pairs. A pair here would only assert where MUI places it, and shadcn ships no speed dial to ground that |
 | `Snackbar`'s close button | sonner positions it from the Toaster's own `--toast-close-button-start/end/transform` variables, so a faithful twin would depend on Toaster configuration rather than on anything the theme can reach |
 | `BottomNavigation`'s selection animation, and `Badge`'s `invisible` transition | The harness disables animations so a capture is deterministic. Anything whose whole content is the transition is invisible to it by construction, not by omission |
 | `Snackbar`'s placement | The open state captures the toast alone and normalizes its position, precisely so a pair measures the box rather than where the library parked it. That makes placement unmeasurable here by the same decision |

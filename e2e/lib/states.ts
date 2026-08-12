@@ -2,7 +2,14 @@ import { expect, type Locator, type Page } from "@playwright/test"
 
 // Duplicated from apps/showcase/src/gallery/types.ts (e2e must not import app source, and
 // vice versa - keep these two PairState unions in sync by hand).
-export type PairState = "default" | "hover" | "focus" | "open" | "active" | "anchored"
+export type PairState =
+  | "default"
+  | "hover"
+  | "focus"
+  | "open"
+  | "active"
+  | "anchored"
+  | "hover-child"
 
 /** Selector matching any currently-open overlay content, portalled or in-cell. */
 const OPEN_CONTENT_SELECTOR = "[data-portal-target], [data-open-target]"
@@ -44,6 +51,37 @@ export async function applyState(page: Page, cell: Locator, state: PairState, pa
   const target = cell.locator("[data-target]").first()
   if (state === "hover") {
     await target.hover()
+  } else if (state === "hover-child") {
+    // Hovers a NOMINATED DESCENDANT rather than the pair's own `data-target`.
+    //
+    // `hover` is enough while a component reacts as one box, and stops being enough the moment the
+    // thing under the pointer matters: a Rating previews a value from WHICH star you are over, and
+    // a SpeedDial shows the tooltip belonging to the action you are on. Pointing the existing state
+    // at those children is not an option - `data-target` is also what `focus` and `active` use, and
+    // what the anchored capture measures from.
+    //
+    // Marks every hoverable child and hovers the LAST of them, rather than nominating one.
+    // Nominating was tried first and does not survive contact with MUI: a Rating renders one `icon`
+    // element for all five stars, so marking "the last star" through that prop marks all five, and
+    // v9 has no per-star hook to distinguish them (`IconContainerComponent` is gone, and the `icon`
+    // slot's ownerState belongs to the component rather than to a star).
+    //
+    // Taking the last match is symmetric - both sides mark the same set - and deterministic, and it
+    // is the useful end of the range anyway: hovering the last star of a Rating previews a full
+    // value, which the twin can express as one rule over every star instead of a per-star ladder.
+    const children = cell.locator("[data-hover-target]")
+    await expect(
+      children.first(),
+      `applyState("hover-child"): no [data-hover-target] inside this cell`,
+    ).toBeAttached({ timeout: 5000 })
+    const box = await children.last().boundingBox()
+    if (!box) throw new Error(`applyState("hover-child"): [data-hover-target] has no bounding box`)
+    // `mouse.move` rather than `locator.hover()`, for the same reason the "active" branch below uses
+    // it. `hover()` waits for the element to be the hit target, and these icons never are: MUI lays
+    // a <label> over every star and shadcn's own icons take `pointer-events: none` in places, so the
+    // actionability check retries until the test times out. Moving the pointer to the centre of the
+    // box produces the hover the pair is testing without asking whether the icon could be clicked.
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
   } else if (state === "focus") {
     await focusVisible(target)
   } else if (state === "open" || state === "anchored") {
