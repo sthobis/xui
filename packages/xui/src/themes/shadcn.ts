@@ -6037,20 +6037,39 @@ export const shadcnTheme = createTheme({
           // shadcn: bg-background/80. Over an image the panel has to stay translucent or it stops
           // reading as an overlay, which is why this is a mix rather than the flat surface token.
           backgroundColor: `color-mix(in oklab, ${theme.vars.palette.background.default} 80%, transparent)`,
-          // shadcn: rounded-b-lg. The tile's own radius sits on the image (see MuiImageListItem
-          // above), so the bar has to round its own bottom corners or it squares the tile off.
-          borderBottomLeftRadius: RADIUS,
-          borderBottomRightRadius: RADIUS,
+          // The radius follows the EDGE THE BAR IS ON. The tile's own radius sits on the image (see
+          // MuiImageListItem above), so a bar has to round the corners it covers or it squares the
+          // tile off - and a bar pinned to the top covers the other two. Hardcoding the bottom pair
+          // would have left `position="top"` with square upper corners over a rounded tile.
+          "&.MuiImageListItemBar-positionBottom": {
+            borderBottomLeftRadius: RADIUS, // shadcn: rounded-b-lg
+            borderBottomRightRadius: RADIUS,
+          },
+          "&.MuiImageListItemBar-positionTop": {
+            borderTopLeftRadius: RADIUS, // shadcn: rounded-t-lg
+            borderTopRightRadius: RADIUS,
+          },
+          // The PADDING BELONGS TO THE BAR, not to the title column. MUI puts it on titleWrap, which
+          // looks the same until an actionIcon exists - the action is a sibling of that wrap, so it
+          // gets no inset at all and sits flush against the bar's edge. Measured 12px out.
+          padding: "0.5rem 0.75rem", // shadcn: px-3 py-2
         }),
         titleWrap: {
-          // MUI's own is 12px 16px, sized for its 16px title. shadcn: px-3 py-2.
-          padding: "0.5rem 0.75rem",
+          padding: 0, // the bar owns it now, see above
+          flex: "1 1 0%", // shadcn: flex-1
+          minWidth: 0, // shadcn: min-w-0, so a long title truncates instead of pushing the action out
         },
         title: ({ theme }) => ({
           fontSize: "0.75rem", // shadcn: text-xs
           lineHeight: "1rem", // shadcn: text-xs's paired line-height
           fontWeight: 500, // shadcn: font-medium
           color: theme.vars.palette.text.primary, // shadcn: text-foreground (MUI's own is white)
+        }),
+        subtitle: ({ theme }) => ({
+          fontSize: "0.75rem", // shadcn: text-xs
+          lineHeight: "1rem", // shadcn: text-xs's paired line-height (MUI ships a tighter 12px)
+          fontWeight: 400,
+          color: theme.vars.palette.text.secondary, // shadcn: text-muted-foreground (MUI's own is white)
         }),
       },
     },

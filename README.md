@@ -131,7 +131,7 @@ AppBar / Toolbar above is the first of these.
 - [x] Backdrop (shadcn Dialog/Sheet overlay)
 - [x] Modal (the primitive under Dialog/Drawer)
 - [x] Badge - the dot (shadcn AvatarBadge) and the count pill (shadcn Badge)
-- [x] ImageList (no shadcn twin - standard variant, with caption bar)
+- [x] ImageList (no shadcn twin - standard, masonry and quilted, with caption bar)
 - [x] TablePagination (no shadcn twin - caption and actions)
 - [x] FormHelperText (shadcn FieldDescription / FieldError) + InputAdornment (via InputGroup)
 
@@ -156,7 +156,7 @@ The second is work that is not the theme's to do, and listing it as a gap only i
 | Badge | The dot anchored to an avatar; the count pill in primary and error, including `showZero` | Nothing outstanding |
 | BottomNavigation | The resting bar with one item selected, with labels on and off | Nothing outstanding |
 | Fab | The circular ladder (56px default, `size="small"`, `size="medium"`) and `variant="extended"` | Nothing outstanding |
-| ImageList | The standard variant at a fixed column count, with and without a caption bar | `variant="masonry"`, `"quilted"` and `"woven"`, per-item row and column spans, and the bar's `subtitle` and `actionIcon` slots and `"top"`/`"below"` positions |
+| ImageList | `variant="standard"`, `"masonry"` and `"quilted"`; per-item row and column spans; the caption bar at `"bottom"` and `"top"`, with `title`, `subtitle` and `actionIcon` | `variant="woven"`, and the bar's `"below"` position |
 | List | Plain items; items with an icon, a description, or both; `dense`, which maps to shadcn's `xs` size; `ItemSeparator`; and `ItemActions` | Nothing outstanding |
 | Rating | Read-only display at whole and half values | Hover preview, click to set - both need a harness state that hovers a specific child rather than the pair's `data-target` |
 | Snackbar | A message alone, with an action, and with a description | The cancel and close buttons |
