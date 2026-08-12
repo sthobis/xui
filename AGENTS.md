@@ -42,7 +42,8 @@ Ship only what a gallery pair actually covers.
    Colors come from `theme.vars.palette.*` so both schemes work from one definition; scheme-specific deltas use `theme.applyStyles("dark", ...)`.
    Alpha blends use `color-mix(in oklab, <color> N%, transparent)` where `N` matches the extracted Tailwind `/NN` suffix exactly (watch for the occasional one-off `in oklch` mix and transcribe it as-is).
 4. Verify: run `pnpm verify:parity` and drive every new pair to 0.00% in both light and dark, with no regression on existing pairs.
-   Diagnose failures with a computed-style diff in the browser before staring at diff images.
+   Diagnose failures with a computed-style diff in the browser before staring at diff images - it is faster than the diff image and it is what catches the cases the diff cannot see.
+   Run `pnpm exec playwright test e2e/behavior.spec.ts` too if the change touches box geometry; parity alone will not catch a transparent box or a differently-built seam.
 5. Commit with a conventional message, no `Co-Authored-By` trailer.
 
 ## The parity harness is strict on purpose
@@ -66,10 +67,68 @@ Fix the theme instead.
 If a pair truly cannot reach zero for a provable rounding reason, prove the geometry is identical and add it to `maxDeltaOverrides`, which judges it on channel error alone and ignores the count.
 `slider-disabled` is the worked example: a 1/255 rail artifact spread over more than a thousand pixels, invisible, and stable at `Δ ≤ 1`.
 
-Two things the pixel diff structurally **cannot** see, so do not rely on it for them:
+Four things the pixel diff structurally **cannot** see, so do not rely on it for them:
 
 - Captures of different sizes are diluted by padding into a small percentage, so a size difference is failed on its own terms instead (`DiffResult.sizes`).
 - Sub-pixel geometry. A missing `line-height` left a label box 20.016px tall against 20.000 and the diff still reported zero differing pixels, because 0.032 device pixels rounds away. The font-metrics sweep in `e2e/behavior.spec.ts` is what holds those values; it found a missing `body1` line-height (24px against shadcn's `leading-7` 28px) that had been shipping green.
+- **Two constructions that render the same picture.** shadcn's ButtonGroup removes the left border of each subsequent button, so a seam is one line; MUI keeps both borders, makes the right one transparent and overlaps them with `margin-left: -1px`, so a seam is two lines on one pixel. Same group width, same content positions, zero differing pixels on macOS - and two stacked borders composite differently from one, which a second platform then reported. The `painted geometry` sweep is the instrument for this class.
+- **A transparent box.** MUI's vertical StepConnector stretches to the stepper's full width and paints only its left border: it looks like a 1px rule and measures 324px across. Parity was zero; `painted geometry` caught it.
+
+Both of the last two were found by something other than the pixel diff, which is the point of the behaviour sweeps.
+**Run `pnpm exec playwright test e2e/behavior.spec.ts` before pushing any change that alters box geometry** - it takes about a minute and it is the only check that sees these.
+
+### Cross-platform
+
+The macOS gate and the non-blocking Linux job exist because one rasterizer hides what another shows.
+Seven pairs that were an exact match on macOS differed on Linux by Δ67-121 - and the cause was neither noise nor a theme bug.
+Every differing pixel sat inside a text band, no capture differed in size, and the signed difference averaged about zero against a large absolute one, which is a positional shift of glyphs.
+Font **hinting** was the amplifier: it snaps an outline to the pixel grid based on where the glyph starts, so two texts a fraction of a pixel apart quantise to different grids instead of blurring together.
+`--font-render-hinting=none` and `--disable-lcd-text` in `playwright.config.ts` remove it; the one real bug left underneath was the ButtonGroup seam above.
+
+### Traps in the harness itself, not the theme
+
+Each of these presents as a component bug and is not one:
+
+- **Another checkout answering on port 5173.** `reuseExistingServer` is on outside CI, so a stale dev server from a different directory gets measured and reports a confident, wrong number. Check `lsof -ti:5173` before trusting a surprising result.
+- **A cell wider than `MAX_PAIR_CONTENT_WIDTH`** slides under the fixed theme panel, whose left border then lands inside the screenshot - a crisp full-height line at Δ245 in a pair whose every computed style matches. Diagnosed twice before the limit was given a name in `PairGrid.tsx`.
+- **Page furniture compositing into a capture.** The mode toggle sat at a z-index above shadcn's overlays and below MUI's, so a full-width top Drawer covered it on one side only. `roomBelow` exists for the same reason at the bottom of a row.
+- **Anchored captures are timing- and position-sensitive.** They skip the sub-pixel snap on purpose, so they have nothing to absorb a box measured mid-animation (Radix animates with CSS *animations*; `transition: none` does not stop them, and Playwright's `animations: "disabled"` applies to the screenshot, not to `boundingBox()`). Round the capture's SIZE, never its far edges - size describes the components, an edge carries the row's position on the page. Rows are centred rather than minimally scrolled so an overlay always has the same room to open into.
+- **A loaded machine.** A full run is ~4 minutes at ~100 pairs; if it takes 15 and sits at 5% CPU it is blocking, not computing, and the parity failures you see will be the per-test budget rather than pixels. Read `e2e/results/report-*.md` directly before believing a red run.
+
+## The mistake this project keeps making
+
+**A rule written for the case you cover will reach the cases you do not, and style them wrongly.**
+
+This is not a hypothetical and it is not rare.
+Every instance below shipped, passed the suite, and was found only when a later pair happened to exercise the untreated case:
+
+| Where | The rule | What it also hit |
+| --- | --- | --- |
+| `MuiFab` | `width/height` on the root | Every size, not just the 56px default - `size="small"` rendered as large |
+| `MuiFab` | `:not(sizeSmall):not(sizeMedium)`, meant as "the default size" | `variant="extended"`, because Fab's default size is `large` - a 102x48 pill squashed to a 56px circle |
+| `MuiRating` | `font-size` on the root | `size="small"` and `"large"`, pinned to the medium size |
+| `MuiToolbar` | AppBar's height and padding | `TablePagination`, which renders its own Toolbar |
+| `MuiDrawer` | The right anchor's width and border | All four anchors - a top sheet came out 384px wide instead of full-bleed |
+| `MuiStepConnector` | The horizontal connector's margin, border and gap | The vertical one, whose rule is indented rather than filling a gap |
+| `MuiImageListItemBar` | The bottom corners' radius | `position="top"`, square over a rounded tile |
+
+Three habits avoid all of it:
+
+1. **Key off the positive class, never a negation.** `&.MuiFab-circular` says what you mean; `:not(sizeSmall):not(sizeMedium)` says something you have to re-derive, and it was wrong.
+2. **Ask what else renders this component.** MUI reuses internals aggressively - `MuiList` is inside Menu, Select and Autocomplete; `MuiToolbar` is inside AppBar and TablePagination; `MuiBackdrop` is inside Dialog, Drawer and Popover. An unscoped override reaches all of them.
+3. **Leaving a surface untreated is a real choice, and it has to be written that way.** "No pair covers it" must mean the component keeps MUI's own geometry there, not that your one rule silently applies. Scope it, then say so in the `SCOPE:` note.
+
+## When MUI's props do not line up with shadcn's variants
+
+Sometimes there is no mapping, and the honest answer is that the gap is not the theme's to close.
+Record which case you are in rather than leaving a blank:
+
+- **No MUI prop exists.** shadcn's Item has `outline` and `muted` variants; MUI's `ListItem` has no `variant` at all, so a consumer reaches for `sx` or a styled component. App-level work.
+- **No shadcn ground truth exists.** shadcn ships no rating, so its `size` ladder cannot be extracted. Scope the sizing to the covered size and leave the rest at MUI's geometry.
+- **The mapping is many-to-few, so pick and justify.** shadcn's Item has three sizes and MUI has one `dense` flag. `dense` maps to `xs`, not `sm`, because `sm` is byte-identical to `default` at the item while `xs` tightens padding - which is what `dense` means in MUI. Write the reasoning down; the next person will otherwise re-litigate it.
+- **The harness cannot see it.** Animations are disabled for determinism and overlay positions are normalized, so a selection animation or a toast's placement is invisible here by construction.
+
+The README's surface table splits these out for exactly this reason - a gap someone can close and a gap nobody can look the same in a list, and only one is worth picking up.
 
 ## MUI traps you will hit
 
@@ -81,6 +140,32 @@ The global `MuiButtonBase` `disableRipple` default does not reach `Checkbox`, `R
 
 Portalled components (Select, Tooltip, and the coming Menu/Dialog/Popover) render outside their cell.
 The harness handles them via an `open` state: both the MUI overlay and the shadcn overlay must carry `data-portal-target="<pairId>"` on their outermost portalled element so they are captured and diffed symmetrically.
+
+## Adding a second theme
+
+Nothing below has been done yet, so treat it as a starting position rather than a proven path.
+What the shadcn theme learned that generalises:
+
+**What is reusable as-is.** The harness (`e2e/`) knows nothing about shadcn - it diffs whatever a pair puts on each side.
+`PairGrid`, the state machinery, the thresholds and every behaviour sweep carry over untouched.
+
+**What is shaped around one theme today.** The gallery imports the reference components directly from `@/components/ui/*`, and the sections name shadcn's classes in their provenance comments.
+A second design system needs its own installed source alongside, and pairs that point at it - the `Section`/`Pair` types themselves need nothing.
+
+**Do not generalise the theme file until there are two.** `shadcn.ts` is one self-contained file on purpose, and the constraint is a feature: a consumer can copy it like a shadcn component.
+Extracting shared scaffolding from a sample size of one is how you get an abstraction that fits neither theme.
+Write the second theme as its own file first, then look at what actually repeated.
+
+**Budget for the reference system being inconsistent.** shadcn's Snackbar twin is the third-party `sonner`, which uses its own font stack, a 13px size off the type scale, a shadow that is not `shadow-lg`, and a raw `#3f3f3f` that ignores the theme.
+All of it was transcribed as found, because the pair exists to match what a user sees.
+Expect the same and resist tidying.
+
+**Expect composed twins.** shadcn has no FAB, stepper, rating, bottom navigation, image grid, app bar or table pagination.
+For those the gallery composes a twin from the system's real utilities and the parity number proves only that MUI renders *that composition* exactly.
+Say so at the top of the block, and keep the composition to utilities the system genuinely ships.
+
+**A twin has to reproduce the component, not just its appearance.** MUI's Fab creates a stacking context because a FAB floats; a plain button does not, and the difference changed how the shadow rasterized.
+When a pair is mysteriously off, check what the MUI component *is* structurally before hunting for a colour.
 
 ## Commands
 
