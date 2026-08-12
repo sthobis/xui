@@ -129,6 +129,44 @@ export const imageListSection: Section = {
       ),
     },
     {
+      // variant="woven". A grid like quilted, but the item HEIGHTS alternate rather than the spans:
+      // MUI gives every item `height: 100%; align-self: center` and every even one `height: 70%`,
+      // which is the whole variant.
+      //
+      // Two things it does that are easy to get wrong. It IGNORES `rowHeight` - ImageListItem
+      // leaves height undefined for woven - so the row is `auto` and sized by the tile's own ratio,
+      // not by a track. And the height sits on the ITEM with the image filling it, so the twin
+      // needs the same wrapper rather than a bare img; a bare img makes `70%` resolve against a
+      // different box.
+      id: "imagelist-woven",
+      shadcn: (
+        <div style={wrapStyle}>
+          <div className="grid grid-cols-3 gap-2">
+            {TILES.map((fill) => (
+              <div key={fill} className="h-full self-center even:h-[70%]">
+                <img
+                  src={TILE(fill)}
+                  alt=""
+                  className="block h-full w-full rounded-lg object-cover"
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      ),
+      mui: (
+        <div style={wrapStyle}>
+          <MuiImageList variant="woven" cols={3} gap={8}>
+            {TILES.map((fill) => (
+              <MuiImageListItem key={fill}>
+                <img src={TILE(fill)} alt="" />
+              </MuiImageListItem>
+            ))}
+          </MuiImageList>
+        </div>
+      ),
+    },
+    {
       // variant="masonry". Not a grid at all: MUI switches to CSS multi-column, where each item
       // keeps its own height and the browser packs columns rather than rows. `columns-3` is the
       // shadcn-language equivalent, and `break-inside-avoid` is what stops a tile splitting across
@@ -254,11 +292,6 @@ export const imageListSection: Section = {
     },
     {
       // position="top". The bar moves to the other edge and takes its rounded corners with it.
-      //
-      // `position="below"` is not covered and is left as a documented gap rather than guessed at: it
-      // stops being an overlay entirely and becomes a caption under the tile, which changes what the
-      // item IS rather than where the bar sits, and shadcn has no captioned-tile pattern to extract
-      // that layout from.
       id: "imagelist-bar-top",
       shadcn: (
         <div style={wrapStyle}>
@@ -285,6 +318,42 @@ export const imageListSection: Section = {
               <MuiImageListItem key={fill}>
                 <img src={TILE(fill)} alt="" />
                 <MuiImageListItemBar position="top" title={title} />
+              </MuiImageListItem>
+            ))}
+          </MuiImageList>
+        </div>
+      ),
+    },
+    {
+      // position="below". Not an overlay: MUI turns the bar relative and transparent, so it becomes
+      // a caption sitting under the tile rather than on it. The twin is the same - plain text after
+      // the image, no panel, no rounding.
+      id: "imagelist-bar-below",
+      shadcn: (
+        <div style={wrapStyle}>
+          <div className="grid grid-cols-2 gap-2">
+            {CAPTIONED.map(({ fill, title }) => (
+              <div key={fill}>
+                <img
+                  src={TILE(fill)}
+                  alt=""
+                  className="block aspect-square w-full rounded-lg object-cover"
+                />
+                <div className="pt-2">
+                  <span className="block truncate text-xs font-medium text-foreground">{title}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ),
+      mui: (
+        <div style={wrapStyle}>
+          <MuiImageList cols={2}>
+            {CAPTIONED.map(({ fill, title }) => (
+              <MuiImageListItem key={fill}>
+                <img src={TILE(fill)} alt="" />
+                <MuiImageListItemBar position="below" title={title} />
               </MuiImageListItem>
             ))}
           </MuiImageList>

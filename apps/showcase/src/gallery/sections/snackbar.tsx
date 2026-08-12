@@ -10,6 +10,8 @@ const PAIR_ID = "snackbar-message"
 const ACTION_PAIR_ID = "snackbar-action"
 const DESCRIPTION_PAIR_ID = "snackbar-description"
 const ACTION_LABEL = "Undo"
+const CANCEL_PAIR_ID = "snackbar-cancel"
+const CANCEL_LABEL = "Dismiss"
 const DESCRIPTION = "Monday, January 6 at 6:00 PM"
 
 // WHERE THE GROUND TRUTH FOR THIS PAIR COMES FROM, AND WHY IT IS WEAKER THAN EVERY OTHER PAIR'S.
@@ -32,7 +34,7 @@ const DESCRIPTION = "Monday, January 6 at 6:00 PM"
 // If a later change makes these track shadcn tokens instead, this pair stops matching the thing a
 // shadcn user actually sees. Ground truth wins, including when the ground truth is inconsistent.
 
-// SCOPE: the toast body, with and without a description, plus the action button.
+// SCOPE: the toast body with and without a description, plus the action and cancel buttons.
 //
 // sonner's toast body is [data-content] (a flex column) holding [data-title] and [data-description]
 // as separate styled nodes. MUI's SnackbarContent has ONE opaque `message` slot and no counterpart
@@ -50,8 +52,11 @@ const DESCRIPTION = "Monday, January 6 at 6:00 PM"
 // 4px-radius, inverted-colour pill - not shadcn's Button, which MuiButton is already themed onto -
 // so the theme styles it contextually, scoped to the action slot. That is not a contradiction of the
 // Button block: in a real shadcn app a toast's action IS sonner's pill, and a themed Snackbar should
-// look like the thing a user actually sees. `[data-cancel]` and `[data-close-button]` have no pair
-// and get no treatment.
+// look like the thing a user actually sees. `[data-cancel]` is the same pill with two colours
+// swapped and has its own pair; `[data-close-button]` does not, and is left alone deliberately - it
+// is absolutely positioned from sonner's own `--toast-close-button-*` variables, which the Toaster
+// sets rather than the toast, so a faithful twin would depend on Toaster configuration the theme
+// has no access to.
 
 // sonner renders the toast itself and forwards neither arbitrary props nor data attributes, so the
 // harness's `data-portal-target` hook cannot be handed to it through the API the way every other
@@ -98,10 +103,12 @@ function ShadcnToastDemo({
   pairId,
   action,
   description,
+  cancel,
 }: {
   pairId: string
   action?: boolean
   description?: boolean
+  cancel?: boolean
 }) {
   useEffect(() => {
     startStamping()
@@ -123,6 +130,7 @@ function ShadcnToastDemo({
           duration: Infinity,
           ...(action ? { action: { label: ACTION_LABEL, onClick: () => {} } } : {}),
           ...(description ? { description: DESCRIPTION } : {}),
+          ...(cancel ? { cancel: { label: CANCEL_LABEL, onClick: () => {} } } : {}),
         })
       }}
     >
@@ -140,6 +148,7 @@ interface PortalTargetProps extends HTMLAttributes<HTMLDivElement> {
 const portalTargetContent: PortalTargetProps = { "data-portal-target": PAIR_ID }
 const portalTargetActionContent: PortalTargetProps = { "data-portal-target": ACTION_PAIR_ID }
 const portalTargetDescriptionContent: PortalTargetProps = { "data-portal-target": DESCRIPTION_PAIR_ID }
+const portalTargetCancelContent: PortalTargetProps = { "data-portal-target": CANCEL_PAIR_ID }
 
 // sonner splits a toast body into [data-title] and [data-description]; MUI's `message` is one
 // opaque slot with no counterpart for either. So the two nodes are written out here as plain divs
@@ -156,7 +165,15 @@ const messageWithDescription = (
   </>
 )
 
-function MuiSnackbarDemo({ action, description }: { action?: boolean; description?: boolean }) {
+function MuiSnackbarDemo({
+  action,
+  description,
+  cancel,
+}: {
+  action?: boolean
+  description?: boolean
+  cancel?: boolean
+}) {
   const [open, setOpen] = useState(false)
   return (
     <>
@@ -169,18 +186,28 @@ function MuiSnackbarDemo({ action, description }: { action?: boolean; descriptio
         message={description ? messageWithDescription : MESSAGE}
         // A plain MUI Button in the action slot - no size or variant props compensating for the
         // theme. Everything that makes it sonner's pill comes from the theme's action-slot rules.
-        action={action ? <MuiButton>{ACTION_LABEL}</MuiButton> : undefined}
+        action={
+          cancel ? (
+            // sonner's cancel is the same [data-button] pill with a different fill, so this is a
+            // plain Button carrying the slot hook the theme keys off - no size or variant props.
+            <MuiButton data-slot="toast-cancel">{CANCEL_LABEL}</MuiButton>
+          ) : action ? (
+            <MuiButton>{ACTION_LABEL}</MuiButton>
+          ) : undefined
+        }
         // sonner's default position. The pixel diff cannot see this either way - the "open" state
         // captures the toast box alone and normalizes its position - so this is here to keep the
         // live showcase honest, not to pass the harness. Toast PLACEMENT is not covered by this
         // pair; only the box is.
         anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
         slotProps={{
-          content: description
-            ? portalTargetDescriptionContent
-            : action
-              ? portalTargetActionContent
-              : portalTargetContent,
+          content: cancel
+            ? portalTargetCancelContent
+            : description
+              ? portalTargetDescriptionContent
+              : action
+                ? portalTargetActionContent
+                : portalTargetContent,
         }}
       />
     </>
@@ -210,6 +237,13 @@ export const snackbarSection: Section = {
       states: ["open"],
       shadcn: <ShadcnToastDemo pairId={DESCRIPTION_PAIR_ID} description />,
       mui: <MuiSnackbarDemo description />,
+    },
+    {
+      // The cancel button. Same pill as the action, and sonner only swaps its two colours.
+      id: CANCEL_PAIR_ID,
+      states: ["open"],
+      shadcn: <ShadcnToastDemo pairId={CANCEL_PAIR_ID} cancel />,
+      mui: <MuiSnackbarDemo cancel />,
     },
   ],
 }

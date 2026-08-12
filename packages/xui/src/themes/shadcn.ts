@@ -5343,6 +5343,20 @@ export const shadcnTheme = createTheme({
               backgroundColor: theme.vars.palette.popover.contrastText,
             },
           },
+          // The CANCEL button is the same pill with a different fill: sonner's [data-cancel] carries
+          // [data-button] too, and only overrides the two colours. So it inherits everything above
+          // and restates those, keyed off the same kind of `data-slot` hook the description uses.
+          '& .MuiButton-root[data-slot="toast-cancel"]': {
+            backgroundColor: "rgba(0, 0, 0, 0.08)", // sonner: [data-cancel] background
+            color: theme.vars.palette.popover.contrastText, // sonner: [data-cancel] color:var(--normal-text)
+            "&:hover": {
+              backgroundColor: "rgba(0, 0, 0, 0.08)", // sonner declares no hover rule
+            },
+            ...theme.applyStyles("dark", {
+              backgroundColor: "rgba(255, 255, 255, 0.3)", // sonner: dark [data-cancel] background
+              "&:hover": { backgroundColor: "rgba(255, 255, 255, 0.3)" },
+            }),
+          },
         }),
         message: ({ theme }) => ({
           padding: 0, // MUI ships `padding: 8px 0`; sonner's [data-content] has none
@@ -6036,7 +6050,11 @@ export const shadcnTheme = createTheme({
         root: ({ theme }) => ({
           // shadcn: bg-background/80. Over an image the panel has to stay translucent or it stops
           // reading as an overlay, which is why this is a mix rather than the flat surface token.
-          backgroundColor: `color-mix(in oklab, ${theme.vars.palette.background.default} 80%, transparent)`,
+          //
+          // Scoped to the OVERLAY positions, like the padding and radius below. `position="below"`
+          // is a caption under the tile and MUI makes it transparent; an unconditional panel here
+          // painted a background rectangle behind it. Invisible to the pixel diff - the mix over the
+          // page background is very nearly the page background - and caught by `painted geometry`.
           // The radius follows the EDGE THE BAR IS ON. The tile's own radius sits on the image (see
           // MuiImageListItem above), so a bar has to round the corners it covers or it squares the
           // tile off - and a bar pinned to the top covers the other two. Hardcoding the bottom pair
@@ -6052,7 +6070,28 @@ export const shadcnTheme = createTheme({
           // The PADDING BELONGS TO THE BAR, not to the title column. MUI puts it on titleWrap, which
           // looks the same until an actionIcon exists - the action is a sibling of that wrap, so it
           // gets no inset at all and sits flush against the bar's edge. Measured 12px out.
-          padding: "0.5rem 0.75rem", // shadcn: px-3 py-2
+          //
+          // Scoped to the two OVERLAY positions. `position="below"` is not an overlay at all - MUI
+          // makes it relative and transparent, a caption under the tile - so it wants neither this
+          // inset nor the translucent panel above it.
+          // ONE block for both overlay positions, carrying everything that distinguishes an overlay
+          // from a caption. Splitting these across two rules with the same selector is not a style
+          // choice, it is a bug: they are keys in one object literal, so the second silently
+          // replaces the first. That is exactly what happened here - the panel vanished from the
+          // bottom and top bars and 25,606 pixels moved.
+          "&.MuiImageListItemBar-positionBottom, &.MuiImageListItemBar-positionTop": {
+            backgroundColor: `color-mix(in oklab, ${theme.vars.palette.background.default} 80%, transparent)`,
+            padding: "0.5rem 0.75rem", // shadcn: px-3 py-2
+          },
+          "&.MuiImageListItemBar-positionBelow": {
+            // MUI already drops the background and goes relative; what it keeps is a 12px/16px
+            // title inset that belongs to its own scrim look. shadcn's caption sits flush with the
+            // tile's left edge and separates by the grid's own gap.
+            padding: 0,
+            "& .MuiImageListItemBar-titleWrap": {
+              padding: "0.5rem 0 0", // shadcn: pt-2, the caption's only spacing
+            },
+          },
         }),
         titleWrap: {
           padding: 0, // the bar owns it now, see above
