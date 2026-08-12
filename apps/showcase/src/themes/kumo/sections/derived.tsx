@@ -1,5 +1,13 @@
+import MuiAppBar from "@mui/material/AppBar"
 import MuiAvatar from "@mui/material/Avatar"
 import MuiDivider from "@mui/material/Divider"
+import MuiList from "@mui/material/List"
+import MuiListItem from "@mui/material/ListItem"
+import MuiListItemButton from "@mui/material/ListItemButton"
+import MuiListItemIcon from "@mui/material/ListItemIcon"
+import MuiListItemText from "@mui/material/ListItemText"
+import MuiToolbar from "@mui/material/Toolbar"
+import { GearIcon, HouseIcon } from "@phosphor-icons/react"
 import MuiSkeleton from "@mui/material/Skeleton"
 import MuiStack from "@mui/material/Stack"
 import MuiTable from "@mui/material/Table"
@@ -44,6 +52,37 @@ export const derivedSection: Section = {
           <MuiSkeleton variant="text" />
           <MuiSkeleton variant="rounded" height={32} />
         </MuiStack>
+      ),
+    },
+    {
+      id: "derived-list",
+      mui: (
+        <MuiList style={{ width: 200 }}>
+          <MuiListItem>
+            <MuiListItemButton>
+              <MuiListItemIcon>
+                <HouseIcon />
+              </MuiListItemIcon>
+              <MuiListItemText primary="Overview" />
+            </MuiListItemButton>
+          </MuiListItem>
+          <MuiListItem>
+            <MuiListItemButton selected>
+              <MuiListItemIcon>
+                <GearIcon />
+              </MuiListItemIcon>
+              <MuiListItemText primary="Settings" />
+            </MuiListItemButton>
+          </MuiListItem>
+        </MuiList>
+      ),
+    },
+    {
+      id: "derived-app-bar",
+      mui: (
+        <MuiAppBar position="static" style={{ width: 220 }}>
+          <MuiToolbar>Workers</MuiToolbar>
+        </MuiAppBar>
       ),
     },
     {

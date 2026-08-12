@@ -2998,6 +2998,134 @@ export const kumoTheme = createTheme({
         rounded: { borderRadius: "6px" }, // kumo: rounded-md
       },
     },
+
+    // Sidebar's header bar - `flex h-[58px] shrink-0 items-center gap-1 border-b border-kumo-line`.
+    // Those values are EXTRACTED; what is derived is only the decision to map MUI's Toolbar onto
+    // them, since Kumo has no toolbar-in-an-app-bar concept of its own. (Kumo's own `Toolbar` is a
+    // segmented button bar and is already paired against MUI's ButtonGroup/ToggleButtonGroup - a
+    // different component that happens to share the name.)
+    MuiToolbar: {
+      styleOverrides: {
+        root: {
+          display: "flex",
+          minHeight: "58px", // kumo: h-[58px]
+          flexShrink: 0, // kumo: shrink-0
+          alignItems: "center", // kumo: items-center
+          gap: "4px", // kumo: gap-1
+          paddingLeft: "12px", // kumo: the sidebar content's px-3
+          paddingRight: "12px",
+          // MUI steps a Toolbar's min-height by breakpoint (56px on mobile, 64px up); Kumo's bar is
+          // one fixed height, so the responsive rules have to be flattened or the bar changes size
+          // at 600px.
+          "@media (min-width: 0px)": { minHeight: "58px", paddingLeft: "12px", paddingRight: "12px" },
+        },
+      },
+    },
+    // The surface that header sits on. Kumo has no app bar; Sidebar's own shell is
+    // `bg-(--sidebar-bg) text-kumo-default` over `--sidebar-bg: var(--color-kumo-base)`, with the
+    // header's `border-b border-kumo-line` as the only edge - so no Material elevation shadow.
+    MuiAppBar: {
+      defaultProps: {
+        elevation: 0,
+        color: "transparent",
+      },
+      styleOverrides: {
+        root: ({ theme }) => ({
+          backgroundColor: theme.vars.palette.kumo.base, // kumo: --sidebar-bg
+          backgroundImage: "none", // MUI overlays a lightness gradient on an elevated dark Paper
+          color: theme.vars.palette.kumo.textDefault, // kumo: text-kumo-default
+          boxShadow: "none",
+          borderBottom: `1px solid ${theme.vars.palette.kumo.line}`, // kumo: border-b border-kumo-line
+        }),
+      },
+    },
+
+    // Kumo's only real list is Sidebar's menu, and these values ARE its classes
+    // (dist/chunks/sidebar-kvjzu0ya0b2z6eec.js):
+    //
+    //   Sidebar.Menu        m-0 flex min-w-0 list-none flex-col items-stretch gap-y-px p-0
+    //   Sidebar.MenuItem    relative
+    //   Sidebar.MenuButton  flex w-full min-w-0 cursor-pointer items-center gap-2.5 rounded-lg
+    //                       outline-none, size base: min-h-8.5 px-3 py-0 text-sm font-medium,
+    //                       text-kumo-default, hover:bg-(--sidebar-active-bg)
+    //   its icon            shrink-0 opacity-40 size-4
+    //
+    // Filed under DERIVED, not extracted, for one specific reason: a Sidebar.MenuButton only
+    // resolves those values INSIDE a Sidebar. Its hover fill reads `--sidebar-active-bg`, a
+    // custom property the Sidebar wrapper defines (as `--color-kumo-tint`), and its content row
+    // carries `translate-x-[-3px] group-not-data-[state=collapsed]/sidebar:translate-x-0`, which
+    // depends on a `group/sidebar` ancestor's data-state. A standalone MUI List has neither, so
+    // there is no honest way to pixel-pair the two - the reference cannot be rendered in the same
+    // context the MUI side lives in. The values below are the resolved ones.
+    MuiList: {
+      styleOverrides: {
+        root: {
+          margin: 0, // kumo: m-0
+          padding: 0, // kumo: p-0
+          display: "flex",
+          flexDirection: "column" as const, // kumo: flex-col
+          alignItems: "stretch" as const, // kumo: items-stretch
+          minWidth: 0, // kumo: min-w-0
+          listStyle: "none" as const, // kumo: list-none
+          gap: "1px", // kumo: gap-y-px
+        },
+      },
+    },
+    MuiListItem: {
+      styleOverrides: {
+        root: {
+          position: "relative" as const, // kumo: relative
+          padding: 0, // the padding belongs to the button, as it does in Kumo
+        },
+      },
+    },
+    MuiListItemButton: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          display: "flex",
+          width: "100%", // kumo: w-full
+          minWidth: 0, // kumo: min-w-0
+          alignItems: "center", // kumo: items-center
+          gap: "10px", // kumo: gap-2.5
+          minHeight: "34px", // kumo: min-h-8.5
+          padding: "0 12px", // kumo: px-3 py-0
+          borderRadius: "8px", // kumo: rounded-lg
+          ...TEXT_SM, // kumo: text-sm (13px in Kumo's scale, not Tailwind's 14)
+          fontWeight: 500, // kumo: font-medium
+          letterSpacing: "normal",
+          color: theme.vars.palette.kumo.textDefault, // kumo: text-kumo-default
+          cursor: "pointer", // kumo: cursor-pointer
+          "&:hover, &.Mui-selected, &.Mui-selected:hover": {
+            // kumo: hover:bg-(--sidebar-active-bg), which the Sidebar wrapper sets to kumo-tint
+            backgroundColor: theme.vars.palette.kumo.tint,
+          },
+          "&.Mui-focusVisible": {
+            outline: "none", // kumo: outline-none, focus-visible:bg-(--sidebar-active-bg)
+            backgroundColor: theme.vars.palette.kumo.tint,
+          },
+        }),
+      },
+    },
+    MuiListItemIcon: {
+      styleOverrides: {
+        root: {
+          minWidth: 0, // MUI reserves 56px for an icon column; Kumo's row is a plain flex gap
+          marginRight: 0,
+          opacity: 0.4, // kumo: opacity-40
+          "& > *": { fontSize: "16px" }, // kumo: size-4
+        },
+      },
+    },
+    MuiListItemText: {
+      styleOverrides: {
+        root: { margin: 0 }, // MUI adds vertical margins; Kumo's row is sized by min-h alone
+        primary: {
+          ...TEXT_SM, // kumo: text-sm
+          fontWeight: 500, // kumo: font-medium
+          letterSpacing: "normal",
+        },
+      },
+    },
   },
 })
 
