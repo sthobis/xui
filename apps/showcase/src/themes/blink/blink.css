@@ -1,0 +1,15 @@
+/* The Pulse Kit ships no Tailwind: it is plain CSS custom properties plus one CSS module per
+   primitive. So this page loads exactly what the app loads, in the app's own order -
+   reset, then tokens, then the generic part of global.css - and nothing else.
+   See reference/README.md for what was left out of base.css and why. */
+@import "./reference/tokens.css";
+@import "./reference/base.css";
+
+/* The app pulls Source Sans Pro from Google Fonts at weights 300/400/600/700. The harness gets
+   the same family from a package instead: a network font is a flake the pixel diff cannot
+   tolerate, and both sides of every pair read from this one file, so the comparison is
+   unaffected by which copy of the typeface it is. */
+@import "@fontsource/source-sans-pro/300.css";
+@import "@fontsource/source-sans-pro/400.css";
+@import "@fontsource/source-sans-pro/600.css";
+@import "@fontsource/source-sans-pro/700.css";

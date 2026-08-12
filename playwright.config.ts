@@ -54,6 +54,10 @@ export default defineConfig({
     { name: "shadcn-dark", use: { colorScheme: "light" } },
     { name: "kumo-light", use: { colorScheme: "light" } },
     { name: "kumo-dark", use: { colorScheme: "light" } },
+    // blink is light-only: the Pulse Kit has a dark scheme but the theme does not cover it yet, so
+    // there is deliberately no `blink-dark` here. activateDark() throws for blink to keep a future
+    // dark project from silently running the whole suite in light and passing everything.
+    { name: "blink-light", use: { colorScheme: "light" } },
   ],
   webServer: {
     command: `pnpm --filter showcase dev --port ${PORT} --strictPort`,

@@ -41,6 +41,8 @@ export default defineConfig(({ command }) => ({
         pure: path.resolve(__dirname, "pure.html"),
         kumo: path.resolve(__dirname, "kumo.html"),
         kumoPure: path.resolve(__dirname, "kumo-pure.html"),
+        blink: path.resolve(__dirname, "blink.html"),
+        blinkPure: path.resolve(__dirname, "blink-pure.html"),
       },
     },
   },

@@ -222,6 +222,14 @@ const BACKDROP_SELECTOR: Record<ThemeName, { ref: string; mui: string }> = {
     ref: '[role="presentation"][data-open][aria-hidden="true"]',
     mui: ".MuiBackdrop-root:not(.MuiBackdrop-invisible)",
   },
+  // blink is the one theme whose two sides agree here, and not by coincidence: the Pulse Kit
+  // builds its own Dialog on MUI's, so the reference scrim IS a MuiBackdrop. The check still has
+  // teeth - it compares the two scrims' computed paint, and the kit styles its dialog through a
+  // CSS module while the theme has to reproduce that from the MuiBackdrop slot.
+  blink: {
+    ref: ".MuiBackdrop-root:not(.MuiBackdrop-invisible)",
+    mui: ".MuiBackdrop-root:not(.MuiBackdrop-invisible)",
+  },
 }
 
 test.describe("overlay-matches", () => {

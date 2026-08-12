@@ -107,6 +107,9 @@ const maxPixelOverrides: Record<ThemeName, Record<string, number>> = {
     // It shows in dark and not light because the corner sits against a much darker canvas there.
     "switch-checked": 200,
   },
+  // blink: no allowances. Every pair is expected to hold the defaults; an entry here needs the
+  // same written proof the two above carry.
+  blink: {},
 }
 
 // Per-pair(+state) channel-error allowances. Use this when a residual is provably NOT misplaced
@@ -204,6 +207,8 @@ const maxDeltaOverrides: Record<ThemeName, Record<string, number>> = {
     "button-primary": 1,
     "button-destructive": 1,
   },
+  // blink: no allowances. See the note in maxPixelOverrides.
+  blink: {},
 }
 
 export interface ParityRule {

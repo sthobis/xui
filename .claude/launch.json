@@ -8,6 +8,13 @@
       "port": 5173
     },
     {
+      "comment": "This is a WORKTREE, so it must not share 5173 with the primary checkout: Playwright's reuseExistingServer would silently attach to whichever server got there first and measure the other checkout. Pair with PARITY_PORT=5273.",
+      "name": "showcase-worktree",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "showcase", "dev", "--port", "5273", "--strictPort"],
+      "port": 5273
+    },
+    {
       "name": "pulse-app",
       "runtimeExecutable": "pnpm",
       "runtimeArgs": ["--dir", "/Users/sthobis/Documents/Projects/app", "dev"],

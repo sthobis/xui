@@ -4,3 +4,4 @@
 // since Vite and tsc are both happy either way.
 export { shadcnTheme } from "./themes/shadcn.js"
 export { kumoTheme } from "./themes/kumo.js"
+export { blinkTheme } from "./themes/blink.js"

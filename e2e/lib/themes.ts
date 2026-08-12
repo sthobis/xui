@@ -7,7 +7,7 @@ import { expect, type Page } from "@playwright/test"
  * reference systems: the project name is the only thing that decides which page a spec opens and
  * how it switches to dark. Everything else in the harness reads the DOM and stays theme-agnostic.
  */
-export type ThemeName = "shadcn" | "kumo"
+export type ThemeName = "shadcn" | "kumo" | "blink"
 
 // Each theme's own isolated page, carrying that design system's Tailwind and nothing else. `/` is
 // NOT one of them: it is the showcase, which renders only MUI under all three themes at once and
@@ -17,6 +17,7 @@ export type ThemeName = "shadcn" | "kumo"
 export const GALLERY_PAGE: Record<ThemeName, string> = {
   shadcn: "/shadcn.html",
   kumo: "/kumo.html",
+  blink: "/blink.html",
 }
 
 /**
@@ -27,10 +28,11 @@ export const GALLERY_PAGE: Record<ThemeName, string> = {
 export const PURE_PAGE: Record<ThemeName, string> = {
   shadcn: "/pure.html",
   kumo: "/kumo-pure.html",
+  blink: "/blink-pure.html",
 }
 
 export function targetOf(projectName: string): { theme: ThemeName; mode: "light" | "dark" } {
-  const match = projectName.match(/^(shadcn|kumo)-(light|dark)$/)
+  const match = projectName.match(/^(shadcn|kumo|blink)-(light|dark)$/)
   if (!match) {
     throw new Error(`project "${projectName}" is not named <theme>-<mode> (e.g. "shadcn-light")`)
   }
@@ -48,6 +50,12 @@ export function targetOf(projectName: string): { theme: ThemeName; mode: "light"
  * matching - the page would still render, in the wrong scheme, and every pair would still "match".
  */
 export async function activateDark(page: Page, theme: ThemeName): Promise<void> {
+  if (theme === "blink") {
+    // blink is a light-only theme and registers no `blink-dark` project, so nothing should ever
+    // ask it to switch. Throwing beats returning quietly: a silent no-op would let a mistakenly
+    // added dark project run the whole suite in LIGHT and report every pair as passing.
+    throw new Error("blink has no dark scheme - there should be no blink-dark project")
+  }
   await page.getByTestId("mode-toggle").click()
   if (theme === "shadcn") {
     await expect(page.locator("html")).toHaveClass(/dark/)
