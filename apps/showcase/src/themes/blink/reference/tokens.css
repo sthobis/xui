@@ -1,0 +1,106 @@
+:root {
+    /* Soft-fill tint opacity — themed (bumped in dark for visibility on dark surfaces) */
+    --color-tint-opacity: 10%;
+
+    --color-primary: #5a63b0;
+    --color-primary-hover: #4f5589;
+    --color-primary-bg: color-mix(in srgb, var(--color-primary) var(--color-tint-opacity), transparent);
+    --color-primary-text: #ffffff;
+
+    --color-error: rgb(229, 49, 10);
+    --color-warning: rgb(244, 161, 36);
+    --color-info: rgb(70, 81, 176);
+    --color-success: rgb(83, 166, 106);
+    --color-error-bg: color-mix(in srgb, var(--color-error) var(--color-tint-opacity), transparent);
+    --color-warning-bg: color-mix(in srgb, var(--color-warning) var(--color-tint-opacity), transparent);
+    --color-info-bg: color-mix(in srgb, var(--color-info) var(--color-tint-opacity), transparent);
+    --color-success-bg: color-mix(in srgb, var(--color-success) var(--color-tint-opacity), transparent);
+
+    /* AA-compliant text variants on white / soft bg (≥ 4.5:1 contrast). */
+    /* Use these whenever rendering text in a semantic color. */
+    /* The plain accent above is for icons, dots, borders, and solid fills. */
+    --color-error-text: #b91c1c;
+    --color-warning-text: #b45309;
+    --color-success-text: #15803d;
+
+    --color-on-error: #ffffff;
+    --color-on-warning: #422c00;
+    --color-on-success: #0a3a22;
+    --color-on-info: #ffffff;
+
+    --color-background: #edeff0;
+    --color-surface: #ffffff;
+    --color-surface-muted: #f7f8fa;
+
+    --color-text-default: #262626;
+    --color-text-muted: #919299;
+    --color-text-subtle: #b5b6bc;
+
+    --color-border: #edeff0;
+    --color-border-input: #dddcf5;
+    --color-border-strong: #e8e8e8;
+
+    /* Tooltip / overlay — always-dark across themes; nudged lighter in dark for elevation */
+    --color-tooltip-bg: #454547;
+    --color-tooltip-text: #f3f3f3;
+
+    /* Chart palette — categorical series colors. Themed for visibility on dark surfaces. */
+    --chart-1: #3b76d1;
+    --chart-2: #e8843a;
+    --chart-3: #36a86b;
+    --chart-4: #d24d8c;
+    --chart-5: #8a5cd1;
+    --chart-6: #1aa6b7;
+    --chart-7: #c79a2b;
+    --chart-8: #d6493d;
+    --chart-9: #6d83b8;
+    --chart-10: #99633f;
+
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 20px;
+    --space-6: 24px;
+    --space-8: 32px;
+    --space-10: 40px;
+
+    --radius-1: 4px;
+    --radius-2: 6px;
+    --radius-3: 8px;
+
+    --text-xs: 13px;
+    --text-sm: 14px;
+    --text-md: 15px;
+    --text-lg: 18px;
+    --text-xl: 24px;
+    --text-2xl: 30px;
+
+    --control-h-xs: 24px;
+    --control-h-sm: 32px;
+    --control-h-md: 36px;
+    --control-h-lg: 40px;
+
+    --shadow-popover: 0 8px 32px rgba(0, 0, 0, 0.1);
+    --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.04);
+
+    /* Focus ring opacity — themed (toned down in dark to avoid over-glow) */
+    --focus-ring-opacity: 50%;
+    --focus-ring: color-mix(in srgb, var(--color-primary) var(--focus-ring-opacity), transparent)
+        0px 0px 0px 4px;
+    --focus-ring-destructive: color-mix(in srgb, var(--color-error) 35%, transparent)
+        0px 0px 0px 4px;
+
+    /* Motion — add new easings only when a primitive actually needs one */
+    --ease-out: cubic-bezier(0.165, 0.84, 0.44, 1);
+
+    --color-search-mark: #ff0;
+    --color-search-mark-active: #ff9632;
+
+    --font-family-sans: "Source Sans Pro";
+    --font-family-mono: ui-monospace, SFMono-Regular, Menlo, "Liberation Mono",
+        Consolas, monospace;
+
+    --toastify-text-color-light: var(--color-text-default);
+    --toastify-font-family: var(--font-family-sans);
+}

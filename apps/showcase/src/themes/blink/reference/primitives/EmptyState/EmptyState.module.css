@@ -1,0 +1,143 @@
+.root {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    color: var(--color-text-default);
+}
+
+/* ---- size: outer padding + gap between blocks ---- */
+.sm {
+    gap: var(--space-3);
+    padding: var(--space-4);
+}
+.md {
+    gap: var(--space-4);
+    padding: var(--space-6) var(--space-4);
+}
+.lg {
+    gap: var(--space-6);
+    padding: var(--space-8) var(--space-4);
+}
+
+/* ---- icon container: soft-filled rounded square ---- */
+.media {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-surface-muted);
+    color: var(--color-text-muted);
+}
+
+.sm .media {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-2);
+}
+.sm .media svg {
+    width: 16px;
+    height: 16px;
+}
+
+.md .media {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-3);
+}
+.md .media svg {
+    width: 20px;
+    height: 20px;
+}
+
+.lg .media {
+    width: 48px;
+    height: 48px;
+    border-radius: var(--radius-3);
+}
+.lg .media svg {
+    width: 24px;
+    height: 24px;
+}
+
+/* ---- message ---- */
+.text {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    max-width: 380px;
+}
+.sm .text {
+    max-width: 280px;
+}
+.lg .text {
+    max-width: 460px;
+}
+
+.title {
+    font-weight: 600;
+    line-height: 1.4;
+    color: var(--color-text-default);
+}
+.sm .title {
+    font-size: var(--text-sm);
+}
+.md .title {
+    font-size: var(--text-lg);
+}
+.lg .title {
+    font-size: var(--text-xl);
+}
+
+.description {
+    margin: 0;
+    line-height: 1.5;
+    color: var(--color-text-muted);
+}
+.sm .description {
+    font-size: var(--text-xs);
+}
+.md .description,
+.lg .description {
+    font-size: var(--text-md);
+}
+
+/* ---- actions ---- */
+.actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+}
+
+/* ---- link ---- */
+.link {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    font-weight: 600;
+    text-decoration: none;
+    color: var(--color-text-muted);
+    border-radius: var(--radius-1);
+    transition: color 150ms var(--ease-out);
+}
+.link:hover {
+    color: var(--color-text-default);
+}
+.link:focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring);
+}
+.sm .link {
+    font-size: var(--text-xs);
+}
+.md .link,
+.lg .link {
+    font-size: var(--text-sm);
+}
+
+.linkIcon {
+    width: 14px;
+    height: 14px;
+}

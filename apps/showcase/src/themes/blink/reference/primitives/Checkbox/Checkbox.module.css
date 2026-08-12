@@ -1,0 +1,64 @@
+.root {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    flex: none;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-1);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    transition: background-color 120ms var(--ease-out),
+        border-color 120ms var(--ease-out),
+        box-shadow 120ms var(--ease-out);
+}
+
+.root:hover:not(:disabled) {
+    border-color: var(--color-border-input);
+}
+
+.root:focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring);
+}
+
+.root:checked,
+.root:indeterminate {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+}
+
+.root:checked:hover:not(:disabled),
+.root:indeterminate:hover:not(:disabled) {
+    background: var(--color-primary-hover);
+    border-color: var(--color-primary-hover);
+}
+
+.root:checked:not(:indeterminate)::after {
+    content: "";
+    position: absolute;
+    width: 4px;
+    height: 8px;
+    border: solid var(--color-primary-text);
+    border-width: 0 2px 2px 0;
+    transform: translateY(-1px) rotate(45deg);
+}
+
+.root:indeterminate::after {
+    content: "";
+    position: absolute;
+    width: 8px;
+    height: 2px;
+    background: var(--color-primary-text);
+    border-radius: 1px;
+}
+
+.root:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}

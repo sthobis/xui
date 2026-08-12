@@ -1,0 +1,33 @@
+.paper {
+    /* Even gutter on all sides so the (rounded) item hover highlight sits
+       inset from the paper edge — matches FilterBar's option picker. */
+    padding: var(--space-2);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-3);
+    box-shadow: var(--shadow-popover);
+    color: var(--color-text-default);
+}
+
+.list {
+    padding: 0;
+}
+
+.item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: var(--control-h-sm);
+    padding: var(--space-2);
+    border-radius: var(--radius-2);
+    font-size: var(--text-md);
+    line-height: 1.4;
+}
+
+/* MUI's default hover (a faint black tint) is invisible on dark surfaces.
+   Use the theme-aware surface-muted, matching FilterBar's option hover.
+   `.list .item` (0,3,0) outweighs MUI's `.MuiMenuItem-root:hover` (0,2,0). */
+.list .item:hover,
+.list .item.Mui-focusVisible {
+    background-color: var(--color-surface-muted);
+}

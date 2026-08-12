@@ -1,0 +1,20 @@
+.tooltip {
+    background: var(--color-tooltip-bg);
+    color: var(--color-tooltip-text);
+    font-family: inherit;
+    font-size: var(--text-md);
+    line-height: 20px;
+    font-weight: 400;
+    padding: 8px 12px 9px;
+    border-radius: var(--radius-2);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    max-width: 280px;
+}
+
+.tooltip b {
+    font-weight: 700;
+}
+
+.arrow {
+    color: var(--color-tooltip-bg);
+}

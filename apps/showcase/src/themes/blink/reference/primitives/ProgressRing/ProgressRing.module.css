@@ -1,0 +1,41 @@
+.root {
+    position: relative;
+    display: inline-grid;
+    place-items: center;
+}
+
+.root svg {
+    display: block;
+}
+
+.track {
+    fill: none;
+    stroke: var(--color-border);
+}
+
+.progress {
+    fill: none;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 0.4s var(--ease-out);
+}
+
+.value {
+    position: absolute;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--color-text-default);
+    font-variant-numeric: tabular-nums;
+}
+
+.default .progress {
+    stroke: var(--color-primary);
+}
+.success .progress {
+    stroke: var(--color-success);
+}
+.warning .progress {
+    stroke: var(--color-warning);
+}
+.error .progress {
+    stroke: var(--color-error);
+}

@@ -1,0 +1,42 @@
+.root {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    flex: none;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border-strong);
+    border-radius: 50%;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    transition: background-color 120ms var(--ease-out),
+        border-color 120ms var(--ease-out),
+        box-shadow 120ms var(--ease-out);
+}
+
+.root:hover:not(:disabled) {
+    border-color: var(--color-border-input);
+}
+
+.root:focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring);
+}
+
+.root:checked {
+    border-color: var(--color-primary);
+    border-width: 5px;
+}
+
+.root:checked:hover:not(:disabled) {
+    border-color: var(--color-primary-hover);
+}
+
+.root:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}

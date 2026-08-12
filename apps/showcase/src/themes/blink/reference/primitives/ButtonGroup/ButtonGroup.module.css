@@ -1,0 +1,22 @@
+.group {
+    display: inline-flex;
+    align-items: stretch;
+}
+
+.group > :not(:last-child) {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+.group > :not(:first-child) {
+    margin-left: -1px;
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+}
+
+/* Lift the active segment so its border / focus ring sits above its neighbors. */
+.group > :hover,
+.group > :focus-visible,
+.group > :focus-within {
+    z-index: 1;
+}
