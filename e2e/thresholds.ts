@@ -114,9 +114,18 @@ const maxDeltaOverrides: Record<string, number> = {
   // pair measured a clean zero for weeks, then adding an unrelated Fab row above it moved this one
   // down the page and the rounding flipped. A genuine difference does not care where the row sits.
   //
-  // The delta arm stays at 2 - the measured worst - so anything that actually changes the shadow
-  // (a different colour, offset, blur or spread moves channels by tens of levels) still fails.
-  "fab-primary": 2,
+  // THE NUMBER IS NOT THE MEASURED WORST, and that is deliberate - it was, and that was a mistake
+  // worth recording. Set to 2 because 2 was what the artifact measured at the time, it went red the
+  // next time a row was added ABOVE this pair: the Fab moved down the page, the rounding shifted,
+  // and the hover state came back at 3. Tuning a bound to one observation of a POSITION-DEPENDENT
+  // artifact bakes the current layout into the suite, exactly the way the flat 240s parity timeout
+  // baked in a pair count (see parity.spec.ts). The gallery grows; the bound has to survive it.
+  //
+  // 8 is chosen as "still invisible in a shadow's falloff" with room for the rounding to land
+  // wherever the next row puts it. It stays far below anything that would signal a real change:
+  // altering the shadow's colour, offset, blur or spread moves channels by tens of levels, and the
+  // count arm is separately unbounded only because a soft gradient's count carries no information.
+  "fab-primary": 8,
 }
 
 export interface ParityRule {
