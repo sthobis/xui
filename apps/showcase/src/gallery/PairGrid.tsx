@@ -24,7 +24,20 @@ const labelStyle: CSSProperties = {
   padding: "0 4px",
 }
 
+const derivedNoteStyle: CSSProperties = {
+  ...cellStyle,
+  font: "500 11px/16px system-ui",
+  opacity: 0.4,
+  textAlign: "center",
+}
+
 export function PairCell({ pair, side }: { pair: Pair; side: Side }) {
+  // A derived component has no reference (see `Pair.ref`). The note deliberately carries NO
+  // `data-side`, so every query the harness makes for a ref cell finds nothing and skips the side
+  // rather than comparing against a caption.
+  if (side === "ref" && pair.ref === undefined) {
+    return <div style={derivedNoteStyle}>derived — no reference component</div>
+  }
   return (
     <div data-side={side} style={cellStyle}>
       {side === "ref" ? pair.ref : pair.mui}
@@ -36,7 +49,11 @@ export function PairRow({ pair, sides }: { pair: Pair; sides: Side[] }) {
   return (
     <div
       data-pair-id={pair.id}
-      data-states={(pair.states ?? ["default"]).join(",")}
+      // A derived pair publishes NO states, whatever it declares: with no reference there is
+      // nothing for the pixel harness to diff, and this makes that structural rather than a rule
+      // an author has to remember. `states: []` is already the suite's "not pixel-comparable"
+      // declaration, so this reuses it instead of inventing a second mechanism.
+      data-states={pair.ref === undefined ? "" : (pair.states ?? ["default"]).join(",")}
       data-behaviors={(pair.behaviors ?? []).join(",")}
       data-open-selector={pair.openSelector}
       style={{

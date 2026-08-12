@@ -2915,6 +2915,89 @@ export const kumoTheme = createTheme({
         },
       },
     },
+
+    // ================================================================================
+    // DERIVED TIER - components MUI ships and Kumo does not
+    // ================================================================================
+    //
+    // Everything above this line is EXTRACTED: a Kumo component was read, measured in the browser,
+    // and a gallery pair holds it at zero. Nothing below is. MUI's component surface is wider than
+    // Kumo's, and a `<Slider>` or `<Avatar>` in a Kumo app has no Kumo counterpart to copy.
+    //
+    // The alternative to deriving them is leaving them stock Material - a blue, Roboto-metric
+    // control sitting beside the themed ones - which for a drop-in theme is worse than an imperfect
+    // derivation. So they are built from Kumo's own TOKENS and from the geometry its real
+    // components use, and every value still says where it came from.
+    //
+    // What that does NOT buy: a pixel guarantee. There is no reference, so these pairs render
+    // MUI-only in the gallery, publish no states, and are skipped by the parity suite (see
+    // `Pair.ref`). preflight still holds them - it compares the MUI cell with and without Tailwind,
+    // which needs no reference. Treat a value here as a considered choice, not as ground truth, and
+    // if Kumo ever ships the real component, re-extract it and move the block above the line.
+
+    // Kumo's only separator is Dropdown's - `-mx-1 my-1 h-px bg-kumo-hairline`. The colour and the
+    // 1px rule are that class verbatim; the negative side margins are NOT carried over, since those
+    // exist to bleed the rule to the edges of a popup's padding and a standalone Divider has none.
+    MuiDivider: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          borderColor: theme.vars.palette.kumo.hairline, // kumo: bg-kumo-hairline
+          borderWidth: 0,
+          borderStyle: "solid" as const,
+          borderBottomWidth: "1px", // kumo: h-px
+          "&.MuiDivider-vertical": {
+            borderBottomWidth: 0,
+            borderRightWidth: "1px",
+          },
+        }),
+      },
+    },
+
+    // A scroll container. Kumo's Table root IS the <table> (`isolate w-full`) and the package ships
+    // no wrapper - but its sticky-column classes are written against "the scroll container", which
+    // the consumer is expected to supply. This is that container, and nothing more: no fill, no
+    // ring, no radius, because Kumo puts none on one.
+    MuiTableContainer: {
+      styleOverrides: {
+        root: {
+          width: "100%", // kumo: the table's own w-full
+          overflowX: "auto" as const,
+        },
+      },
+    },
+
+    // Kumo has no avatar. Derived from the shape it uses for every circular chip - `rounded-full`
+    // over `bg-kumo-fill` - at the neutral badge's type (`text-xs font-medium`) and the base
+    // control height (h-9/36px), so an Avatar lines up with a Button or Input beside it.
+    MuiAvatar: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          width: "36px", // kumo: the base size row's h-9
+          height: "36px",
+          backgroundColor: theme.vars.palette.kumo.fill, // kumo: bg-kumo-fill
+          color: theme.vars.palette.kumo.textSubtle, // kumo: text-kumo-subtle
+          ...TEXT_XS, // kumo: the badge's text-xs
+          fontWeight: 500, // kumo: font-medium
+          letterSpacing: "normal",
+        }),
+        // MUI rounds a "rounded" variant with its own shape.borderRadius; Kumo's control radius is
+        // rounded-lg at this size.
+        rounded: { borderRadius: "8px" }, // kumo: rounded-lg
+      },
+    },
+
+    // Kumo has no skeleton - the package exports none, and the docs site's SkeletonLine is not in
+    // 2.9.0. Derived from `bg-kumo-fill`, the token Kumo uses for every inert placeholder shape,
+    // at the medium control radius. MUI's pulse is kept as-is: Kumo has no loading animation to
+    // copy (its only animations are toast/bounce keyframes), so there is nothing to contradict it.
+    MuiSkeleton: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          backgroundColor: theme.vars.palette.kumo.fill, // kumo: bg-kumo-fill
+        }),
+        rounded: { borderRadius: "6px" }, // kumo: rounded-md
+      },
+    },
   },
 })
 

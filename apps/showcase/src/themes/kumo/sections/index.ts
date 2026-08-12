@@ -24,13 +24,14 @@ import { selectSection } from "./select"
 import { popoverSection } from "./popover"
 import { dialogSection } from "./dialog"
 import { toastSection } from "./toast"
+import { derivedSection } from "./derived"
 
-// DELIBERATELY ABSENT, both from the gallery and from the theme - a component with no pair does
-// not ship, so neither MuiCircularProgress nor MuiSkeleton is themed:
+// NO KUMO COUNTERPART. These are the components a pixel pair cannot be built for, and they now
+// split two ways.
 //
-//   SkeletonLine  is not in @cloudflare/kumo 2.9.0 at all. The docs site demonstrates it, but the
-//                 published package exports no such component, so there is no ground truth to
-//                 extract. It can be added once a release ships it.
+// Some are still absent from the theme entirely - a Kumo component MUI has no equivalent of, so
+// there is nothing for a theme to style:
+//
 //   Empty         is a bordered empty-state card with an illustration slot. MUI has no
 //                 empty-state component to pair it against.
 //   Flow          is a scrollable canvas with its own custom scrollbar thumbs and per-corner
@@ -49,4 +50,12 @@ import { toastSection } from "./toast"
 //                 SMIL, so a captured frame has no stable phase and a pixel pair could not be
 //                 meaningful. MUI's CircularProgress also has no track ring to pair against.
 //
-export const sections: Section[] = [buttonSection, textSection, labelSection, linkSection, inputSection, checkboxSection, switchSection, radioSection, badgeSection, bannerSection, meterSection, layerCardSection, tabsSection, collapsibleSection, tableSection, breadcrumbsSection, toolbarSection, toggleSection, inputGroupSection, tooltipSection, dropdownSection, selectSection, popoverSection, dialogSection, toastSection]
+// The rest go the OTHER way. Where MUI ships a component Kumo does not, leaving it unthemed means
+// leaving it stock Material in a Kumo app, which is worse than an imperfect derivation - so those
+// are styled from Kumo's tokens and shown in `derivedSection` below, MUI-side only and skipped by
+// the parity suite. SkeletonLine is the example that moved: it is not in @cloudflare/kumo 2.9.0 at
+// all (the docs site demonstrates it, the published package exports nothing), so MuiSkeleton is
+// derived from `bg-kumo-fill` rather than extracted, and should be re-done properly if a release
+// ever ships the real component.
+//
+export const sections: Section[] = [buttonSection, textSection, labelSection, linkSection, inputSection, checkboxSection, switchSection, radioSection, badgeSection, bannerSection, meterSection, layerCardSection, tabsSection, collapsibleSection, tableSection, breadcrumbsSection, toolbarSection, toggleSection, inputGroupSection, tooltipSection, dropdownSection, selectSection, popoverSection, dialogSection, toastSection, derivedSection]
