@@ -6,7 +6,7 @@ Three themes ship today, each verified by the same pixel-parity harness:
 
 - **`shadcnTheme`** replicates shadcn/ui's default look (new-york style, neutral base, Geist). Complete, light and dark.
 - **`kumoTheme`** replicates [Kumo](https://kumo-ui.com), Cloudflare's design system (Inter). Complete, light and dark: Button, Text, Label, Link, Input, InputArea, Field, Checkbox, Radio, Switch, Badge, Banner, Meter, LayerCard, Tabs, Collapsible, Table, Breadcrumbs, Toolbar, InputGroup, and the whole portalled tier - Tooltip, DropdownMenu, Select, Popover, Dialog and Toast, arrows and backdrops and all.
-- **`blinkTheme`** replicates the Pulse Kit, the design system of Pulse / NeverBlink (Source Sans Pro). **Light only so far** - the kit ships a dark scheme and the theme is written in the shape that makes adding it a one-line change, but it is not covered yet, so there is deliberately no `blink-dark` project in the harness. Covered: Button, ButtonGroup, Link, Input, Select, Checkbox, Radio, Switch, ToggleGroup, Alert, Card, Divider, Avatar, Badge, Table, Tabs, Accordion, and the portalled tier - Tooltip, Popover, Menu and Dialog. Still to do: Spinner / ProgressRing, and the FormField / Textarea pairing (see below).
+- **`blinkTheme`** replicates the Pulse Kit, the design system of Pulse / NeverBlink (Source Sans Pro). **Light only so far** - the kit ships a dark scheme and the theme is written in the shape that makes adding it a one-line change, but it is not covered yet, so there is deliberately no `blink-dark` project in the harness. It covers the same MUI surface the other two do: Button, ButtonGroup, IconButton, Link, Input, Textarea, Select, FormField, Checkbox, Radio, Switch, ToggleGroup, Alert, Card, Divider, Avatar, Badge, Table, Tabs, Accordion, Spinner, the portalled tier - Tooltip, Popover, Menu and Dialog - and a derived tier for everything MUI ships that the kit does not.
 
 Dark mode follows each design system's own convention, so a theme is a drop-in: shadcn uses a `.dark` class on `<html>`, kumo uses `data-mode="dark"`. Either way MUI's `useColorScheme()` drives it.
 
@@ -204,8 +204,8 @@ The two tables above are shadcn's. blink is younger and its gaps are its own, so
 
 | Component | Covered | Still to do |
 | --- | --- | --- |
-| Spinner / ProgressRing | Nothing yet | `MuiCircularProgress`. The kit's Spinner is an SVG track plus a fixed 25% arc rotating at 0.8s linear, where MUI's indeterminate arc grows and shrinks - so the drop-in is a real change to how MUI animates, not a colour. The kit's `xs` also floors its stroke at an absolute 2px, which MUI's proportional `thickness` cannot express |
-| Textarea / FormField | Nothing yet | Reverted once already: MUI puts `box-sizing: content-box` on an input, which fights the vertical padding the kit's textarea needs. Needs a diagnosis before a second attempt |
+| ProgressRing | Nothing | The kit's determinate ring draws a percentage label inside itself, which MUI's CircularProgress has no slot for - its own docs compose that from a Box and a Typography, which is app markup. The RING is covered, as `MuiCircularProgress` |
+| EmptyState, Stack | Nothing | Layout primitives with no MUI counterpart to theme - a consumer composes them from Box and Typography |
 
 #### Not the theme's to close
 
@@ -218,3 +218,5 @@ The two tables above are shadcn's. blink is younger and its gaps are its own, so
 | Dialog's close button | The kit composes its own ghost Button into the header with a -2px/-4px nudge. On the MUI side that is an IconButton a consumer writes into `DialogTitle` - app markup, not theme. The header row that positions it IS themed and is covered |
 | Select's `placeholder` | It renders a hidden disabled `<option>`; MUI's native Select has no placeholder concept, so a consumer writes that option themselves |
 | Dark mode | The kit ships a dark scheme and the theme's palette is a factory over a token set precisely so adding it is a one-line change. It is simply not done yet, and the harness has no `blink-dark` project so that a future one cannot silently run in light and pass |
+| The Textarea's height | MUI has no plain multiline input: `rows` maps onto minRows/maxRows and renders a TextareaAutosize, which measures a shadow element's integer `scrollHeight` and writes an INLINE pixel height. That is 3 x 23 against the kit's plain `<textarea rows={3}>` at 3 x 22.5 for its 15px/1.5 type. An inline style is out of a theme's reach, so the block is carried and its pairs are ref-less |
+| `MuiBackdrop` and `MuiTableHead` | Both left unthemed on purpose, and both were measured before being left alone. MUI's default backdrop already IS the kit's scrim, and writing it into `root` breaks the invisible backdrop Menu and Select rely on; a table head reads white in the kit only because whatever is behind the table is, so giving it `--color-surface` overpaints the page |
