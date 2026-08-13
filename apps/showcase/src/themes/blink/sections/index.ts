@@ -9,6 +9,7 @@ import { checkboxSection, radioSection } from "./checkbox"
 import { formFieldSection, textareaSection } from "./form-field"
 import { inputSection } from "./input"
 import { linkSection } from "./link"
+import { derivedSection } from "./derived"
 import { dialogSection, menuSection, popoverSection, tooltipSection } from "./overlay"
 import { selectSection } from "./select"
 import { iconButtonSection, spinnerSection } from "./spinner"
@@ -43,4 +44,5 @@ export const sections: Section[] = [
   inputSection,
   textareaSection,
   linkSection,
+  derivedSection,
 ]

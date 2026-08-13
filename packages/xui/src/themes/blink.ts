@@ -2509,6 +2509,435 @@ export const blinkTheme = createTheme({
       },
     },
 
+    // =====================================================================================
+    // THE DERIVED TIER - everything below this banner
+    // =====================================================================================
+    //
+    // EXTRACTION STOPS HERE. Every block above is transcribed from a Pulse Kit primitive that
+    // exists; every block below is a component MUI ships and the kit does NOT, built from the kit's
+    // own TOKENS and from the geometry its real components use.
+    //
+    // Why build them at all: left unthemed they render as stock Material - a blue, Roboto-metric
+    // control sitting beside the themed ones - which for a drop-in theme is worse than an imperfect
+    // derivation. The showcase makes that visible, one row per component across four columns.
+    //
+    // What this tier does NOT buy is a pixel guarantee, and the harness enforces the weaker claim
+    // rather than trusting anyone to remember it: every pair below omits `ref`, so `PairRow`
+    // publishes `data-states=""` and the pixel suite structurally cannot be asked to diff something
+    // with no reference. preflight still covers them in full - it compares the MUI cell with and
+    // without the kit's stylesheet, which needs no reference, and that is the check that catches a
+    // derived block leaning on someone else's reset.
+    //
+    // Treat a value here as a CONSIDERED CHOICE, not as ground truth. If the kit ever ships the
+    // real component, re-extract it and move the block above the line.
+
+    // Surfaces that are simply "a kit panel": the app bar, the drawer sheet, the snackbar.
+    MuiAppBar: {
+      defaultProps: { elevation: 0, color: "inherit" },
+      styleOverrides: {
+        root: ({ theme }) => ({
+          background: theme.vars.palette.surface, // --color-surface
+          color: theme.vars.palette.text.primary, // --color-text-default
+          // The kit's only horizontal rule between a header and its content is `--color-border-
+          // strong`, which is what the Table container and the Tabs bar both use.
+          borderBottom: `1px solid ${theme.vars.palette.borderStrong}`,
+          boxShadow: "none", // the kit has no elevated chrome anywhere
+        }),
+      },
+    },
+    MuiToolbar: {
+      styleOverrides: {
+        // Scoped per density on purpose. An unscoped height here would also reach TablePagination,
+        // which renders its own Toolbar - the exact mistake AGENTS.md records against MuiToolbar.
+        regular: { minHeight: 56, paddingLeft: 16, paddingRight: 16 }, // --space-4
+        dense: { minHeight: 40, paddingLeft: 12, paddingRight: 12 }, // --space-3
+      },
+    },
+    MuiDrawer: {
+      styleOverrides: {
+        // Keyed off the positive anchor classes rather than one blanket rule on the paper: MUI's
+        // Drawer has four anchors and a width set for the right-hand one turns a top sheet into a
+        // 384px box. AGENTS.md has that exact bug on record.
+        paper: ({ theme }) => ({
+          background: theme.vars.palette.surface, // --color-surface
+          color: theme.vars.palette.text.primary,
+          backgroundImage: "none", // MUI tints an elevated paper; the kit's surfaces are flat
+          boxShadow: "0 8px 32px rgba(0, 0, 0, 0.1)", // --shadow-popover
+        }),
+        // The four anchors, keyed by the class MUI puts on the ROOT rather than one blanket rule
+        // on the paper - a border set for the right-hand anchor alone turns a top sheet into a
+        // wrong-edged box, and AGENTS.md records exactly that bug (a 384px-wide top sheet).
+        anchorLeft: ({ theme }) => ({
+          "& .MuiDrawer-paper": { borderRight: `1px solid ${theme.vars.palette.borderStrong}` },
+        }),
+        anchorRight: ({ theme }) => ({
+          "& .MuiDrawer-paper": { borderLeft: `1px solid ${theme.vars.palette.borderStrong}` },
+        }),
+        anchorTop: ({ theme }) => ({
+          "& .MuiDrawer-paper": { borderBottom: `1px solid ${theme.vars.palette.borderStrong}` },
+        }),
+        anchorBottom: ({ theme }) => ({
+          "& .MuiDrawer-paper": { borderTop: `1px solid ${theme.vars.palette.borderStrong}` },
+        }),
+      },
+    },
+    MuiSnackbarContent: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          // The kit's one always-dark surface is its tooltip, and a snackbar is the same idea - a
+          // transient overlay that has to read against any page - so it takes the same two tokens.
+          background: theme.vars.palette.tooltipBg, // --color-tooltip-bg
+          color: theme.vars.palette.tooltipText, // --color-tooltip-text
+          borderRadius: 6, // --radius-2, as the tooltip uses
+          fontSize: 15, // --text-md
+          lineHeight: 1.4,
+          boxShadow: "0 8px 32px rgba(0, 0, 0, 0.1)", // --shadow-popover
+          padding: "8px 12px", // the tooltip's own padding
+        }),
+      },
+    },
+    // NO MuiBackdrop BLOCK, and that is the finding rather than an omission.
+    //
+    // The kit's Dialog styles no scrim, so there is nothing to extract - and MUI's own default is
+    // already `rgba(0, 0, 0, 0.5)`, which is what the Dialog pair above measures at zero. Writing
+    // that same value into `MuiBackdrop.root` therefore changes nothing a user sees and breaks
+    // something they do: Menu, Select and Popover render an INVISIBLE backdrop so a click outside
+    // closes them without dimming the page, and `.MuiBackdrop-invisible` is only one class - a
+    // plain `root` override lands at the same specificity and wins by source order.
+    //
+    // Measured: the menu pair went from 0 to 230 differing pixels at Δ119 open, and 12337 at Δ128
+    // anchored, with the whole top row of the capture reading 116,117,118 - a half-black scrim
+    // composited behind the overlay's own corners. AGENTS.md lists MuiBackdrop by name as a
+    // component whose overrides reach further than they look; this is that, measured.
+
+    // Lists. MUI reuses MuiList inside Menu, Select and Autocomplete, so the padding below is
+    // deliberately NOT on MuiList - the Menu block above already sets its own, and a blanket rule
+    // here would reach all three.
+    MuiListItemButton: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          borderRadius: 6, // --radius-2, as the kit's menu items use
+          minHeight: 32, // --control-h-sm
+          padding: 8, // --space-2
+          gap: 8,
+          fontSize: 15, // --text-md
+          "&:hover": { backgroundColor: theme.vars.palette.surfaceMuted },
+          "&.Mui-selected, &.Mui-selected:hover": {
+            // The 10% brand tint the kit uses for a selected table row.
+            backgroundColor: `color-mix(in srgb, ${theme.vars.palette.primary.main} 10%, transparent)`,
+          },
+        }),
+      },
+    },
+    MuiListItemIcon: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          color: theme.vars.palette.textMuted, // the kit's icon ink everywhere else
+          minWidth: 0,
+          marginRight: 8, // --space-2, the gap the kit puts between an icon and its label
+        }),
+      },
+    },
+    MuiListItemText: {
+      styleOverrides: {
+        primary: { fontSize: 15, lineHeight: 1.4 }, // --text-md
+        secondary: ({ theme }) => ({
+          fontSize: 13, // --text-xs, as the kit's helper text
+          lineHeight: 1.4,
+          color: theme.vars.palette.textMuted,
+        }),
+      },
+    },
+    MuiListItemSecondaryAction: {
+      styleOverrides: { root: { right: 8 } }, // --space-2
+    },
+
+    // Progress and placeholders: flat token fills, no Material gradients or pulses beyond MUI's.
+    MuiLinearProgress: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          height: 8,
+          borderRadius: 999, // the kit's pill radius, as on its Switch track
+          backgroundColor: theme.vars.palette.surfaceMuted,
+        }),
+        bar: ({ theme }) => ({
+          borderRadius: 999,
+          backgroundColor: theme.vars.palette.primary.main,
+        }),
+      },
+    },
+    MuiSkeleton: {
+      styleOverrides: {
+        root: ({ theme }) => ({ backgroundColor: theme.vars.palette.surfaceMuted }),
+        rounded: { borderRadius: 6 }, // --radius-2, matching baselineTheme's own choice
+      },
+    },
+
+    // Controls MUI has and the kit does not, built from the kit's fill/line/brand triple.
+    MuiSlider: {
+      styleOverrides: {
+        rail: ({ theme }) => ({
+          height: 8,
+          borderRadius: 999,
+          backgroundColor: theme.vars.palette.surfaceMuted,
+          opacity: 1, // MUI dims its rail to 0.38; the kit states its greys outright
+        }),
+        track: ({ theme }) => ({
+          height: 8,
+          border: 0,
+          borderRadius: 999,
+          backgroundColor: theme.vars.palette.primary.main,
+        }),
+        thumb: ({ theme }) => ({
+          width: 16,
+          height: 16,
+          backgroundColor: theme.vars.palette.surface,
+          border: `1px solid ${theme.vars.palette.borderStrong}`,
+          boxShadow: "0 1px 2px rgba(0, 0, 0, 0.04)", // --shadow-card
+          "&:hover, &.Mui-focusVisible": {
+            boxShadow: `color-mix(in srgb, ${theme.vars.palette.primary.main} 50%, transparent) 0px 0px 0px 4px`,
+          },
+        }),
+      },
+    },
+    MuiRating: {
+      styleOverrides: {
+        // NOT a font-size on the root: that pins every size to the covered one, which AGENTS.md
+        // records as a real bug on this very component.
+        iconFilled: ({ theme }) => ({ color: theme.vars.palette.warning.main }),
+        iconEmpty: ({ theme }) => ({ color: theme.vars.palette.borderStrong }),
+        iconHover: ({ theme }) => ({ color: theme.vars.palette.warning.main }),
+      },
+    },
+    MuiFab: {
+      styleOverrides: {
+        // Keyed off the POSITIVE shape class. AGENTS.md records two separate bugs from doing this
+        // by negation - `variant="extended"` squashed to a circle, and every size pinned to 56px.
+        circular: ({ theme }) => ({
+          boxShadow: "0 8px 32px rgba(0, 0, 0, 0.1)", // --shadow-popover
+          backgroundColor: theme.vars.palette.primary.main,
+          color: theme.vars.palette.primary.contrastText,
+          "&:hover": { backgroundColor: theme.vars.palette.primary.dark },
+        }),
+        extended: ({ theme }) => ({
+          borderRadius: 999,
+          fontWeight: 600, // the kit's button weight
+          textTransform: "none" as const,
+          boxShadow: "0 8px 32px rgba(0, 0, 0, 0.1)",
+          backgroundColor: theme.vars.palette.primary.main,
+          color: theme.vars.palette.primary.contrastText,
+          "&:hover": { backgroundColor: theme.vars.palette.primary.dark },
+        }),
+      },
+    },
+    MuiSpeedDialAction: {
+      styleOverrides: {
+        fab: ({ theme }) => ({
+          backgroundColor: theme.vars.palette.surface,
+          color: theme.vars.palette.text.primary,
+          boxShadow: "0 1px 2px rgba(0, 0, 0, 0.04)", // --shadow-card
+          "&:hover": { backgroundColor: theme.vars.palette.surfaceMuted },
+        }),
+        staticTooltipLabel: ({ theme }) => ({
+          background: theme.vars.palette.tooltipBg,
+          color: theme.vars.palette.tooltipText,
+          borderRadius: 6,
+          fontSize: 15,
+          padding: "8px 12px",
+          whiteSpace: "nowrap" as const,
+        }),
+      },
+    },
+
+    // Navigation and pagination: the kit's brand-on-muted selection, at its own radius.
+    MuiBottomNavigation: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          background: theme.vars.palette.surface,
+          borderTop: `1px solid ${theme.vars.palette.borderStrong}`,
+        }),
+      },
+    },
+    MuiBottomNavigationAction: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          color: theme.vars.palette.textMuted,
+          fontSize: 13, // --text-xs
+          // A <button> does not inherit font-family, and MUI states none on this root - so without
+          // these two the control renders in the UA's own 13px Arial at `line-height: normal` the
+          // moment the kit's reset is not on the page. preflight caught exactly that: 184 pixels at
+          // Δ165, `13px Arial` against `13px/19.5px "Source Sans Pro"`. AGENTS.md notes this same
+          // component has now been caught by this same check on three separate themes.
+          fontFamily: "inherit",
+          lineHeight: 1.5, // reset.css `body { line-height: 1.5 }`, which the kit's page inherits
+          "&.Mui-selected": { color: theme.vars.palette.primary.main },
+        }),
+        // MUI grows a selected label; the kit's type scale has no step between these, so it stays.
+        label: { fontSize: 13, lineHeight: 1.5, "&.Mui-selected": { fontSize: 13 } },
+      },
+    },
+    MuiBreadcrumbs: {
+      styleOverrides: {
+        root: ({ theme }) => ({ fontSize: 15, color: theme.vars.palette.textMuted }),
+        separator: ({ theme }) => ({ color: theme.vars.palette.textSubtle, marginLeft: 8, marginRight: 8 }),
+        li: ({ theme }) => ({ "& a": { color: theme.vars.palette.primary.main } }),
+      },
+    },
+    MuiPaginationItem: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          borderRadius: 6, // --radius-2
+          minWidth: 32, // --control-h-sm
+          height: 32,
+          fontSize: 14, // --text-sm
+          fontWeight: 600, // the kit's control weight
+          color: theme.vars.palette.textMuted,
+          "&:hover": { backgroundColor: theme.vars.palette.surfaceMuted },
+          "&.Mui-selected": {
+            backgroundColor: theme.vars.palette.primary.main,
+            color: theme.vars.palette.primary.contrastText,
+            "&:hover": { backgroundColor: theme.vars.palette.primary.dark },
+          },
+        }),
+      },
+    },
+    MuiTablePagination: {
+      styleOverrides: {
+        // The TOOLBAR here is TablePagination's own, and the reason MuiToolbar above is scoped per
+        // density rather than given a blanket height.
+        toolbar: { minHeight: 48, paddingLeft: 12, paddingRight: 12 },
+        selectLabel: ({ theme }) => ({ fontSize: 14, color: theme.vars.palette.textMuted }),
+        displayedRows: ({ theme }) => ({ fontSize: 14, color: theme.vars.palette.textMuted }),
+      },
+    },
+
+    // The stepper family. Each slot is keyed by orientation where MUI's own geometry differs, for
+    // the reason AGENTS.md records: the horizontal connector's rule reached the vertical one and
+    // turned a 1px indent into a 324px transparent box.
+    MuiStepper: {
+      styleOverrides: { root: { padding: 0 } },
+    },
+    MuiStepIcon: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          color: theme.vars.palette.surfaceMuted,
+          "& .MuiStepIcon-text": { fill: theme.vars.palette.textMuted, fontSize: 13, fontWeight: 600 },
+          "&.Mui-active": {
+            color: theme.vars.palette.primary.main,
+            "& .MuiStepIcon-text": { fill: theme.vars.palette.primary.contrastText },
+          },
+          "&.Mui-completed": { color: theme.vars.palette.success.main },
+        }),
+      },
+    },
+    MuiStepLabel: {
+      styleOverrides: {
+        label: ({ theme }) => ({
+          fontSize: 15, // --text-md
+          color: theme.vars.palette.textMuted,
+          "&.Mui-active": { color: theme.vars.palette.text.primary, fontWeight: 600 },
+          "&.Mui-completed": { color: theme.vars.palette.text.primary },
+        }),
+      },
+    },
+    MuiStepConnector: {
+      styleOverrides: {
+        line: ({ theme }) => ({ borderColor: theme.vars.palette.borderStrong }),
+      },
+    },
+
+    // Image lists: a kit tile is a flat surface at the panel radius.
+    MuiImageListItem: {
+      styleOverrides: {
+        root: { borderRadius: 8, overflow: "hidden" }, // --radius-3
+      },
+    },
+    MuiImageListItemBar: {
+      styleOverrides: {
+        // Keyed per position rather than rounding "the bottom corners", which AGENTS.md records as
+        // having squared off a `position="top"` bar over a rounded tile.
+        positionBottom: { background: "rgba(0, 0, 0, 0.5)" },
+        positionTop: { background: "rgba(0, 0, 0, 0.5)" },
+        title: { fontSize: 14, fontWeight: 600 },
+        subtitle: { fontSize: 13 },
+      },
+    },
+
+    // Form plumbing MUI has and the kit does not put in its FormField.
+    MuiFormControlLabel: {
+      styleOverrides: {
+        root: { marginLeft: 0, marginRight: 0, gap: 8 }, // --space-2, the kit's control/label gap
+        label: ({ theme }) => ({
+          fontSize: 15, // --text-md
+          lineHeight: 1.4,
+          color: theme.vars.palette.text.primary,
+          "&.Mui-disabled": { color: theme.vars.palette.textSubtle },
+        }),
+      },
+    },
+    MuiFormGroup: {
+      styleOverrides: { root: { gap: 8 } }, // --space-2
+    },
+    MuiAutocomplete: {
+      styleOverrides: {
+        // The popup is a kit menu - the Menu block above owns that surface, so only what
+        // Autocomplete adds is here.
+        paper: ({ theme }) => ({
+          background: theme.vars.palette.surface,
+          border: `1px solid ${theme.vars.palette.border}`,
+          borderRadius: 8,
+          boxShadow: "0 8px 32px rgba(0, 0, 0, 0.1)",
+          fontSize: 15,
+        }),
+        listbox: { padding: 8 }, // the kit's menu gutter
+        option: ({ theme }) => ({
+          borderRadius: 6,
+          minHeight: 32,
+          padding: 8,
+          fontSize: 15,
+          '&[aria-selected="true"], &.Mui-focused': {
+            backgroundColor: theme.vars.palette.surfaceMuted,
+          },
+        }),
+        noOptions: ({ theme }) => ({ fontSize: 15, color: theme.vars.palette.textMuted }),
+      },
+    },
+
+    // ---- Ripples ----
+    //
+    // The kit has no ripple anywhere: every one of its interactive primitives passes
+    // `disableRipple` to the ButtonBase underneath. This is the global default, and it is NOT
+    // enough on its own - Checkbox, Radio, Switch, ButtonGroup and MenuItem each resolve their own
+    // `disableRipple` and forward it, so each restates it at its own block above. The `no ripple`
+    // sweep is what keeps that list honest as components are added; it caught the derived tier's
+    // ListItemButton, Fab, BottomNavigationAction and PaginationItem the moment they landed.
+    MuiButtonBase: {
+      defaultProps: { disableRipple: true },
+    },
+
+    // ---- Global anchor styling ----
+    //
+    // Ground truth: the kit's global.css, which base.css vendors verbatim:
+    //
+    //     a { text-decoration: none; color: #5a63b0; }
+    //     a:hover, button, [role="button"] { cursor: pointer; }
+    //
+    // The MuiLink block below covers a `<Link>`, but the kit's rule covers EVERY anchor - including
+    // the ones MUI renders inside other components and the ones an app writes by hand. Carrying it
+    // in CssBaseline is what makes the theme a drop-in for that rule rather than only for the
+    // component: preflight caught the gap on Breadcrumbs, whose links are plain `<a>` elements and
+    // came out underlined and browser-blue the moment the kit's stylesheet was not on the page
+    // (234 pixels at Δ147).
+    //
+    // The hex is transcribed as the kit writes it - global.css hardcodes it rather than using
+    // var(--color-primary), and it is the same brand colour either way.
+    MuiCssBaseline: {
+      styleOverrides: {
+        a: { textDecoration: "none", color: "#5a63b0" },
+        "a:hover, button, [role=\"button\"]": { cursor: "pointer" },
+      },
+    },
+
     // ---- Link ----
     //
     // The kit has no Link primitive. Links are styled globally, by one rule in global.css:
