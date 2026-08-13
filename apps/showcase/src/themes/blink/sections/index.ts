@@ -11,6 +11,7 @@ import { inputSection } from "./input"
 import { linkSection } from "./link"
 import { dialogSection, menuSection, popoverSection, tooltipSection } from "./overlay"
 import { selectSection } from "./select"
+import { iconButtonSection, spinnerSection } from "./spinner"
 import { switchSection } from "./switch"
 import { tableSection } from "./table"
 import { toggleGroupSection } from "./toggle-group"
@@ -31,12 +32,14 @@ export const sections: Section[] = [
   menuSection,
   popoverSection,
   selectSection,
+  spinnerSection,
   switchSection,
   tableSection,
   tabsSection,
   toggleGroupSection,
   tooltipSection,
   formFieldSection,
+  iconButtonSection,
   inputSection,
   textareaSection,
   linkSection,

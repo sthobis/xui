@@ -2373,6 +2373,142 @@ export const blinkTheme = createTheme({
       },
     },
 
+    // ---- IconButton ----
+    //
+    // Ground truth: reference/primitives/Button/Button.module.css - `.root`, `.ghost`, `.iconOnly`
+    // and the size ladder, which is the composition the kit itself uses for an icon-only action
+    // (`<Button variant="ghost" iconOnly>`). MUI's IconButton is that same button, so the rules are
+    // the Button block's, restated for a component that does not share its class.
+    MuiIconButton: {
+      defaultProps: { disableRipple: true }, // blink: Button/index.tsx `disableRipple`
+      styleOverrides: {
+        root: ({ theme }) => ({
+          display: "flex", // blink: .root `display: flex`
+          alignItems: "center",
+          justifyContent: "center",
+          borderRadius: 8, // blink: .root `border-radius: var(--radius-3)`
+          padding: 0, // blink: .iconOnly `padding: 0`
+          aspectRatio: "1", // blink: .iconOnly `aspect-ratio: 1`
+          color: theme.vars.palette.primary.main, // blink: .ghost `color: var(--color-primary)`
+          background: "transparent", // blink: .ghost `background: transparent`
+          border: "1px solid transparent", // blink: .ghost `border: 1px solid transparent`
+          transition: "background-color 0.2s, border-color 0.2s, color 0.2s, opacity 0.2s", // blink: .root
+          // blink: .md `height`/`min-width: var(--control-h-md)`, the kit's default size. On the
+          // root rather than a `size: "medium"` variant, because MUI leaves an unstated `size`
+          // undefined - the same trap the Input's height documents.
+          height: 36,
+          width: 36,
+          "&:hover": {
+            // blink: .ghost:hover `background: color-mix(in srgb, var(--color-primary) 15%, transparent)`
+            background: `color-mix(in srgb, ${theme.vars.palette.primary.main} 15%, transparent)`,
+          },
+          "&.Mui-disabled": {
+            opacity: 0.6, // blink: .root:disabled `opacity: 0.6`
+            color: theme.vars.palette.primary.main, // the kit dims rather than greys - see the Button block
+          },
+          "&.Mui-focusVisible": {
+            outline: "2px solid transparent", // blink: .root:focus-visible
+            outlineOffset: 2,
+            boxShadow: `color-mix(in srgb, ${theme.vars.palette.primary.main} 50%, transparent) 0px 0px 0px 4px`, // blink: --focus-ring
+          },
+        }),
+      },
+      variants: [
+        { props: { size: "small" }, style: { height: 32, width: 32 } }, // blink: .sm `var(--control-h-sm)`
+        { props: { size: "large" }, style: { height: 40, width: 40 } }, // blink: .lg `var(--control-h-lg)`
+      ],
+    },
+
+    // ---- InputAdornment ----
+    //
+    // The kit has no adornment element: its Input `.root` is a flex row with `gap: var(--space-2)`
+    // and anything beside the control is a plain child of it. So the whole of this block is taking
+    // MUI's own spacing back off and letting that gap do the work, and colouring the adornment with
+    // the same muted token the kit gives its placeholder and its chevron.
+    MuiInputAdornment: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          margin: 0, // MUI ships 8px of side margin, which stacks with the root's own gap
+          height: "auto",
+          color: theme.vars.palette.textMuted, // blink: Select .chevron / Input ::placeholder
+          "& .MuiTypography-root": { color: "inherit", fontSize: "inherit" },
+        }),
+      },
+    },
+
+    // ---- CircularProgress ----
+    //
+    // Ground truth: reference/primitives/Spinner/Spinner.module.css and index.tsx.
+    //
+    // The kit's Spinner is not MUI's, and the difference is the ANIMATION rather than the paint:
+    // it rotates a FIXED 25% arc at 0.8s linear over a 20%-opacity track ring, while MUI grows and
+    // shrinks its arc through a second keyframe animation and paints no track at all. Making a
+    // themed MUI spinner behave like the kit's is therefore a real change to how it animates, and
+    // it is what a drop-in has to do - a consumer who writes `<CircularProgress />` should get the
+    // kit's spinner, not a Material one wearing the kit's colours.
+    //
+    //   - `thickness: 5.5` is the kit's stroke as MUI expresses it: 12.5% of the diameter (2.5px at
+    //     20px, 3px at 24px), against a 44-unit viewBox.
+    //   - the arc is pinned to a quarter turn with a round cap and rotated to start at twelve
+    //     o'clock, which is `strokeDasharray` + `rotate(-90)` in the kit's SVG.
+    //   - the track is a ring drawn with a radial-gradient on a pseudo-element, because MUI's
+    //     CircularProgress renders ONE circle and gives a theme no second element to paint.
+    //
+    // SCOPE: the kit's stroke ladder is not proportional - `px <= 14 ? 2 : px <= 20 ? 2.5 : 3`, so
+    // 16.7% of the diameter at xs, 15.6% at sm and 12.5% at md and lg. MUI's `thickness` is one
+    // number against a fixed viewBox, so only one of those can live in a theme; it carries the
+    // 12.5% the default size uses. A 12px or 16px spinner states its own `thickness` at the call
+    // site (7.33 and 6.875).
+    MuiCircularProgress: {
+      defaultProps: {
+        thickness: 5.5, // blink: 44 * 12.5%, the kit's stroke ratio for sm/md/lg
+        size: 20, // blink: Spinner `SIZE_PX.md`, the kit's default - MUI's is 40
+        // blink: .track - the kit draws a second circle behind its arc. MUI v9 has a real slot for
+        // exactly that, off by default, so this is the whole of the track rather than a derived
+        // stand-in: same centre, same radius, same stroke width, `stroke: currentColor`.
+        enableTrackSlot: true,
+        // blink: the kit's arc never changes LENGTH - the motion is all rotation. MUI's default
+        // indeterminate spinner animates its dash as well, and this is the prop that turns that
+        // second animation off. Without it the arc grows and shrinks under a fixed-length dash.
+        disableShrink: true,
+      },
+      styleOverrides: {
+        root: {
+          color: "inherit", // blink: .root `color: inherit` - the kit's spinner takes its parent's ink
+          // blink: .ring `animation: spin 0.8s linear infinite`. MUI's own rotation is 1.4s with an
+          // eased curve.
+          animationDuration: "0.8s",
+          animationTimingFunction: "linear",
+        },
+        track: {
+          opacity: 0.2, // blink: .track `opacity: 0.2` - MUI's is `action.activatedOpacity`
+        },
+        circle: {
+          strokeLinecap: "round" as const, // blink: .head `stroke-linecap: round`
+          // Scoped to the INDETERMINATE root, and it has to be: MUI rotates the root by -90deg for
+          // the determinate variant already, so an unscoped rotation here would take a determinate
+          // ring a quarter turn past where its value says.
+          ".MuiCircularProgress-indeterminate &": {
+            // blink: Spinner draws `strokeDasharray={dash} {circumference - dash}` with
+            // `dash = circumference * 0.25`. In MUI's 44-unit viewBox at the 5.5 thickness above,
+            // r is 19.25 and the circumference 120.95 - so a quarter is 30.24. MUI's own value is
+            // `80px, 200px`, which is most of the ring.
+            strokeDasharray: "30.24 90.71",
+            strokeDashoffset: 0,
+            // blink: the kit's arc carries `transform="rotate(-90 cx cy)"`, so it starts at twelve
+            // o'clock; MUI's dash starts at three.
+            transform: "rotate(-90deg)",
+            // `transform-box: fill-box` is what makes `center` mean the circle's own centre. MUI's
+            // viewBox is `22 22 44 44` with the circle at (44, 44), so the default reference box
+            // put the origin at (22, 22) and swung the arc a quarter turn around the wrong point -
+            // 202 pixels at Δ162, all of them in the quadrant the arc had moved out of.
+            transformBox: "fill-box",
+            transformOrigin: "center",
+          },
+        },
+      },
+    },
+
     // ---- Link ----
     //
     // The kit has no Link primitive. Links are styled globally, by one rule in global.css:
