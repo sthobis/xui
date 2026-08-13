@@ -81,6 +81,18 @@ declare module "@mui/material/Button" {
   }
 }
 
+// The kit's Badge has two emphases against MUI's filled/outlined, and three sizes against two.
+// `solid` is the saturated fill (MUI's `filled` already carries the soft tint); `xs` is the 18px
+// pill. MUI's `outlined` is left unstyled on purpose - the kit ships no bordered pill.
+declare module "@mui/material/Chip" {
+  interface ChipPropsVariantOverrides {
+    solid: true
+  }
+  interface ChipPropsSizeOverrides {
+    xs: true
+  }
+}
+
 // The kit's Input has three heights (32/36/40); MUI's InputBase has two. `large` is the 40px step.
 declare module "@mui/material/InputBase" {
   interface InputBasePropsSizeOverrides {
@@ -652,6 +664,173 @@ export const blinkTheme = createTheme({
           // blink: `.circle .image { object-fit: cover }` - a circle crops, a square letterboxes.
           props: { variant: "circular" },
           style: { "& .MuiAvatar-img": { objectFit: "cover" } },
+        },
+      ],
+    },
+
+    // ---- Badge (MUI Chip) ----
+    //
+    // Ground truth: reference/primitives/Badge/Badge.module.css.
+    //
+    // A pill on two independent axes - six colours by two emphases - plus three sizes. The emphasis
+    // axis lands on MUI's `variant` (`filled` carries the kit's soft tint, a custom `solid` the
+    // saturated fill) and the colour axis on `color`, which is a clean one-to-one.
+    //
+    // The two emphases are NOT the same shape of rule. `soft` pairs a 10% tint with the AA TEXT cut
+    // of the same colour, while `solid` pairs the saturated accent with its `on-` colour. Only info
+    // breaks the pattern in soft, for the same reason it does in Alert: there is no
+    // `--color-info-text`, so its ink is the plain colour.
+    MuiChip: {
+      styleOverrides: {
+        root: {
+          gap: 4, // blink: .root `gap: var(--space-1)`
+          borderRadius: 999, // blink: .root `border-radius: 999px`
+          fontFamily: "inherit", // blink: .root `font-family: inherit`
+          fontWeight: 600, // blink: .root `font-weight: 600`
+          lineHeight: 1, // blink: .root `line-height: 1`
+          whiteSpace: "nowrap", // blink: .root `white-space: nowrap`
+          border: 0, // blink: .root `border: 0`
+          fontVariantNumeric: "tabular-nums", // blink: .root `font-variant-numeric: tabular-nums`
+          // blink: .interactive - only a Badge with an onClick becomes a button and takes these.
+          "&.MuiChip-clickable:hover": { filter: "brightness(0.96)" },
+          "&.Mui-focusVisible": {
+            outline: "none",
+          },
+        },
+        label: {
+          // blink: .label - the kit's label carries no padding of its own; the ROOT owns it, per
+          // size. MUI splits it the other way (12px on the label, none on the root), which would
+          // double every horizontal inset once the root's padding is set below.
+          paddingLeft: 0,
+          paddingRight: 0,
+          // blink: .label `display: inline-flex; align-items: center; min-width: 0`
+          display: "inline-flex",
+          alignItems: "center",
+          minWidth: 0,
+          // blink: .label sets no `overflow`, and MUI's ships `overflow: hidden` with
+          // `text-overflow: ellipsis`.
+          //
+          // That clip is not cosmetic here: the root's `line-height: 1` makes the label box exactly
+          // as tall as the font size, so every DESCENDER hangs outside it and MUI cuts them off.
+          // It showed up as 16 pixels at Δ131 in two 8-pixel runs on a single row - the bottom row
+          // of the two `g`s in "Staging" - with the reference painting ink where MUI painted
+          // background. Nothing in the computed styles disagreed: both labels measured
+          // 42.094x13.000 at the same offset, with identical text rects, because a clipped glyph
+          // still reports its full box.
+          //
+          // Dropping the ellipsis with it is correct rather than a trade-off - the kit truncates
+          // nothing, and a Badge that silently ellipsised where the design system does not would be
+          // a behaviour difference the pixel harness could never see.
+          overflow: "visible",
+          textOverflow: "clip",
+        },
+      },
+      variants: [
+        // ---- sizes: height, min-width and padding all live on the root ----
+        {
+          props: { size: "xs" },
+          style: { height: 18, minWidth: 18, padding: "0 6px", fontSize: 13 }, // blink: .xs
+        },
+        {
+          props: { size: "small" },
+          style: { height: 22, minWidth: 22, padding: "0 8px", fontSize: 13 }, // blink: .sm
+        },
+        {
+          // blink: .md - note it sets no min-width, unlike the two smaller steps.
+          props: { size: "medium" },
+          style: { height: 28, padding: "0 12px", fontSize: 14 },
+        },
+
+        // ---- soft: a 10% tint of the colour, inked with its AA text cut ----
+        {
+          props: { variant: "filled", color: "default" },
+          style: ({ theme }) => ({
+            background: theme.vars.palette.surfaceMuted, // blink: .soft.default
+            color: theme.vars.palette.textMuted,
+          }),
+        },
+        {
+          props: { variant: "filled", color: "primary" },
+          style: ({ theme }) => ({
+            // blink: .soft.primary `background: var(--color-primary-bg)`
+            background: `color-mix(in srgb, ${theme.vars.palette.primary.main} 10%, transparent)`,
+            color: theme.vars.palette.primary.main,
+          }),
+        },
+        {
+          props: { variant: "filled", color: "error" },
+          style: ({ theme }) => ({
+            background: `color-mix(in srgb, ${theme.vars.palette.error.main} 10%, transparent)`,
+            color: theme.vars.palette.errorText, // blink: .soft.error
+          }),
+        },
+        {
+          props: { variant: "filled", color: "warning" },
+          style: ({ theme }) => ({
+            background: `color-mix(in srgb, ${theme.vars.palette.warning.main} 10%, transparent)`,
+            color: theme.vars.palette.warningText, // blink: .soft.warning
+          }),
+        },
+        {
+          props: { variant: "filled", color: "success" },
+          style: ({ theme }) => ({
+            background: `color-mix(in srgb, ${theme.vars.palette.success.main} 10%, transparent)`,
+            color: theme.vars.palette.successText, // blink: .soft.success
+          }),
+        },
+        {
+          props: { variant: "filled", color: "info" },
+          style: ({ theme }) => ({
+            background: `color-mix(in srgb, ${theme.vars.palette.info.main} 10%, transparent)`,
+            // blink: .soft.info - the plain colour, there being no --color-info-text
+            color: theme.vars.palette.info.main,
+          }),
+        },
+
+        // ---- solid: the saturated accent, inked with its `on-` colour ----
+        {
+          props: { variant: "solid", color: "default" },
+          style: ({ theme }) => ({
+            // blink: .solid.default - the one solid pill whose ink is the DEFAULT text colour
+            // rather than an `on-` colour, because there is no `--color-on-subtle`.
+            background: theme.vars.palette.textSubtle,
+            color: theme.vars.palette.text.primary,
+          }),
+        },
+        {
+          props: { variant: "solid", color: "primary" },
+          style: ({ theme }) => ({
+            background: theme.vars.palette.primary.main, // blink: .solid.primary
+            color: theme.vars.palette.primary.contrastText,
+          }),
+        },
+        {
+          props: { variant: "solid", color: "error" },
+          style: ({ theme }) => ({
+            background: theme.vars.palette.error.main, // blink: .solid.error
+            color: theme.vars.palette.error.contrastText,
+          }),
+        },
+        {
+          props: { variant: "solid", color: "warning" },
+          style: ({ theme }) => ({
+            background: theme.vars.palette.warning.main, // blink: .solid.warning
+            color: theme.vars.palette.warning.contrastText,
+          }),
+        },
+        {
+          props: { variant: "solid", color: "success" },
+          style: ({ theme }) => ({
+            background: theme.vars.palette.success.main, // blink: .solid.success
+            color: theme.vars.palette.success.contrastText,
+          }),
+        },
+        {
+          props: { variant: "solid", color: "info" },
+          style: ({ theme }) => ({
+            background: theme.vars.palette.info.main, // blink: .solid.info
+            color: theme.vars.palette.info.contrastText,
+          }),
         },
       ],
     },

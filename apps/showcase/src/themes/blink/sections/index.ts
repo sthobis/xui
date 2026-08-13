@@ -1,6 +1,7 @@
 import type { Section } from "../../../gallery/types"
 import { alertSection } from "./alert"
 import { buttonSection } from "./button"
+import { badgeSection } from "./badge"
 import { avatarSection, cardSection, dividerSection } from "./card"
 import { checkboxSection, radioSection } from "./checkbox"
 import { inputSection } from "./input"
@@ -11,6 +12,7 @@ export const sections: Section[] = [
   buttonSection,
   alertSection,
   avatarSection,
+  badgeSection,
   cardSection,
   checkboxSection,
   dividerSection,
