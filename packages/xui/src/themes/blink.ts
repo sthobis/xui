@@ -1490,6 +1490,121 @@ export const blinkTheme = createTheme({
       },
     },
 
+    // ---- Table ----
+    //
+    // Ground truth: reference/primitives/Table/Table.module.css. Unlike Accordion and Tabs this
+    // primitive is plain React - a <table> and a stylesheet - so nothing here is inherited from
+    // MUI on the reference side and every value below is a transcription.
+    //
+    // The one structural thing to keep in mind: the kit puts every FONT declaration on the <table>
+    // and none on the cells, so a cell's family, size, weight, line-height and tracking are all
+    // inherited. MUI does the opposite - TableCell carries `theme.typography.body2` - so the cell
+    // block below hands those back to inheritance rather than restating them, which is what keeps
+    // the `sm` density (a font-size on the TABLE) reaching the cells at all.
+    MuiTableContainer: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          border: `1px solid ${theme.vars.palette.borderStrong}`, // blink: .container `border`
+          borderRadius: 8, // blink: .container `border-radius: var(--radius-3)`
+          overflow: "auto", // blink: .container `overflow: auto` - MUI ships overflow-x only
+          scrollbarWidth: "thin" as const, // blink: .container `scrollbar-width: thin`
+        }),
+      },
+    },
+    MuiTable: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          fontFamily: "inherit", // blink: .table `font-family: inherit`
+          fontSize: 15, // blink: .table `font-size: var(--text-md)`
+          color: theme.vars.palette.text.primary, // blink: .table `color: var(--color-text-default)`
+        }),
+      },
+      variants: [
+        // blink: `.table.sm { font-size: var(--text-sm) }`. Only the type size lives here; the
+        // matching cell padding is on MuiTableCell's own sizeSmall slot, because that is the
+        // element the kit's `.table.sm .cell` selector actually paints.
+        { props: { size: "small" }, style: { fontSize: 14 } },
+      ],
+    },
+    MuiTableCell: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          // Hand the type back to the <table>, which is where the kit states it. `font` covers
+          // family/size/weight/style/line-height in one go; letter-spacing is not part of the
+          // shorthand and MUI's body2 sets it, so it needs its own line.
+          font: "inherit",
+          letterSpacing: "inherit",
+          padding: 12, // blink: .headerCell/.cell `padding: var(--space-3)`
+          borderBottom: `1px solid ${theme.vars.palette.borderStrong}`, // blink: .cell, and `.head .headerCell`
+          color: theme.vars.palette.text.primary, // blink: .cell `color: var(--color-text-default)`
+          verticalAlign: "middle", // blink: .cell `vertical-align: middle`
+        }),
+        head: {
+          fontWeight: 600, // blink: .headerCell `font-weight: 600`
+          whiteSpace: "nowrap" as const, // blink: .headerCell `white-space: nowrap`
+        },
+        footer: ({ theme }) => ({
+          borderTop: `1px solid ${theme.vars.palette.borderStrong}`, // blink: .footer .cell `border-top`
+          borderBottom: "none", // blink: .footer .cell `border-bottom: none`
+          color: theme.vars.palette.textMuted, // blink: .footer .cell `color: var(--color-text-muted)`
+          // MUI drops a footer cell to 12px and its own line-height. The kit's footer cell is just
+          // `.cell`, so it keeps the table's type - restated because MUI's footer slot wins over
+          // the `font: inherit` on the root above.
+          fontSize: "inherit",
+          lineHeight: "inherit",
+        }),
+        // blink: `.table.sm .headerCell, .table.sm .cell { padding: var(--space-2) var(--space-3) }`
+        sizeSmall: { padding: "8px 12px" },
+      },
+    },
+    MuiTableBody: {
+      styleOverrides: {
+        root: {
+          // blink: `.body .row:last-child .cell { border-bottom: none }`. Scoped to tbody exactly as
+          // the kit scopes it - the same rule left unscoped would also strip the rule under a head
+          // whose table has no body rows, and the divider under the header is the one line a table
+          // always has.
+          "& .MuiTableRow-root:last-child .MuiTableCell-root": { borderBottom: "none" },
+        },
+      },
+    },
+    MuiTableRow: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          transition: "background-color 120ms cubic-bezier(0.165, 0.84, 0.44, 1)", // blink: .row `transition`
+          // blink: `.interactive { cursor: pointer }` + `.interactive:hover .cell { background }`.
+          //
+          // The kit infers "interactive" from the row having an `onClick`; MUI has no such
+          // inference and makes a consumer opt in with the `hover` prop, so both halves of the
+          // kit's rule hang off `.MuiTableRow-hover` here - it is the nearest thing MUI has to
+          // "this row responds to the pointer".
+          //
+          // The tint goes on the CELLS, not on the row, because that is where the kit puts it: a
+          // row background and a cell background paint the same picture only while the cells tile
+          // the row exactly, and a collapsed border makes that not quite true. MUI's own rule
+          // paints the row, so it has to be taken back off.
+          "&.MuiTableRow-hover:hover": {
+            backgroundColor: "transparent",
+            "& .MuiTableCell-root": { backgroundColor: theme.vars.palette.surfaceMuted },
+          },
+          // After the hover rule, exactly as `.rowSelected` follows `.interactive:hover` in the
+          // module: a selected row that is also hovered keeps the selected tint.
+          "&.Mui-selected, &.Mui-selected:hover": {
+            backgroundColor: "transparent",
+            "& .MuiTableCell-root": {
+              // blink: `.rowSelected .cell` -> --color-primary-bg, which tokens.css builds as
+              // `color-mix(in srgb, var(--color-primary) var(--color-tint-opacity), transparent)`
+              // at the 10% light-scheme opacity.
+              backgroundColor: `color-mix(in srgb, ${theme.vars.palette.primary.main} 10%, transparent)`,
+            },
+          },
+        }),
+      },
+      variants: [
+        { props: { hover: true }, style: { cursor: "pointer" } }, // blink: .interactive `cursor: pointer`
+      ],
+    },
+
     // ---- Link ----
     //
     // The kit has no Link primitive. Links are styled globally, by one rule in global.css:
