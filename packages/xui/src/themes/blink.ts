@@ -2072,6 +2072,100 @@ export const blinkTheme = createTheme({
       },
     },
 
+    // ---- Dialog ----
+    //
+    // Ground truth: reference/primitives/Dialog/Dialog.module.css, plus the props index.tsx pins.
+    //
+    // The kit's paper is a flex COLUMN with a 16px pad and a 12px gap, and its header, body and
+    // footer carry no padding at all - the paper owns every bit of the spacing. MUI's three slots
+    // each carry their own padding instead, so the whole of this block is: put the spacing on the
+    // paper, take it off the slots.
+    //
+    // The size ladder is remapped rather than renamed. The kit's sm/md/lg are 400/560/720 and MUI's
+    // are 600/900/1200, so `maxWidth="md"` means a different dialog under this theme - which is the
+    // point of a drop-in. `md` is also the kit's default size, hence the defaultProps below; MUI's
+    // own default is `sm`, which would come out 160px narrower than the kit's default dialog.
+    MuiDialog: {
+      defaultProps: {
+        maxWidth: "md", // blink: Dialog/index.tsx `size = "md"`
+        fullWidth: true, // blink: `.sm/.md/.lg { width: 100% }`
+      },
+      styleOverrides: {
+        paper: ({ theme }) => ({
+          background: theme.vars.palette.surface, // blink: .paper `background: var(--color-surface)`
+          borderRadius: 8, // blink: .paper `border-radius: var(--radius-3)`
+          padding: 16, // blink: .paper `padding: var(--space-4)`
+          display: "flex", // blink: .paper `display: flex`
+          flexDirection: "column" as const, // blink: .paper `flex-direction: column`
+          gap: 12, // blink: .paper `gap: var(--space-3)`
+        }),
+        paperWidthSm: { maxWidth: 400 }, // blink: .sm `max-width: 400px`
+        paperWidthMd: { maxWidth: 560 }, // blink: .md `max-width: 560px`
+        paperWidthLg: { maxWidth: 720 }, // blink: .lg `max-width: 720px`
+      },
+    },
+    MuiDialogTitle: {
+      styleOverrides: {
+        // The kit splits this across two elements - a `.header` flex row holding an `h2.title` -
+        // and MUI has one. Both sets of declarations land here, which works because the kit's title
+        // is the only in-flow child of its header when there is no close button, and because a
+        // consumer who composes an IconButton into DialogTitle gets exactly the row the kit's
+        // header lays out.
+        root: ({ theme }) => ({
+          display: "flex", // blink: .header `display: flex`
+          justifyContent: "space-between", // blink: .header `justify-content: space-between`
+          alignItems: "flex-start", // blink: .header `align-items: flex-start`
+          gap: 12, // blink: .header `gap: var(--space-3)`
+          padding: 0, // blink: neither .header nor .title has padding - the paper owns it
+          margin: 0, // blink: .title `margin: 0`
+          fontWeight: 600, // blink: .title `font-weight: 600`
+          fontSize: 18, // blink: .title `font-size: var(--text-lg)`
+          lineHeight: 1.3, // blink: .title `line-height: 1.3`
+          color: theme.vars.palette.text.primary, // blink: .title `color: var(--color-text-default)`
+        }),
+      },
+    },
+    MuiDialogContent: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          display: "flex", // blink: .body `display: flex`
+          flexDirection: "column" as const, // blink: .body `flex-direction: column`
+          gap: 12, // blink: .body `gap: var(--space-3)`
+          color: theme.vars.palette.text.primary, // blink: .body `color: var(--color-text-default)`
+          fontSize: 15, // blink: .body `font-size: var(--text-md)`
+          lineHeight: 1.5, // blink: .body `line-height: 1.5`
+          padding: 0, // blink: .body has none - MUI ships 20px/24px
+          // MUI also drops a title's neighbouring content to `padding-top: 0`, which is dead weight
+          // once the padding is gone, and it is stated at two classes - restated here so the rule
+          // above is not silently outranked for the one arrangement that matters most.
+          ".MuiDialogTitle-root + &": { paddingTop: 0 },
+        }),
+      },
+    },
+    MuiDialogContentText: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          margin: 0, // blink: .description `margin: 0`
+          color: theme.vars.palette.textMuted, // blink: .description `color: var(--color-text-muted)`
+          fontSize: 15, // blink: .description `font-size: var(--text-md)`
+          lineHeight: 1.4, // blink: .description `line-height: 1.4` - NOT the body's 1.5
+        }),
+      },
+    },
+    MuiDialogActions: {
+      styleOverrides: {
+        root: {
+          display: "flex", // blink: .footer `display: flex`
+          justifyContent: "flex-end", // blink: .footer `justify-content: flex-end`
+          gap: 8, // blink: .footer `gap: var(--space-2)`
+          padding: 0, // blink: .footer has none - MUI ships 8px
+          // MUI spaces its actions with a sibling margin rather than a gap. Left in place it would
+          // stack with the 8px gap above and put 16px between two buttons.
+          "& > :not(style) ~ :not(style)": { marginLeft: 0 },
+        },
+      },
+    },
+
     // ---- Select ----
     //
     // Ground truth: reference/primitives/Select/Select.module.css.

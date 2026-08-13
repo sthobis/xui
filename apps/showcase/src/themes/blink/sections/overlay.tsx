@@ -3,9 +3,15 @@ import MuiTooltip from "@mui/material/Tooltip"
 import MuiPopover from "@mui/material/Popover"
 import MuiMenu from "@mui/material/Menu"
 import MuiMenuItem from "@mui/material/MenuItem"
+import MuiDialog from "@mui/material/Dialog"
+import MuiDialogTitle from "@mui/material/DialogTitle"
+import MuiDialogContent from "@mui/material/DialogContent"
+import MuiDialogContentText from "@mui/material/DialogContentText"
+import MuiDialogActions from "@mui/material/DialogActions"
 import Tooltip from "../reference/primitives/Tooltip"
 import Popover from "../reference/primitives/Popover"
 import { Menu, MenuItem } from "../reference/primitives/Menu"
+import Dialog from "../reference/primitives/Dialog"
 import { RefProviders } from "../Providers"
 import type { Section } from "../../../gallery/types"
 
@@ -205,6 +211,75 @@ export const menuSection: Section = {
       roomBelow: 140,
       ref: <MenuDemo side="ref" />,
       mui: <MenuDemo side="mui" />,
+    },
+  ],
+}
+
+// ---- Dialog ----
+//
+// The kit's Dialog is a MUI Dialog whose paper is a flex column with a 16px pad and a 12px gap,
+// holding a header, a body and a footer that each carry NO padding of their own. MUI's
+// DialogTitle/DialogContent/DialogActions all carry their own, so the theme zeroes them and lets
+// the paper own the spacing - which is what makes the three MUI slots line up with the kit's three
+// divs.
+//
+// The reference cell has nowhere to put `data-portal-target`: the kit's Dialog takes a fixed prop
+// list and spreads nothing. It does forward `className` to the PAPER, though, so this pair declares
+// `openSelector` against a class passed in through that documented prop - stable by construction,
+// rather than the hashed module class beside it. The MUI side is tagged by attribute as usual; only
+// one side's overlay is ever open at a time, so the two never collide.
+//
+// SCOPE: the kit's `dismissible` close button is unpaired. It is the kit's own ghost Button with a
+// -2px/-4px nudge, composed INSIDE the header; on the MUI side a consumer composes an IconButton
+// into the DialogTitle themselves, so the button is app-level markup rather than anything a theme
+// puts there. The header's flex layout - which is what positions such a button - is themed and is
+// exercised by this pair.
+
+const DIALOG_CLASS = "blink-dialog-open"
+
+function DialogDemo({ side }: { side: "ref" | "mui" }) {
+  const { open, close, trigger } = useClickOpen()
+  const title = "Drop the rollup?"
+  const description = "Rows older than ninety days are removed. This cannot be undone."
+  return side === "ref" ? (
+    <RefProviders>
+      {trigger("Open")}
+      <Dialog
+        open={open}
+        onClose={close}
+        dismissible={false}
+        title={title}
+        description={description}
+        className={DIALOG_CLASS}
+        actions={<span style={triggerStyle}>Cancel</span>}
+      />
+    </RefProviders>
+  ) : (
+    <>
+      {trigger("Open")}
+      <MuiDialog open={open} onClose={close} slotProps={{ paper: portalTarget("dialog-open") }}>
+        <MuiDialogTitle>{title}</MuiDialogTitle>
+        <MuiDialogContent>
+          <MuiDialogContentText>{description}</MuiDialogContentText>
+        </MuiDialogContent>
+        <MuiDialogActions>
+          <span style={triggerStyle}>Cancel</span>
+        </MuiDialogActions>
+      </MuiDialog>
+    </>
+  )
+}
+
+export const dialogSection: Section = {
+  title: "Dialog",
+  pairs: [
+    {
+      id: "dialog-open",
+      states: ["open"],
+      behaviors: ["overlay-matches", "escape-closes"],
+      openSelector: `.${DIALOG_CLASS}`,
+      ref: <DialogDemo side="ref" />,
+      mui: <DialogDemo side="mui" />,
     },
   ],
 }
