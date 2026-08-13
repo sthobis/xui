@@ -1315,6 +1315,83 @@ export const blinkTheme = createTheme({
       ],
     },
 
+    // ---- Tabs ----
+    //
+    // Ground truth: reference/primitives/Tabs/Tabs.module.css.
+    //
+    // A special case worth naming: the kit's Tabs primitive is not a re-implementation, it IS
+    // MUI's Tabs with a CSS module attached to the `root`, `indicator` and `selected` slots. So
+    // this block is a transcription of that module and nothing else - every property the module
+    // leaves alone (the 360px maxWidth, the centred label, the scroller's flex layout) is already
+    // identical on both sides and must NOT be restated here, or the theme starts asserting values
+    // it never extracted.
+    MuiTabs: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          minHeight: 40, // blink: .tabs `min-height: 40px` (MUI's own is 48)
+          borderBottom: `1px solid ${theme.vars.palette.borderStrong}`, // blink: .tabs `border-bottom`
+        }),
+        indicator: ({ theme }) => ({
+          // The background is already primary.main by MUI's default and the height already 2px;
+          // both are restated because the module states them, and a later palette change should
+          // not be able to silently move the indicator off the token the kit names.
+          background: theme.vars.palette.primary.main, // blink: .indicator `background: var(--color-primary)`
+          height: 2, // blink: .indicator `height: 2px`
+          // Held by reading, not by the pixel diff: a 1px radius on a 2px-tall bar lands entirely
+          // inside pixels pixelmatch classifies as antialiasing, and `includeAA` is off by design
+          // (see e2e/lib/compare.ts). Removing this line measured 0 differing pixels. Sabotage-test
+          // this block with the padding or the colour instead.
+          borderRadius: "1px 1px 0 0", // blink: .indicator `border-radius: 1px 1px 0 0`
+        }),
+      },
+    },
+    MuiTab: {
+      defaultProps: {
+        // blink: Tabs/index.tsx passes `disableRipple` to every MuiTab it renders.
+        disableRipple: true,
+      },
+      styleOverrides: {
+        root: ({ theme }) => ({
+          minHeight: 40, // blink: .tab `min-height: 40px`
+          padding: "8px 16px", // blink: .tab `padding: var(--space-2) var(--space-4)`
+          // A <button> does not inherit font-family, and MUI hands Tab `theme.typography.button`,
+          // so this is what puts the page's face on the label - same as the Button block above.
+          fontFamily: "inherit", // blink: .tab `font-family: inherit`
+          fontSize: 14, // blink: .tab `font-size: var(--text-sm)`
+          fontWeight: 600, // blink: .tab `font-weight: 600`
+          lineHeight: 1.4, // blink: .tab `line-height: 1.4` (MUI's own is 1.25)
+          color: theme.vars.palette.textMuted, // blink: .tab `color: var(--color-text-muted)`
+          textTransform: "none" as const, // blink: .tab `text-transform: none`
+          letterSpacing: "normal", // blink: .tab `letter-spacing: normal`
+          minWidth: 0, // blink: .tab `min-width: 0` - MUI's breakpoint-guarded 90px floor has to go
+          transition: "color 120ms cubic-bezier(0.165, 0.84, 0.44, 1)", // blink: .tab `transition`
+          "&:hover": {
+            color: theme.vars.palette.text.primary, // blink: .tab:hover
+          },
+          // After `&:hover` on purpose. The module writes `color: ... !important` here because a
+          // CSS module cannot rely on its own source order against MUI's emotion output; inside one
+          // styleOverrides object the two rules have equal specificity, so ordering does the same
+          // job and a hovered selected tab stays brand-coloured on both sides.
+          "&.Mui-selected": {
+            color: theme.vars.palette.primary.main, // blink: .tabSelected `color: var(--color-primary)`
+            fontWeight: 600, // blink: .tabSelected `font-weight: 600`
+          },
+          "&:focus-visible": {
+            outline: "none", // blink: .tab:focus-visible `outline: none`
+            // blink: tokens.css --focus-ring
+            boxShadow: `color-mix(in srgb, ${theme.vars.palette.primary.main} 50%, transparent) 0px 0px 0px 4px`,
+            borderRadius: 6, // blink: .tab:focus-visible `border-radius: var(--radius-2)`
+          },
+          "&.Mui-disabled": {
+            color: theme.vars.palette.textSubtle, // blink: .tab.Mui-disabled `color: var(--color-text-subtle)`
+            // MUI fades a disabled tab to 0.38; the kit states the colour outright, so the opacity
+            // has to go or the token is diluted.
+            opacity: 1, // blink: .tab.Mui-disabled `opacity: 1`
+          },
+        }),
+      },
+    },
+
     // ---- Link ----
     //
     // The kit has no Link primitive. Links are styled globally, by one rule in global.css:

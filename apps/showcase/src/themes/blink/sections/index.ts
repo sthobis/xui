@@ -7,6 +7,7 @@ import { checkboxSection, radioSection } from "./checkbox"
 import { inputSection } from "./input"
 import { linkSection } from "./link"
 import { switchSection } from "./switch"
+import { tabsSection } from "./tabs"
 
 export const sections: Section[] = [
   buttonSection,
@@ -18,6 +19,7 @@ export const sections: Section[] = [
   dividerSection,
   radioSection,
   switchSection,
+  tabsSection,
   inputSection,
   linkSection,
 ]
