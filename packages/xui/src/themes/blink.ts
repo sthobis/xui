@@ -615,6 +615,100 @@ export const blinkTheme = createTheme({
       },
     },
 
+    // ---- Switch ----
+    //
+    // Ground truth: reference/primitives/Switch/Switch.module.css.
+    //
+    // The kit paints two shapes on one native input: the 36x20 track is the element's own
+    // background, and the 18x18 knob is a ::after that translates 16px when checked. MUI has four
+    // elements for the same picture - root > switchBase > thumb, with track as a sibling - so each
+    // kit declaration is aimed at whichever MUI slot paints it, and all of MUI's own padding goes.
+    MuiSwitch: {
+      defaultProps: { disableRipple: true },
+      styleOverrides: {
+        root: {
+          width: 36, // blink: .root `width: 36px`
+          height: 20, // blink: .root `height: 20px`
+          padding: 0, // MUI reserves 12px around the track for the ripple; the kit has none
+          flex: "none", // blink: .root `flex: none`
+          overflow: "visible", // the focus ring is a box-shadow on the track and must not clip
+          // blink: .root:disabled `opacity: 0.5`.
+          //
+          // On the ROOT, via :has, because the kit's rule dims the ENTIRE control - track and knob
+          // together - while MUI puts `.Mui-disabled` on the inner switchBase and has no disabled
+          // class on the root at all. Dimming the slots individually is not the same picture: the
+          // knob overlaps the track, so two half-transparent shapes composite differently from one
+          // half-transparent control (measured 2571 differing pixels).
+          "&:has(.Mui-disabled)": { opacity: 0.5 },
+        },
+        switchBase: ({ theme }) => ({
+          // blink: .root::after `top: 1px; left: 1px` - the knob's inset is MUI's switchBase
+          // padding, since the thumb is centred inside it.
+          padding: 1,
+          color: "transparent", // MUI tints the thumb through `color`; the kit's knob is fixed #fff
+          "&:hover": {
+            // MUI paints a circular action-hover behind the thumb. The kit changes the TRACK on
+            // hover and nothing else.
+            backgroundColor: "transparent",
+          },
+          "& .MuiTouchRipple-root": { display: "none" }, // same trap as Radio, see that block
+          "&.Mui-checked": {
+            transform: "translateX(16px)", // blink: .root:checked::after `translateX(16px)`
+            color: "transparent",
+            "& + .MuiSwitch-track": {
+              background: theme.vars.palette.primary.main, // blink: .root:checked `background: var(--color-primary)`
+              opacity: 1,
+            },
+            "&:hover": {
+              backgroundColor: "transparent",
+              "& + .MuiSwitch-track": {
+                background: theme.vars.palette.primary.dark, // blink: .root:checked:hover:not(:disabled)
+              },
+            },
+          },
+          // blink: .root:focus-visible - `outline: none` plus the ring. It goes on the TRACK
+          // because that is the 36x20 rounded box the kit draws the ring around; switchBase is only
+          // the 20x20 knob carrier.
+          "&.Mui-focusVisible + .MuiSwitch-track": {
+            boxShadow: `color-mix(in srgb, ${theme.vars.palette.primary.main} 50%, transparent) 0px 0px 0px 4px`,
+          },
+          "&.Mui-disabled": {
+            // blink: .root:disabled `opacity: 0.5`, applied to the whole control. MUI would
+            // otherwise grey the thumb and drop the track to its own disabled opacity.
+            "& + .MuiSwitch-track": { opacity: 1 },
+            "& .MuiSwitch-thumb": { opacity: 1 },
+          },
+        }),
+        thumb: {
+          width: 18, // blink: .root::after `width: 18px`
+          height: 18, // blink: .root::after `height: 18px`
+          background: "#fff", // blink: .root::after - a literal in the kit, not a token, on purpose
+          boxShadow: "0 1px 3px rgba(0, 0, 0, 0.18)", // blink: .root::after `box-shadow`
+        },
+        track: ({ theme }) => ({
+          borderRadius: 999, // blink: .root `border-radius: 999px`
+          background: theme.vars.palette.textSubtle, // blink: .root `background: var(--color-text-subtle)`
+          // MUI ships the track at 38% so its grey reads as "off"; the kit states the colour
+          // outright, so the opacity has to go or the token is diluted.
+          opacity: 1,
+          transition:
+            "background-color 150ms cubic-bezier(0.165, 0.84, 0.44, 1), box-shadow 120ms cubic-bezier(0.165, 0.84, 0.44, 1)", // blink: .root
+        }),
+      },
+      variants: [
+        {
+          // blink: .root:hover:not(:disabled):not(:checked) `background: var(--color-text-muted)`.
+          // A variant rather than a `&:hover` inside `track`, because the hover happens on the ROOT
+          // while the colour lands on the track, and the kit's rule excludes the checked case.
+          props: {},
+          style: ({ theme }) => ({
+            "&:hover .MuiSwitch-switchBase:not(.Mui-checked):not(.Mui-disabled) + .MuiSwitch-track":
+              { background: theme.vars.palette.textMuted },
+          }),
+        },
+      ],
+    },
+
     // ---- Input ----
     //
     // Ground truth: reference/primitives/Input/Input.module.css.

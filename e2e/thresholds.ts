@@ -107,9 +107,31 @@ const maxPixelOverrides: Record<ThemeName, Record<string, number>> = {
     // It shows in dark and not light because the corner sits against a much darker canvas there.
     "switch-checked": 200,
   },
-  // blink: no allowances. Every pair is expected to hold the defaults; an entry here needs the
-  // same written proof the two above carry.
-  blink: {},
+  blink: {
+    // switch-disabled: a GROUP-OPACITY rounding artifact, judged on channel error instead.
+    //
+    // The kit dims a disabled switch with `opacity: 0.5` on the input - one element that owns both
+    // paints, its background being the track and its ::after the knob. MUI has no single such
+    // element: the track and the thumb are siblings under the root, so the same 0.5 has to go on
+    // the ROOT. Both are "render the group, then dim it", but the two layers are built by different
+    // elements and Chrome lands the composite one level apart.
+    //
+    // The proof it is rounding and not a colour or geometry error:
+    //   - the delta histogram is {1: 564, 2: 5, 3: 3, 4: 2, 7: 3} - 98% of differing pixels are off
+    //     by exactly 1/255, and the handful above that are corner antialiasing
+    //   - the dominant bucket is a single pair of values, ref(209,210,214) vs mui(208,210,213),
+    //     repeated 474 times: the same colour, rounded differently, not a different colour
+    //   - the CHECKED twin (switch-disabled-on) sits at 16px on the same recipe, so the treatment
+    //     itself is right
+    //
+    // The alternative was measured and is worse: dimming the track and thumb individually instead
+    // of the root scores 2571 pixels, because the knob overlaps the track and two half-transparent
+    // shapes composite differently from one half-transparent control.
+    //
+    // Only the COUNT is relaxed. The delta cap stays at the default 40, which a real regression
+    // trips instantly - every defect this suite has caught moved a channel by 18 or more.
+    "switch-disabled": 640,
+  },
 }
 
 // Per-pair(+state) channel-error allowances. Use this when a residual is provably NOT misplaced
