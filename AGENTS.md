@@ -8,6 +8,9 @@ Two themes ship today:
 - **shadcn** - shadcn/ui's default look (new-york style, neutral base, Geist, light and dark). Complete.
 - **kumo** - Kumo, Cloudflare's design system (https://kumo-ui.com), Inter, light and dark. Complete, including the portalled tier (Tooltip, DropdownMenu, Select, Popover, Dialog, Toast).
 
+Both cover the same MUI surface - every `Mui*` key one themes, the other themes too.
+Kumo reaches part of that surface through the derived tier described below, because Kumo ships fewer components than MUI does; that tier is marked in the theme file and is held to a different standard.
+
 Everything below applies to both. Where they differ, the theme name is called out.
 
 ## Layout
@@ -42,8 +45,24 @@ Copying a value from a different component ("Button had this, so Input probably 
 Radius, padding, colors, and icon sizes differ per component.
 
 Every value carries a provenance comment naming where it came from - `// shadcn: <class-or-source>` or `// kumo: <class-or-token>`.
-If a value has no ground-truth backing, it does not ship, even if MUI exposes that API surface.
 Ship only what a gallery pair actually covers - and if a component cannot be paired, say so where the sections are registered rather than theming it blind.
+
+That rule governs everything ABOVE the derived-tier banner in a theme file, which is where every pixel claim is made.
+There is exactly one sanctioned exception below it, and it is a different KIND of work rather than a relaxation of this one.
+
+**The derived tier - components MUI ships and the design system does not.**
+MUI's surface is wider than either system's: shadcn has no Slider or Rating, kumo has no Avatar, Skeleton or Stepper.
+Left unthemed those render as stock Material - a blue, Roboto-metric control beside the themed ones - which for a drop-in theme is worse than an imperfect derivation.
+So they are built from the system's own TOKENS and from the geometry its real components use, below a banner in the theme file that says exactly where extraction stops, and every value still names the token it came from.
+
+What that does NOT buy is a pixel guarantee, and the harness enforces the weaker claim rather than trusting anyone to remember it:
+
+- A derived pair omits `ref` (see `Pair.ref`). `PairRow` then publishes `data-states=""` whatever the pair declares, so the pixel suite structurally cannot be asked to diff something with no reference.
+- No `[data-side="ref"]` cell is rendered, so the gallery-wide behavior sweeps skip the missing side on their own.
+- preflight still covers it in full - it compares the MUI cell with and without Tailwind, which needs no reference, and that is the check that catches a derived block leaning on Tailwind's reset. It has already caught one (BottomNavigation, twice over).
+
+Treat a value there as a considered choice, not as ground truth.
+If the system ever ships the real component, re-extract it and move the block above the line.
 
 **And a source file is only EVIDENCE about the ground truth; what paints is the ground truth.**
 That distinction is not pedantic - it has cost real time twice on the kumo theme:
