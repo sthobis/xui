@@ -1490,6 +1490,118 @@ export const blinkTheme = createTheme({
       },
     },
 
+    // ---- ButtonGroup ----
+    //
+    // Ground truth: reference/primitives/ButtonGroup/ButtonGroup.module.css, which is the whole of
+    // the kit's group - four rules and no variants:
+    //
+    //     .group                   { display: inline-flex; align-items: stretch }
+    //     .group > :not(:last-child)  { square the right corners }
+    //     .group > :not(:first-child) { margin-left: -1px; square the left corners }
+    //     .group > :hover, :focus-visible, :focus-within { z-index: 1 }
+    //
+    // The corner squashing MUI already does the same way. The SEAM it does not, and it builds it
+    // differently for every variant: `outlined` overlaps by a pixel but paints the left button's
+    // right border transparent, while `contained` and `text` inject a divider border and do not
+    // overlap at all. The kit overlaps in every case and keeps both borders painted - two opaque
+    // borders of the same colour on one pixel column, which composites to that colour.
+    //
+    // So the rules below are variant-blind where the kit is (the overlap, the z-index lift) and
+    // variant-scoped only where MUI put something there that has to come back off.
+    MuiButtonGroup: {
+      defaultProps: {
+        // The same trap as Checkbox, Radio and Switch, and it caught this block: ButtonGroup
+        // resolves its OWN `disableRipple` default and forwards it to every child through
+        // ButtonGroupButtonContext, so the `disableRipple` on MuiButton above never reaches a
+        // GROUPED button. Found by the `no ripple` sweep - all nine grouped buttons in the gallery
+        // mounted a ripple on press while every ungrouped one did not.
+        disableRipple: true, // blink: Button/index.tsx `disableRipple`, via the group's own default
+      },
+      styleOverrides: {
+        root: {
+          alignItems: "stretch", // blink: .group `align-items: stretch`
+          // MUI rounds the GROUP itself to `shape.borderRadius`. The kit's `.group` states no
+          // radius, so it is the initial 0 and the corners belong entirely to the end buttons.
+          borderRadius: 0,
+          // MUI floors a GROUPED button at 40px wide, on top of whatever floor the button's own
+          // size already sets - so inside a group an `xs`, `sm` or `md` button stops being 24, 32
+          // or 36. The kit's group states no min-width at all and leaves the button's size class to
+          // own it, so the ladder is restated here to put that back. It is a duplicate of the
+          // Button size variants above by necessity: MUI's rule is a descendant selector and beats
+          // the button's own class, so there is no value that means "whatever the size set".
+          "& .MuiButtonGroup-grouped": {
+            minWidth: 36, // blink: .md `min-width: var(--control-h-md)`
+            "&.MuiButton-sizeXs": { minWidth: 24 }, // blink: .xs
+            "&.MuiButton-sizeSmall": { minWidth: 32 }, // blink: .sm
+            "&.MuiButton-sizeLarge": { minWidth: 40 }, // blink: .lg
+          },
+        },
+      },
+      variants: [
+        {
+          // blink: `.group > :hover, :focus-visible, :focus-within { z-index: 1 }`. The kit's
+          // Button is `position: relative` (see the Button root above), so a z-index takes effect
+          // and the active segment's border and focus ring draw over its neighbour's.
+          props: { orientation: "horizontal" as const },
+          style: {
+            "& .MuiButtonGroup-grouped": {
+              "&:hover, &:focus-visible, &:focus-within": { zIndex: 1 },
+            },
+            // blink: `.group > :not(:first-child) { margin-left: -1px }`, applied whatever the
+            // variant. MUI only overlaps `outlined`.
+            "& .MuiButtonGroup-lastButton, & .MuiButtonGroup-middleButton": { marginLeft: "-1px" },
+          },
+        },
+        {
+          props: { orientation: "horizontal" as const, variant: "outlined" as const },
+          style: ({ theme }) => ({
+            // MUI hides the left button's right border and brings it back on hover, so a seam is
+            // one painted line that moves between the two buttons. The kit paints both, always.
+            "& .MuiButtonGroup-firstButton, & .MuiButtonGroup-middleButton": {
+              borderRightColor: theme.vars.palette.borderStrong, // blink: .secondary `border: 1px solid var(--color-border-strong)`
+              "&:hover": { borderRightColor: theme.vars.palette.borderStrong },
+            },
+          }),
+        },
+        {
+          props: { orientation: "horizontal" as const, variant: "contained" as const },
+          style: ({ theme }) => ({
+            // MUI puts an elevation-2 shadow around a CONTAINED group as a whole - separate from
+            // the per-button shadow the Button block already kills - and the kit's group has none.
+            // Measured before this line: 6366 differing pixels at Δ84, a halo around the strip.
+            boxShadow: "none",
+            // MUI draws a `grey[400]` divider down the right edge of every button but the last,
+            // and then - in a SEPARATE per-colour variant - recolours that button's whole border to
+            // `primary.dark`. So this is `borderColor`, not `borderRight`: fixing only the right
+            // edge left the top, bottom and left ones at #4f5589 against the kit's #5a63b0, which
+            // measured 1088 pixels at Δ39 - under the delta cap and caught by the count.
+            //
+            // The kit has no divider at all: the button keeps its own 1px brand border and the
+            // overlap above does the rest.
+            "& .MuiButtonGroup-firstButton, & .MuiButtonGroup-middleButton": {
+              borderColor: theme.vars.palette.primary.main, // blink: .primary `border: 1px solid var(--color-primary)`
+              // Restated, because the rule above is a descendant selector and outranks the
+              // button's own hover rule - which would otherwise leave a hovered middle button
+              // still wearing the resting border. 769 pixels at Δ39 before this line.
+              "&:hover": { borderColor: theme.vars.palette.primary.dark }, // blink: .primary:hover `border-color: var(--color-primary-hover)`
+              "&.Mui-disabled": { borderColor: theme.vars.palette.primary.main },
+            },
+          }),
+        },
+        {
+          props: { orientation: "horizontal" as const, variant: "text" as const },
+          style: {
+            // Same story as `contained`: MUI injects a 23%-black divider, the kit's ghost button
+            // carries `border: 1px solid transparent` and shows no seam at all.
+            "& .MuiButtonGroup-firstButton, & .MuiButtonGroup-middleButton": {
+              borderRight: "1px solid transparent", // blink: .ghost `border: 1px solid transparent`
+              "&.Mui-disabled": { borderRight: "1px solid transparent" },
+            },
+          },
+        },
+      ],
+    },
+
     // ---- Table ----
     //
     // Ground truth: reference/primitives/Table/Table.module.css. Unlike Accordion and Tabs this
