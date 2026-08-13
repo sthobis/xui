@@ -2,10 +2,11 @@
 
 Material UI v9 themes that make MUI components look pixel-for-pixel identical to another design system.
 
-Two themes ship today, both verified in light and dark by the same pixel-parity harness:
+Three themes ship today, each verified by the same pixel-parity harness:
 
-- **`shadcnTheme`** replicates shadcn/ui's default look (new-york style, neutral base, Geist). Complete.
-- **`kumoTheme`** replicates [Kumo](https://kumo-ui.com), Cloudflare's design system (Inter). Complete: Button, Text, Label, Link, Input, InputArea, Field, Checkbox, Radio, Switch, Badge, Banner, Meter, LayerCard, Tabs, Collapsible, Table, Breadcrumbs, Toolbar, InputGroup, and the whole portalled tier - Tooltip, DropdownMenu, Select, Popover, Dialog and Toast, arrows and backdrops and all.
+- **`shadcnTheme`** replicates shadcn/ui's default look (new-york style, neutral base, Geist). Complete, light and dark.
+- **`kumoTheme`** replicates [Kumo](https://kumo-ui.com), Cloudflare's design system (Inter). Complete, light and dark: Button, Text, Label, Link, Input, InputArea, Field, Checkbox, Radio, Switch, Badge, Banner, Meter, LayerCard, Tabs, Collapsible, Table, Breadcrumbs, Toolbar, InputGroup, and the whole portalled tier - Tooltip, DropdownMenu, Select, Popover, Dialog and Toast, arrows and backdrops and all.
+- **`blinkTheme`** replicates the Pulse Kit, the design system of Pulse / NeverBlink (Source Sans Pro). **Light only so far** - the kit ships a dark scheme and the theme is written in the shape that makes adding it a one-line change, but it is not covered yet, so there is deliberately no `blink-dark` project in the harness. Covered: Button, ButtonGroup, Link, Input, Select, Checkbox, Radio, Switch, ToggleGroup, Alert, Card, Divider, Avatar, Badge, Table, Tabs, Accordion, and the portalled tier - Tooltip, Popover, Menu and Dialog. Still to do: Spinner / ProgressRing, and the FormField / Textarea pairing (see below).
 
 Dark mode follows each design system's own convention, so a theme is a drop-in: shadcn uses a `.dark` class on `<html>`, kumo uses `data-mode="dark"`. Either way MUI's `useColorScheme()` drives it.
 
@@ -194,3 +195,26 @@ The first table is the only one worth picking work from.
 Anything unchecked in either section still renders.
 It just renders in MUI's default look rather than the shadcn look, which is a cosmetic gap and never a broken component.
 The showcase is the source of truth for exactly what is covered today.
+
+### blink's own open surfaces
+
+The two tables above are shadcn's. blink is younger and its gaps are its own, so they are listed here rather than folded in - an entry in one theme's table says nothing about the other's.
+
+#### Not covered yet
+
+| Component | Covered | Still to do |
+| --- | --- | --- |
+| Spinner / ProgressRing | Nothing yet | `MuiCircularProgress`. The kit's Spinner is an SVG track plus a fixed 25% arc rotating at 0.8s linear, where MUI's indeterminate arc grows and shrinks - so the drop-in is a real change to how MUI animates, not a colour. The kit's `xs` also floors its stroke at an absolute 2px, which MUI's proportional `thickness` cannot express |
+| Textarea / FormField | Nothing yet | Reverted once already: MUI puts `box-sizing: content-box` on an input, which fights the vertical padding the kit's textarea needs. Needs a diagnosis before a second attempt |
+
+#### Not the theme's to close
+
+| Surface | Why it stays open |
+| --- | --- |
+| The Menu item's focus-visible highlight | The kit's stylesheet asks for `--color-surface-muted` there and the rule does not compile - the selector is written bare, so CSS Modules hashes `Mui-focusVisible` as a local class. What the kit paints is MUI's own `action.focus`, and that is what the theme reproduces. If the kit adds the `:global()`, the state comes back |
+| The 150ms pop transition on Popover, Menu and Dialog | The kit passes it through `slots` as a react-transition-group component. The theme's contract is that it imports only `@mui/material`, `lucide-react` and React, so a component cannot ship in it. The settled overlay is identical; an app that wants the entrance passes the same prop the kit does |
+| ToggleGroup's focus ring | The kit runs a roving tabindex over its pills and MUI leaves every ToggleButton tabbable. That is a behaviour difference in the kit's favour and MUI's ToggleButtonGroup has no roving mode to switch on |
+| The Table's sortable header | The kit draws three different icons for ascending, descending and idle; MUI's TableSortLabel rotates and fades ONE `IconComponent`, so no single icon can produce the kit's three states |
+| Dialog's close button | The kit composes its own ghost Button into the header with a -2px/-4px nudge. On the MUI side that is an IconButton a consumer writes into `DialogTitle` - app markup, not theme. The header row that positions it IS themed and is covered |
+| Select's `placeholder` | It renders a hidden disabled `<option>`; MUI's native Select has no placeholder concept, so a consumer writes that option themselves |
+| Dark mode | The kit ships a dark scheme and the theme's palette is a factory over a token set precisely so adding it is a one-line change. It is simply not done yet, and the harness has no `blink-dark` project so that a future one cannot silently run in light and pass |
