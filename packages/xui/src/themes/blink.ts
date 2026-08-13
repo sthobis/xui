@@ -191,6 +191,16 @@ const palette = (c: typeof color) => ({
   tooltipText: c.tooltipText,
 })
 
+/**
+ * The Select's chevron, as a stable component identity.
+ *
+ * MUI hands `IconComponent` a className and nothing else, so the kit's `size={16}` has to be bound
+ * here. Declared once at module scope rather than inline in `defaultProps`: an inline arrow is a
+ * new component type on every render, which remounts the icon each time.
+ */
+const SelectChevron = (props: { className?: string }) =>
+  createElement(ChevronDownIcon, { size: 16, ...props }) // blink: Select/index.tsx
+
 export const blinkTheme = createTheme({
   cssVariables: true,
   colorSchemes: { light: { palette: palette(color) } },
@@ -1268,6 +1278,12 @@ export const blinkTheme = createTheme({
           // blink: .root `transition: border-color 120ms var(--ease-out), box-shadow 120ms ...`
           transition: "border-color 120ms cubic-bezier(0.165, 0.84, 0.44, 1), box-shadow 120ms cubic-bezier(0.165, 0.84, 0.44, 1)",
           cursor: "text", // blink: .root `cursor: text`
+          // ...except when the control is a native SELECT, where the kit's own wrapper says
+          // `cursor: pointer` (Select.module.css `.root`). Scoped with `:has()` rather than left to
+          // the select element itself, because the kit puts the pointer on the whole control -
+          // padding and chevron included - and the select does not cover those. Invisible to the
+          // pixel harness, which captures no cursor; here because it is part of the transcription.
+          "&:has(select)": { cursor: "pointer" },
           "& .MuiOutlinedInput-notchedOutline": {
             borderColor: theme.vars.palette.borderStrong, // blink: .root `border: 1px solid var(--color-border-strong)`
             borderWidth: 1,
@@ -1933,6 +1949,87 @@ export const blinkTheme = createTheme({
       variants: [
         { props: { hover: true }, style: { cursor: "pointer" } }, // blink: .interactive `cursor: pointer`
       ],
+    },
+
+    // ---- Select ----
+    //
+    // Ground truth: reference/primitives/Select/Select.module.css.
+    //
+    // The kit's Select is a NATIVE <select> with `appearance: none`, wrapped in a div that carries
+    // the same chrome as its Input, with a chevron absolutely positioned over the right edge. There
+    // is no portalled listbox in it at all - the options are the operating system's.
+    //
+    // That means MUI's `<Select native>`, and it means most of this component is already themed:
+    // `.root` and `.root:hover/.error/.disabled/:has(.select:focus)` are byte-for-byte the Input's
+    // rules over the same tokens, and MuiOutlinedInput above carries them. Only what is genuinely
+    // the SELECT's own is below.
+    // Both keys, and both are needed. `<Select native>` resolves `IconComponent` against ITS own
+    // name (MuiSelect) and hands the result down, so a default on MuiNativeSelect alone never
+    // reaches it - measured, the chevron stayed MUI's 24px arrow. MuiNativeSelect covers a bare
+    // <NativeSelect>. The non-native Select gets the same chevron: the kit ships no listbox of its
+    // own, so its native control is the only ground truth there is for that icon.
+    MuiSelect: {
+      defaultProps: { IconComponent: SelectChevron },
+    },
+    MuiNativeSelect: {
+      defaultProps: {
+        // blink: Select/index.tsx `<ChevronDownIcon size={16} />`. MUI's own is a filled Material
+        // arrow at 24px. Defined at module scope rather than inline so the component identity is
+        // stable across renders.
+        IconComponent: SelectChevron,
+      },
+      styleOverrides: {
+        select: ({ theme }) => ({
+          // blink: `.select:disabled`. Doubled to three classes on purpose. The OutlinedInput block
+          // above already states this for `.MuiOutlinedInput-input:disabled` and it wins for a real
+          // <input>, but a native select is styled by TWO stacks at once - InputBase's
+          // `.MuiInputBase-input.Mui-disabled` and NativeSelect's own - and InputBase's
+          // `-webkit-text-fill-color: action.disabled` came out on top, painting the label at 38%
+          // black instead of the subtle token. Measured: 492 differing pixels over the label.
+          "&&.Mui-disabled": {
+            color: theme.vars.palette.textSubtle,
+            WebkitTextFillColor: theme.vars.palette.textSubtle,
+            cursor: "not-allowed", // blink: .select:disabled - MUI's own is `cursor: default`
+            // The kit's `.select:disabled` states a colour and a cursor and NOTHING else, so the
+            // browser's own dimming of a disabled <select> stands - Chrome renders it at 0.7. MUI
+            // resets that to 1 (its comment says for iOS), which made the label a visibly denser
+            // grey: 492 differing pixels across the text, and the reason the colour above looked
+            // right in the computed styles while the capture disagreed.
+            //
+            // `revert` rather than the literal 0.7: it hands the value back to the USER-AGENT
+            // origin, which is where the kit gets it from too, so the theme reproduces the kit on
+            // whatever browser it runs on rather than freezing one browser's number.
+            opacity: "revert",
+          },
+          // blink: .select carries no radius - MUI rounds an outlined select to `shape.borderRadius`
+          // and resets it again on focus. Nothing paints there either way (the element is
+          // transparent and borderless), but the kit's value is 0 and this is cheaper than a reader
+          // wondering which of the two is deliberate.
+          borderRadius: 0,
+          "&:focus": { borderRadius: 0 },
+          // blink: .select `padding: 0 var(--space-6) 0 0`. MUI reserves 32px for an outlined
+          // select and states it at `&&&`, three classes of specificity, expressly so a custom
+          // input cannot accidentally undo it - so undoing it deliberately has to match.
+          "&&&": { paddingRight: 24 },
+        }),
+        icon: ({ theme }) => ({
+          // blink: .chevron `right: var(--space-3)` (12px) PLUS the 1px the kit's own border
+          // occupies, for exactly the reason the OutlinedInput's `padding: 0 13px` carries the same
+          // extra pixel: `right` resolves against the PADDING box, and the kit's root has a real
+          // border there while MUI's outline is an absolutely positioned fieldset that occupies no
+          // space. Measured at 12: the chevron sat one pixel too far out, 37 differing pixels.
+          right: 13,
+          // blink: .chevron `top: 50%; transform: translateY(-50%)`. MUI centres the icon on the
+          // TEXT instead (`top: calc(50% - .5em)`, half a 15px em against this icon's 16px box),
+          // which puts it half a pixel high.
+          top: "50%",
+          transform: "translateY(-50%)",
+          color: theme.vars.palette.textMuted, // blink: .chevron `color: var(--color-text-muted)`
+          "&.Mui-disabled": {
+            color: theme.vars.palette.textSubtle, // blink: `.root.disabled .chevron`
+          },
+        }),
+      },
     },
 
     // ---- Link ----

@@ -786,6 +786,18 @@ test.describe("painted geometry", () => {
       "input-placeholder",
       "input-error",
       "input-disabled",
+
+      // The Select family is the SAME construction as the Input family above, for the same reason:
+      // the kit's Select is a native <select> inside a bordered wrapper div, and MUI's
+      // `<Select native>` is a native <select> inside an OutlinedInput - so MUI again shows the
+      // notched-outline fieldset as a second painted box, 5px taller than the control. The theme
+      // pays for the kit's border out of the padding here too, and additionally out of the
+      // chevron's `right` (12px becomes 13px), which is what keeps the ink identical: every select
+      // pair diffs at 0 or 1 px.
+      "select-md",
+      "select-error",
+      "select-disabled",
+      "select-sm",
     ]),
   }
 
