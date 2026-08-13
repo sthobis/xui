@@ -2903,6 +2903,122 @@ export const blinkTheme = createTheme({
       },
     },
 
+    // The rest of the derived surface: the slots that go with the blocks above, plus the two input
+    // shapes the kit does not have.
+    MuiTypography: {
+      styleOverrides: {
+        // The type SCALE lives in `typography` above, where it belongs - these are the two spacing
+        // props MUI puts on the component, at the kit's own steps.
+        gutterBottom: { marginBottom: 8 }, // --space-2
+      },
+    },
+    MuiBadge: {
+      styleOverrides: {
+        // NOT the kit's Badge - that is a standalone pill and is already themed as MuiChip. This is
+        // MUI's corner dot/count, which the kit has no equivalent of at all.
+        badge: ({ theme }) => ({
+          fontSize: 13, // --text-xs
+          fontWeight: 600, // the kit's control weight
+          fontFamily: "inherit",
+          backgroundColor: theme.vars.palette.error.main,
+          color: theme.vars.palette.error.contrastText,
+        }),
+        dot: ({ theme }) => ({
+          width: 8,
+          height: 8,
+          minWidth: 8,
+          borderRadius: 999,
+          backgroundColor: theme.vars.palette.error.main,
+        }),
+      },
+    },
+    MuiList: {
+      styleOverrides: {
+        // Deliberately EMPTY of padding. MuiList is inside Menu, Select and Autocomplete as well as
+        // a standalone list, and each of those blocks sets its own gutter - AGENTS.md lists this
+        // component by name for exactly that reason. Only the type is stated here, which every one
+        // of them shares.
+        root: { fontSize: 15 }, // --text-md
+      },
+    },
+    MuiListItem: {
+      styleOverrides: {
+        root: { paddingLeft: 0, paddingRight: 0 }, // the kit's rows are flush; the BUTTON owns the inset
+      },
+    },
+    MuiPagination: {
+      styleOverrides: {
+        ul: { gap: 4 }, // --space-1, between the numbered items
+      },
+    },
+    MuiSnackbar: {
+      styleOverrides: {
+        root: { "& .MuiSnackbarContent-root": { minWidth: 0 } }, // the kit sizes to content
+      },
+    },
+    MuiSpeedDial: {
+      styleOverrides: {
+        // The trigger is a Fab and is themed there; this is only the stack's own spacing.
+        actions: { gap: 8 }, // --space-2
+      },
+    },
+    MuiStep: {
+      styleOverrides: {
+        root: { padding: 0 }, // the Stepper's own gap does the spacing, as in the kit's layouts
+      },
+    },
+    // NO MuiTableHead BLOCK, for the same reason there is no MuiBackdrop one: the obvious value is
+    // wrong. A head looks white in the kit only because whatever is behind the table is - its
+    // `.container` paints no background at all, and neither does `.head`. Giving the head
+    // `--color-surface` therefore does not match the kit, it OVERPAINTS the page: measured at
+    // 57948 differing pixels, Δ18, which is exactly #fff against the #edeff0 canvas.
+    //
+    // Everything a head cell actually states - its border, weight, padding and nowrap - is on
+    // MuiTableCell's `head` slot above, extracted from the kit's own Table.
+    MuiImageList: {
+      styleOverrides: {
+        root: { margin: 0, gap: 8 }, // --space-2; MUI ships a 16px block margin the kit never has
+      },
+    },
+    // The two input SHAPES the kit does not have. Its only field is the bordered box themed as
+    // MuiOutlinedInput above, so a standard (underlined) or filled input has no twin to extract -
+    // these are the kit's tokens arranged into MUI's two other shapes so that a `<TextField
+    // variant="standard">` is recognisably the same design system rather than Material.
+    MuiInput: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          fontSize: 15, // --text-md
+          color: theme.vars.palette.text.primary,
+          "&::before": { borderBottom: `1px solid ${theme.vars.palette.borderStrong}` },
+          "&:hover:not(.Mui-disabled, .Mui-error)::before": {
+            borderBottom: `1px solid ${theme.vars.palette.borderInput}`,
+          },
+          "&::after": { borderBottom: `1px solid ${theme.vars.palette.primary.main}` },
+        }),
+      },
+    },
+    MuiFilledInput: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          fontSize: 15,
+          borderRadius: 6, // --radius-2
+          backgroundColor: theme.vars.palette.surfaceMuted,
+          "&:hover": { backgroundColor: theme.vars.palette.surfaceMuted },
+          "&.Mui-focused": { backgroundColor: theme.vars.palette.surfaceMuted },
+          // The kit has no underlined field anywhere, so the filled shape loses MUI's.
+          "&::before, &::after": { display: "none" },
+        }),
+      },
+    },
+    MuiInputLabel: {
+      styleOverrides: {
+        // SCOPE: only the type and ink, which come from MuiFormLabel anyway. MUI's InputLabel
+        // FLOATS - it shrinks into the outline's notch - and the kit ships no floating label to
+        // extract a position, a scale or a notch width from, so all of that stays MUI's.
+        root: ({ theme }) => ({ color: theme.vars.palette.textMuted }),
+      },
+    },
+
     // ---- Ripples ----
     //
     // The kit has no ripple anywhere: every one of its interactive primitives passes
