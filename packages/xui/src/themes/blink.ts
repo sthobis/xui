@@ -359,7 +359,7 @@ export const blinkTheme = createTheme({
         // wondering which of them the disabled state uses. Borders are set long-hand so `skin` can
         // carry `borderColor` on its own.
         {
-          props: { variant: "contained" },
+          props: { variant: "contained", color: "primary" as const },
           style: ({ theme }) => {
             const skin = {
               background: theme.vars.palette.primary.main, // blink: .primary `background: var(--color-primary)`
@@ -419,6 +419,67 @@ export const blinkTheme = createTheme({
               "&.Mui-disabled": skin,
             }
           },
+        },
+        // DERIVED, and flagged here rather than below the banner because it belongs beside the
+        // variant it corrects. The kit has no SOLID semantic button - its `.destructive` is a
+        // tinted fill, which is the `light` + error pairing below - so `color="error"` on a
+        // contained Button has no twin to extract. Left unhandled it fell through to the rule above
+        // and painted a destructive button INDIGO, which is worse than either honest answer.
+        //
+        // The tokens are the kit's own and are strong evidence of the intent: tokens.css ships
+        // `--color-on-error`, `--color-on-warning`, `--color-on-success` and `--color-on-info`, a
+        // set of foregrounds that only makes sense over solid semantic fills.
+        {
+          props: { variant: "contained" as const, color: "error" as const },
+          style: ({ theme }) => ({
+            background: theme.vars.palette.error.main,
+            color: theme.vars.palette.error.contrastText,
+            border: `1px solid ${theme.vars.palette.error.main}`,
+            "&.Mui-disabled": {
+              background: theme.vars.palette.error.main,
+              color: theme.vars.palette.error.contrastText,
+              borderColor: theme.vars.palette.error.main,
+            },
+          }),
+        },
+        {
+          props: { variant: "contained" as const, color: "warning" as const },
+          style: ({ theme }) => ({
+            background: theme.vars.palette.warning.main,
+            color: theme.vars.palette.warning.contrastText,
+            border: `1px solid ${theme.vars.palette.warning.main}`,
+            "&.Mui-disabled": {
+              background: theme.vars.palette.warning.main,
+              color: theme.vars.palette.warning.contrastText,
+              borderColor: theme.vars.palette.warning.main,
+            },
+          }),
+        },
+        {
+          props: { variant: "contained" as const, color: "success" as const },
+          style: ({ theme }) => ({
+            background: theme.vars.palette.success.main,
+            color: theme.vars.palette.success.contrastText,
+            border: `1px solid ${theme.vars.palette.success.main}`,
+            "&.Mui-disabled": {
+              background: theme.vars.palette.success.main,
+              color: theme.vars.palette.success.contrastText,
+              borderColor: theme.vars.palette.success.main,
+            },
+          }),
+        },
+        {
+          props: { variant: "contained" as const, color: "info" as const },
+          style: ({ theme }) => ({
+            background: theme.vars.palette.info.main,
+            color: theme.vars.palette.info.contrastText,
+            border: `1px solid ${theme.vars.palette.info.main}`,
+            "&.Mui-disabled": {
+              background: theme.vars.palette.info.main,
+              color: theme.vars.palette.info.contrastText,
+              borderColor: theme.vars.palette.info.main,
+            },
+          }),
         },
         {
           props: { variant: "light", color: "primary" },
