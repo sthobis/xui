@@ -615,6 +615,180 @@ export const blinkTheme = createTheme({
       },
     },
 
+    // ---- Avatar ----
+    //
+    // Ground truth: reference/primitives/Avatar/Avatar.module.css.
+    //
+    // SCOPE: the `default` fill only, at the kit's default 32px. The kit has seven fills and four
+    // sizes; MUI's Avatar has no colour axis (its `variant` already means the shape) and no size
+    // prop, so the rest have nothing for a theme to attach to and are left to `sx` at the call
+    // site. Shape maps exactly: the kit's `square` is MUI's `rounded`, its `circle` MUI's
+    // `circular` - only the DEFAULTS differ, and that is the caller's choice, not the theme's.
+    MuiAvatar: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          width: 32, // blink: Avatar/index.tsx SIZE_PX.md
+          height: 32, // blink: Avatar/index.tsx SIZE_PX.md
+          flex: "none", // blink: .root `flex: none`
+          overflow: "hidden", // blink: .root `overflow: hidden`
+          background: theme.vars.palette.surfaceMuted, // blink: .default `background: var(--color-surface-muted)`
+          color: theme.vars.palette.textMuted, // blink: .default `color: var(--color-text-muted)`
+          // MUI sizes an Avatar's initials off its own scale; the kit inherits the page's.
+          fontSize: 15, // blink: inherited --text-md
+          fontWeight: 400,
+          // blink: reset.css `body { line-height: 1.5 }`, inherited - Avatar.module.css sets no
+          // line-height, so the initials take the document's. MUI's Avatar pins `line-height: 1`,
+          // which is not neutral: it made the initials' line box 15px against the kit's 22.5px.
+          // Stated rather than left to `inherit` for the same reason as the Button's, so a consumer
+          // without the kit's reset still gets the kit's metrics.
+          lineHeight: 1.5,
+        }),
+        rounded: { borderRadius: 6 }, // blink: .square `border-radius: var(--radius-2)`
+        circular: { borderRadius: "50%" }, // blink: .circle `border-radius: 50%`
+        img: { objectFit: "contain" }, // blink: .image - note `.circle .image` switches to cover
+      },
+      variants: [
+        {
+          // blink: `.circle .image { object-fit: cover }` - a circle crops, a square letterboxes.
+          props: { variant: "circular" },
+          style: { "& .MuiAvatar-img": { objectFit: "cover" } },
+        },
+      ],
+    },
+
+    // ---- Card ----
+    //
+    // Ground truth: reference/primitives/Card/Card.module.css.
+    //
+    // A flat surface: no shadow, no border, just `--color-surface` at `--radius-3`. MUI's Paper
+    // ships an elevation shadow, so `elevation: 0` is a default rather than a style override - it
+    // is what a caller would otherwise have to pass on every Card.
+    //
+    // The three regions map onto CardHeader / CardContent / CardActions. Two of the kit's rules are
+    // about the SEAM between them rather than about any one region, and both are transcribed as
+    // sibling selectors so they keep firing only in the combination the kit intends.
+    MuiCard: {
+      defaultProps: { elevation: 0 },
+      styleOverrides: {
+        root: ({ theme }) => ({
+          display: "flex", // blink: .root `display: flex`
+          flexDirection: "column", // blink: .root `flex-direction: column`
+          background: theme.vars.palette.surface, // blink: .root `background: var(--color-surface)`
+          borderRadius: 8, // blink: .root `border-radius: var(--radius-3)`
+          backgroundImage: "none", // MUI's Paper paints an elevation overlay gradient; the kit has none
+        }),
+      },
+    },
+    MuiCardHeader: {
+      styleOverrides: {
+        root: {
+          display: "flex", // blink: .header
+          justifyContent: "space-between", // blink: .header `justify-content: space-between`
+          alignItems: "flex-start", // blink: .header `align-items: flex-start`
+          gap: 12, // blink: .header `gap: var(--space-3)`
+          padding: "16px 16px 0", // blink: .header `padding: var(--space-4) var(--space-4) 0`
+        },
+        // blink: .titleGroup `gap: var(--space-1)` - MUI puts no gap between title and subheader,
+        // relying on the subheader's own margin instead.
+        content: { display: "flex", flexDirection: "column", gap: 4, minWidth: 0 },
+        avatar: {
+          // blink: .icon - MUI reserves a 16px right margin for the avatar slot; the kit spaces it
+          // with `.main`'s 8px gap instead.
+          marginRight: 8,
+          // blink: .icon `height: calc(var(--text-lg) * 1.2)` - the icon is aligned to the title's
+          // first LINE BOX rather than centred on the whole header.
+          height: 21.6,
+          alignItems: "center",
+        },
+        title: ({ theme }) => ({
+          margin: 0, // blink: .title `margin: 0`
+          fontWeight: 600, // blink: .title `font-weight: 600`
+          fontSize: 18, // blink: .title `font-size: var(--text-lg)`
+          lineHeight: 1.2, // blink: .title `line-height: 1.2`
+          color: theme.vars.palette.text.primary, // blink: .title `color: var(--color-text-default)`
+        }),
+        subheader: ({ theme }) => ({
+          margin: 0, // blink: .description `margin: 0`
+          fontSize: 15, // blink: .description `font-size: var(--text-md)`
+          lineHeight: 1.4, // blink: .description `line-height: 1.4`
+          color: theme.vars.palette.textMuted, // blink: .description `color: var(--color-text-muted)`
+        }),
+        action: {
+          // blink: .actions - MUI offsets the action slot with negative margins to pull it into the
+          // header's padding; the kit just lets it sit at the end of the flex row.
+          margin: 0,
+          alignSelf: "auto",
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+        },
+      },
+    },
+    MuiCardContent: {
+      styleOverrides: {
+        root: {
+          display: "flex", // blink: .body `display: flex`
+          flexDirection: "column", // blink: .body `flex-direction: column`
+          padding: 16, // blink: .body `padding: var(--space-4)`
+          // blink: `.header + .body { padding-top: var(--space-3) }`. Expressed as the same sibling
+          // relationship rather than as a flat value, so a Card WITHOUT a header keeps 16px all
+          // round - which is the whole point of the kit having two rules here instead of one.
+          ".MuiCardHeader-root + &": { paddingTop: 12 },
+          // MUI adds 24px of bottom padding to the last CardContent, which would make every card
+          // bottom-heavy against the kit's symmetric 16.
+          "&:last-child": { paddingBottom: 16 },
+        },
+      },
+    },
+    MuiCardActions: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          // blink: .footer - the only region with a rule above it, and note the token is
+          // `--color-border` (the light one), not `--color-border-strong`.
+          borderTop: `1px solid ${theme.vars.palette.border}`,
+          padding: 16, // blink: .footer `padding: var(--space-4)`
+          // MUI spaces CardActions children by 8px via a `:not(:first-of-type)` margin rule; the
+          // kit's footer is a plain block with no such treatment.
+          "& > :not(style) ~ :not(style)": { marginLeft: 0 },
+        }),
+      },
+    },
+
+    // ---- Divider ----
+    //
+    // Ground truth: reference/primitives/Divider/Divider.module.css.
+    //
+    // The plain rule is a 1px background, NOT a border - which matters, because MUI draws its
+    // Divider as a `border-bottom-width` on an <hr> with `border: 0` elsewhere. Either paints one
+    // line; the theme keeps MUI's construction and colours it, since forcing a background on an
+    // element MUI gives a border would paint two.
+    //
+    // SCOPE: the kit's `subtle` flag has no MUI counterpart and is left uncovered - see the note in
+    // the gallery section.
+    MuiDivider: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          borderColor: theme.vars.palette.borderStrong, // blink: .horizontal `background: var(--color-border-strong)`
+        }),
+        // blink: .withLabel - the labelled form is a flex row whose two rules are ::before/::after.
+        // MUI builds it the same way, so only the type and colour need stating.
+        withChildren: ({ theme }) => ({
+          gap: 12, // blink: .withLabel `gap: var(--space-3)`
+          color: theme.vars.palette.textMuted, // blink: .withLabel `color: var(--color-text-muted)`
+          fontSize: 13, // blink: .withLabel `font-size: var(--text-xs)`
+          textTransform: "uppercase", // blink: .withLabel `text-transform: uppercase`
+          letterSpacing: "0.06em", // blink: .withLabel `letter-spacing: 0.06em`
+          "&::before, &::after": {
+            // blink: .withLabel::before/::after `height: 1px; background: var(--color-border-strong)`
+            borderTop: `1px solid ${theme.vars.palette.borderStrong}`,
+          },
+        }),
+        // MUI puts the label's horizontal padding on the text wrapper; the kit uses the flex gap,
+        // so the padding is removed and the gap above does the spacing.
+        wrapper: { padding: 0 },
+      },
+    },
+
     // ---- Checkbox / Radio ----
     //
     // Ground truth: reference/primitives/Checkbox/Checkbox.module.css and Radio/Radio.module.css.
