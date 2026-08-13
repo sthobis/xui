@@ -3,18 +3,18 @@ import { ThemeProvider } from "@mui/material/styles"
 import CssBaseline from "@mui/material/CssBaseline"
 import ScopedCssBaseline from "@mui/material/ScopedCssBaseline"
 import { createTheme } from "@mui/material/styles"
-import { shadcnTheme, kumoTheme } from "xui"
+import { shadcnTheme, kumoTheme, blinkTheme } from "xui"
 import { sections } from "../themes/kumo/sections"
 import { GallerySidebar, SIDEBAR_WIDTH, sectionId } from "../gallery/Sidebar"
 
 /**
- * The showcase: one MUI component per row, rendered three times - stock MUI, then each theme.
+ * The showcase: one MUI component per row, rendered four times - stock MUI, then each theme.
  *
  * This page carries NO design-system stylesheet, and that is what makes it possible at all. It
- * shows only MUI, so neither shadcn's nor Kumo's Tailwind is needed, and the two can therefore sit
- * on one page without fighting over the cascade. The REAL shadcn and Kumo components stay on their
- * own isolated pages (/shadcn.html, /kumo.html), where the parity harness compares each against
- * its themed twin - see AGENTS.md on why those two stylesheets must never load together.
+ * shows only MUI, so none of the three design systems' stylesheets are needed, and they can
+ * therefore sit on one page without fighting over the cascade. The REAL components stay on their
+ * own isolated pages (/shadcn.html, /kumo.html, /blink.html), where the parity harness compares
+ * each against its themed twin - see AGENTS.md on why those stylesheets must never load together.
  *
  * The component list is the kumo gallery's, reused rather than rewritten: that theme now covers
  * every component the shadcn theme does, so its `mui` nodes already enumerate the full surface.
@@ -24,13 +24,18 @@ import { GallerySidebar, SIDEBAR_WIDTH, sectionId } from "../gallery/Sidebar"
 /** Stock MUI, for the leftmost column - no overrides at all, so the difference is the theme's. */
 const defaultTheme = createTheme()
 
-type ShowcaseTheme = typeof defaultTheme | typeof shadcnTheme | typeof kumoTheme
+type ShowcaseTheme =
+  | typeof defaultTheme
+  | typeof shadcnTheme
+  | typeof kumoTheme
+  | typeof blinkTheme
 type ThemeWithVars = { generateStyleSheets?: () => Array<Record<string, unknown>> }
 
 const COLUMNS: Array<{ key: string; label: string; theme: ShowcaseTheme }> = [
   { key: "default", label: "MUI (default)", theme: defaultTheme },
   { key: "shadcn", label: "shadcn theme", theme: shadcnTheme },
   { key: "kumo", label: "kumo theme", theme: kumoTheme },
+  { key: "blink", label: "blink theme", theme: blinkTheme },
 ]
 
 const cellStyle: CSSProperties = {
@@ -123,9 +128,10 @@ export function Showcase() {
         <header style={{ marginBottom: 32 }}>
           <h1 style={{ font: "600 20px/28px system-ui", margin: "0 0 8px" }}>xui</h1>
           <p style={{ font: "400 13px/20px system-ui", opacity: 0.7, margin: 0, maxWidth: 640 }}>
-            The same MUI components under each theme. Stock MUI on the left, then shadcn/ui, then
-            Kumo. For pixel comparison against the real design-system components, see{" "}
-            <a href="/shadcn.html">/shadcn.html</a> and <a href="/kumo.html">/kumo.html</a>.
+            The same MUI components under each theme. Stock MUI on the left, then shadcn/ui, Kumo,
+            and the Pulse Kit. For pixel comparison against the real design-system components, see{" "}
+            <a href="/shadcn.html">/shadcn.html</a>, <a href="/kumo.html">/kumo.html</a> and{" "}
+            <a href="/blink.html">/blink.html</a>.
           </p>
         </header>
         {sections.map((section) => (
