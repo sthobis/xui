@@ -757,6 +757,36 @@ test.describe("painted geometry", () => {
       // this collector sees at a different depth. Both land on identical pixels.
       "tabs-underline",
     ]),
+    blink: new Set([
+      // The Switch family: the kit paints its knob as a ::after on the input - one element owning
+      // both the track and the knob - while MUI has a real `MuiSwitch-thumb` span. A pseudo-element
+      // contributes no rectangle here, so MUI shows one 18x18 box the kit cannot. The knob lands on
+      // identical pixels either way (the parity diff agrees), and the substitution is forced: there
+      // is no way to make MUI paint its thumb from a pseudo-element.
+      //
+      // This is also why switch-disabled needs its threshold entry in thresholds.ts - the same two
+      // constructions dim through different layer trees. The measurements are there.
+      "switch-off",
+      "switch-on",
+      "switch-disabled",
+      "switch-disabled-on",
+
+      // The Input family: same shape of difference, at the other end. The kit puts a real
+      // `1px solid` border on the root div, so its box IS the border. MUI paints the border on an
+      // absolutely positioned <fieldset> - the notched outline - which is a second painted element,
+      // 5px taller than the control because it is inset `top: -5px` to make room for a label notch
+      // this design never uses.
+      //
+      // Pixel-neutral, and deliberately so: the theme pays for the kit's border out of the padding
+      // (12px becomes 13px) precisely so both constructions put their ink on the same pixels. See
+      // the MuiOutlinedInput banner in the theme; every input pair diffs at 0 or 1 px.
+      "input-sm",
+      "input-md",
+      "input-lg",
+      "input-placeholder",
+      "input-error",
+      "input-disabled",
+    ]),
   }
 
   test("each pair paints the same rectangles on both sides", async ({ page }) => {
