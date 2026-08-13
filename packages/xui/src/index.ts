@@ -3,3 +3,4 @@
 // package throws ERR_MODULE_NOT_FOUND on import - which this repo's bundler-style resolution hides,
 // since Vite and tsc are both happy either way.
 export { shadcnTheme } from "./themes/shadcn.js"
+export { kumoTheme } from "./themes/kumo.js"

@@ -1,6 +1,7 @@
 import { expect, test, type Locator, type Page } from "@playwright/test"
 import { diffPngs } from "./lib/compare"
 import { snapToPixelGrid } from "./lib/states"
+import { GALLERY_PAGE, PURE_PAGE, targetOf } from "./lib/themes"
 
 /**
  * The most any channel of any pixel may differ between the two pages.
@@ -19,6 +20,12 @@ import { snapToPixelGrid } from "./lib/states"
  * gallery grows is not a check, it is a chore.
  */
 const MAX_CHANNEL_DELTA = 40
+
+// NOTE: this file used to carry per-pair `maxDeltaOverrides` (switch-checked at 8, badge-outline
+// at 4), calibrated against an older default of 2. They are gone because MAX_CHANNEL_DELTA above
+// is now 40 for the reason its own banner gives - re-tuning a floor every time the gallery grows
+// is a chore, not a check - and every one of those residuals sits far below it. The measurements
+// behind them live in e2e/thresholds.ts, which still judges the same artifacts on the parity side.
 
 /**
  * Captures a cell via a page-level clip with ROUNDED integer bounds, for the same reason
@@ -54,9 +61,18 @@ async function captureCell(page: Page, cell: Locator, id: string): Promise<Buffe
   })
 }
 
-test("mui renders identically with and without tailwind", async ({ page }) => {
-  test.skip(test.info().project.name === "dark", "mode covered by parity suite; preflight is mode-independent")
-  await page.goto("/")
+test("mui renders identically with and without tailwind", async ({ page }, testInfo) => {
+  // Duration budget, NOT a correctness threshold - the same distinction parity.spec.ts records.
+  // This test screenshots EVERY pair on two pages, so its runtime grows with the gallery, and it
+  // had been riding Playwright's 30s default: measured at 30.2s for shadcn (101 pairs, failed) and
+  // 27.1s for kumo (77, passed). A timeout there reports as `locator.scrollIntoViewIfNeeded` on
+  // whichever pair the clock happened to run out on, which reads exactly like a missing element -
+  // it cost a real diagnostic detour chasing a `type-h2` cell that was present on both pages the
+  // whole time. Raised with headroom so a slow machine reports real numbers instead.
+  testInfo.setTimeout(300_000)
+  const { theme, mode } = targetOf(test.info().project.name)
+  test.skip(mode === "dark", "mode covered by parity suite; preflight is mode-independent")
+  await page.goto(GALLERY_PAGE[theme])
   await page.waitForLoadState("networkidle")
   const ids: string[] = await page.evaluate(() =>
     Array.from(document.querySelectorAll("[data-pair-id]")).map((el) => el.getAttribute("data-pair-id")!),
@@ -68,7 +84,7 @@ test("mui renders identically with and without tailwind", async ({ page }) => {
     withTailwind.set(id, await captureCell(page, cell, id))
   }
 
-  await page.goto("/pure.html")
+  await page.goto(PURE_PAGE[theme])
   await page.waitForLoadState("networkidle")
   const failures: string[] = []
   for (const id of ids) {

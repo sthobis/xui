@@ -29,7 +29,7 @@ export interface DiffResult {
    * a number indistinguishable from a font-rendering wobble. Callers should treat a size
    * difference as its own failure and never let a threshold absorb it.
    */
-  sizes: { shadcn: { width: number; height: number }; mui: { width: number; height: number } }
+  sizes: { ref: { width: number; height: number }; mui: { width: number; height: number } }
   diff: PNG
 }
 
@@ -98,7 +98,7 @@ export function diffPngs(aBuf: Buffer, bBuf: Buffer, pixelThreshold = 0): DiffRe
     mismatchPct: (mismatchedPixels / totalPixels) * 100,
     maxChannelDelta,
     sizes: {
-      shadcn: { width: a.width, height: a.height },
+      ref: { width: a.width, height: a.height },
       mui: { width: b.width, height: b.height },
     },
     diff,

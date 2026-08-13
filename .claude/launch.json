@@ -4,8 +4,9 @@
     {
       "name": "showcase",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["--filter", "showcase", "dev", "--port", "5173", "--strictPort"],
-      "port": 5173
+      "runtimeArgs": ["--filter", "showcase", "dev"],
+      "port": 5173,
+      "autoPort": true
     }
   ]
 }

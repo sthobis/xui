@@ -1,13 +1,15 @@
 {
   "name": "xui",
   "version": "0.1.0",
-  "description": "Material UI v9 themes that make MUI components look pixel-for-pixel identical to another design system. The first theme replicates shadcn/ui.",
+  "description": "Material UI v9 themes that make MUI components look pixel-for-pixel identical to another design system. Ships shadcn/ui and Kumo (Cloudflare) themes.",
   "license": "MIT",
   "keywords": [
     "mui",
     "material-ui",
     "shadcn",
     "shadcn-ui",
+    "kumo",
+    "cloudflare",
     "theme",
     "design-system"
   ],
@@ -45,6 +47,7 @@
     "react": "^18.0.0 || ^19.0.0"
   },
   "dependencies": {
+    "@phosphor-icons/react": "^2.1.10",
     "lucide-react": "^1.24.0"
   },
   "devDependencies": {

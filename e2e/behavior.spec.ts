@@ -1,5 +1,6 @@
 import { expect, test, type Locator, type Page } from "@playwright/test"
 import { openContentLocator, resetState } from "./lib/states"
+import { GALLERY_PAGE, targetOf, type ThemeName } from "./lib/themes"
 
 // Non-pixel behavior checks. The pixel harness (parity.spec.ts) only ever screenshots frozen
 // frames of default/hover/focus/open/active/anchored states, so it structurally cannot see
@@ -12,14 +13,30 @@ import { openContentLocator, resetState } from "./lib/states"
 
 test.beforeEach(async ({ page }, testInfo) => {
   // Same convention as preflight.spec.ts: these checks (animation motion, hover/Escape trigger
-  // semantics) are style-mode-independent - running them twice under both the "light" and "dark"
+  // semantics) are style-mode-independent - running them twice under both the light and dark
   // Playwright projects would just re-test the same JS behavior against the same (light) UI,
   // since dark mode is toggled by an in-app button this spec never clicks, not by the project's
-  // colorScheme setting.
-  test.skip(testInfo.project.name === "dark", "mode covered by parity suite; behavior checks are mode-independent")
-  await page.goto("/")
+  // colorScheme setting. The THEME half of the project name does matter, though: each theme has
+  // its own gallery page with its own pairs.
+  const { theme, mode } = targetOf(testInfo.project.name)
+  test.skip(mode === "dark", "mode covered by parity suite; behavior checks are mode-independent")
+  await page.goto(GALLERY_PAGE[theme])
   await page.waitForLoadState("networkidle")
 })
+
+/**
+ * Each of these checks is opt-in per pair, so a gallery that has not yet grown a component of that
+ * shape has nothing to exercise - the kumo gallery has no portalled overlay and no editable control
+ * until its Tier 2 components land. That is a legitimately empty sweep, not a failure.
+ *
+ * The guard these calls replaced (`expect(count).toBeGreaterThan(0)`) existed to stop a test
+ * quietly proving nothing, and that is still worth having: skipping is REPORTED by Playwright,
+ * where a silent pass would not be, and the shadcn project still runs every one of them for real.
+ */
+function skipIfNothingToCheck(count: number, what: string) {
+  const { theme } = targetOf(test.info().project.name)
+  test.skip(count === 0, `the ${theme} gallery has no ${what} pairs yet`)
+}
 
 type BehaviorPair = { id: string; behaviors: string[] }
 
@@ -73,12 +90,12 @@ async function sampleAnimationSignature(cell: Locator): Promise<{ first: string;
 test.describe("animates", () => {
   test("each tagged pair's animated element changes over time on both sides", async ({ page }) => {
     const pairs = (await discover(page)).filter((p) => p.behaviors.includes("animates"))
-    expect(pairs.length, "no pairs tagged with the animates behavior").toBeGreaterThan(0)
+    skipIfNothingToCheck(pairs.length, "animates")
 
     for (const { id } of pairs) {
       const row = page.locator(`[data-pair-id="${id}"]`)
       await row.scrollIntoViewIfNeeded()
-      for (const side of ["shadcn", "mui"] as const) {
+      for (const side of ["ref", "mui"] as const) {
         const cell = row.locator(`[data-side="${side}"]`)
         const { first, second } = await sampleAnimationSignature(cell)
         expect(
@@ -91,10 +108,6 @@ test.describe("animates", () => {
   })
 })
 
-// The scrim behind a modal overlay, per side. shadcn marks its own with a data-slot; MUI's is a
-// Backdrop. These are the only two side-specific selectors in the harness, and they are here rather
-// than in the gallery because shadcn's DialogContent renders its overlay internally - a pair cannot
-// put a marker on it.
 /**
  * Drops fully transparent layers from a computed `box-shadow` before comparing two of them.
  *
@@ -122,65 +135,261 @@ function significantShadowLayers(boxShadow: string): string[] {
   return layers.filter((layer) => layer !== "none" && !/(,\s*0\s*\)|\/\s*0\s*\))/.test(layer))
 }
 
-const BACKDROP_SELECTOR = {
-  shadcn: "[data-slot$='-overlay']",
-  mui: ".MuiBackdrop-root:not(.MuiBackdrop-invisible)",
-} as const
+/**
+ * Rewrites every colour inside a measured value to its sRGB bytes, so two spellings of the SAME
+ * colour compare equal.
+ *
+ * Needed because getComputedStyle preserves the colour space a value was authored in, and the two
+ * sides of a pair reach the same colour by different routes. Kumo's tooltip shadow is
+ * `shadow-kumo-tip-shadow`, and Tailwind pipes every shadow colour through its own alpha
+ * `color-mix(in oklab, ...)`, so Chrome reports `oklab(0.928 -0.000571842 -0.00597269)`; the theme
+ * names the token directly and Chrome reports `oklch(0.928 0.006 264.531)`. Those are one colour -
+ * the pixel harness renders the pair at exactly zero differing pixels - and a string comparison
+ * that failed on them would be reporting Tailwind's internal plumbing as a theme bug.
+ *
+ * Canvas is the canonicaliser rather than a parser: assigning to `fillStyle` keeps the authored
+ * space (measured - it returns the oklab and oklch spellings unchanged), but actually PAINTING the
+ * colour and reading the pixel back gives the sRGB bytes the screen would show. Colours are located
+ * by scanning for a colour function and matching balanced parentheses, since `color-mix(...)` nests
+ * and a regex cannot.
+ */
+async function inSrgb<T>(page: Page, value: T): Promise<T> {
+  return page.evaluate((input) => {
+    const canvas = document.createElement("canvas")
+    canvas.width = canvas.height = 1
+    const ctx = canvas.getContext("2d", { willReadFrequently: true })!
+    const SENTINEL = "#010203"
+    const toSrgb = (colour: string): string => {
+      ctx.fillStyle = SENTINEL
+      ctx.fillStyle = colour
+      // fillStyle silently ignores a value it cannot parse, so an unchanged sentinel means "not a
+      // colour I can resolve" - leave it exactly as measured rather than reporting it as black.
+      if (ctx.fillStyle === SENTINEL && colour !== SENTINEL) return colour
+      ctx.clearRect(0, 0, 1, 1)
+      ctx.fillRect(0, 0, 1, 1)
+      const [r, g, b, a] = ctx.getImageData(0, 0, 1, 1).data
+      return `srgb(${r} ${g} ${b} / ${a})`
+    }
+    const COLOUR_FN = /\b(?:color-mix|oklab|oklch|lab|lch|hwb|color|rgba?|hsla?)\(/g
+    const canon = (s: string): string => {
+      let out = ""
+      let i = 0
+      for (;;) {
+        COLOUR_FN.lastIndex = i
+        const match = COLOUR_FN.exec(s)
+        if (!match) return out + s.slice(i)
+        let depth = 0
+        let j = match.index + match[0].length - 1
+        for (; j < s.length; j++) {
+          if (s[j] === "(") depth++
+          else if (s[j] === ")" && --depth === 0) {
+            j++
+            break
+          }
+        }
+        out += s.slice(i, match.index) + toSrgb(s.slice(match.index, j))
+        i = j
+      }
+    }
+    const walk = (v: unknown): unknown => {
+      if (typeof v === "string") return canon(v)
+      if (Array.isArray(v)) return v.map(walk)
+      if (v && typeof v === "object") {
+        return Object.fromEntries(Object.entries(v).map(([k, entry]) => [k, walk(entry)]))
+      }
+      return v
+    }
+    return walk(input)
+  }, value) as Promise<T>
+}
+
+// The scrim behind a MODAL overlay, per theme and per side. MUI's is always a Backdrop; the
+// reference selector belongs to the design system under test, because a scrim is rendered by the
+// reference component internally and a pair has nowhere to put a marker on it (shadcn's
+// DialogContent uses a data-slot; kumo's modals are Base UI, whose backdrop carries its own
+// data attribute). These are the only side-specific selectors in the harness.
+//
+// A pair whose overlay is NOT modal - a tooltip, a popover - simply has no scrim on either side,
+// which is a legitimate shape rather than a failure: see the test below for how that is handled
+// without weakening the check for the pairs that do have one.
+const BACKDROP_SELECTOR: Record<ThemeName, { ref: string; mui: string }> = {
+  shadcn: { ref: "[data-slot$='-overlay']", mui: ".MuiBackdrop-root:not(.MuiBackdrop-invisible)" },
+  // Base UI gives its backdrop no attribute of its own, so kumo's is identified structurally: the
+  // one presentation box that is both OPEN and hidden from assistive tech. Base UI's internal inert
+  // layer shares the role but carries no `data-open`, and a Select positioner carries `data-open`
+  // but is not aria-hidden.
+  kumo: {
+    ref: '[role="presentation"][data-open][aria-hidden="true"]',
+    mui: ".MuiBackdrop-root:not(.MuiBackdrop-invisible)",
+  },
+}
 
 test.describe("overlay-matches", () => {
-  // Covers the two things a modal overlay paints that the pixel harness structurally cannot reach.
+  // Covers the things an open overlay paints that the pixel harness structurally cannot reach.
   //
   // The scrim, because it is a full-viewport translucent, blurred layer sitting over whatever the
   // page shows behind each cell - and the two cells are 240px apart, so any framing compares
   // different content (see dialog.tsx's own note).
   //
   // The panel's OUTER decoration, because the open state screenshots the panel element, and an
-  // element capture clips at its border box: a drop shadow or a ring falls outside it and is simply
-  // not in the picture. Sabotaging the drawer's shadow left the pair at 0.00% before this.
+  // element capture clips at its border box: a drop shadow, a ring or an OUTLINE falls outside it
+  // and is simply not in the picture. Sabotaging the drawer's shadow left the pair at 0.00% before
+  // this, and kumo's tooltip is decorated entirely by an outline and a shadow-lg - neither of which
+  // any capture of that pair contains.
   test("each tagged pair's scrim and panel chrome match on both sides", async ({ page }) => {
     const pairs = (await discover(page)).filter((p) => p.behaviors.includes("overlay-matches"))
-    expect(pairs.length, "no pairs tagged with the overlay-matches behavior").toBeGreaterThan(0)
+    skipIfNothingToCheck(pairs.length, "overlay-matches")
+    const { theme } = targetOf(test.info().project.name)
 
     for (const { id } of pairs) {
       const row = page.locator(`[data-pair-id="${id}"]`)
       await row.scrollIntoViewIfNeeded()
       const measured: Record<string, unknown> = {}
-      for (const side of ["shadcn", "mui"] as const) {
+      for (const side of ["ref", "mui"] as const) {
         const cell = row.locator(`[data-side="${side}"]`)
         await cell.locator("[data-target]").first().click()
-        const scrim = page.locator(BACKDROP_SELECTOR[side]).first()
-        await expect(scrim, `${id} (${side}): no scrim appeared after opening`).toBeVisible({
-          timeout: 5000,
-        })
-        const panel = openContentLocator(page, cell, id)
+        const panel = await openContentLocator(page, cell, id)
         await expect(panel, `${id} (${side}): no panel appeared after opening`).toBeVisible({
           timeout: 5000,
         })
-        measured[side] = {
-          scrim: await scrim.evaluate((el) => {
-            const c = getComputedStyle(el)
-            const r = el.getBoundingClientRect()
-            return {
-              backgroundColor: c.backgroundColor,
-              backdropFilter: c.backdropFilter,
-              isolation: c.isolation,
-              box: `${Math.round(r.width)}x${Math.round(r.height)} @ ${Math.round(r.x)},${Math.round(r.y)}`,
-            }
-          }),
+        // Let the open transition finish before reading anything. Now that element opacity is
+        // folded into the scrim's colour, a measurement taken mid-fade reports whatever alpha the
+        // animation happened to be at - shadcn's overlay read back at 2/255 on one side and 0 on
+        // the other, purely from being sampled a frame apart.
+        await page.waitForTimeout(400)
+        // The scrim is measured only if this overlay HAS one. A missing scrim is not asserted away
+        // here, it is folded into the comparison as `null` - so a non-modal pair (tooltip, popover)
+        // compares null against null and passes, while a modal pair that loses its scrim on one
+        // side only compares an object against null and still fails, with both values printed.
+        const scrim = page.locator(BACKDROP_SELECTOR[theme][side]).first()
+        measured[side] = await inSrgb(page, {
+          scrim: (await scrim.count())
+            ? await scrim.evaluate((el) => {
+                const c = getComputedStyle(el)
+                const r = el.getBoundingClientRect()
+                return {
+                  // Element opacity is folded INTO the colour, because the two sides express the
+                  // same translucent layer differently and both spellings paint the same thing.
+                  // kumo writes `bg-kumo-recessed opacity-80`; the theme has to carry the alpha in
+                  // the colour, since MUI mounts every Backdrop inside a Fade that writes
+                  // `opacity: 1` inline once the transition ends and outranks any rule.
+                  backgroundColor:
+                    c.opacity === "1"
+                      ? c.backgroundColor
+                      : `color-mix(in srgb, ${c.backgroundColor} ${parseFloat(c.opacity) * 100}%, transparent)`,
+                  backdropFilter: c.backdropFilter,
+                  isolation: c.isolation,
+                  box: `${Math.round(r.width)}x${Math.round(r.height)} @ ${Math.round(r.x)},${Math.round(r.y)}`,
+                }
+              })
+            : null,
           panel: await panel
             .evaluate((el) => {
               const c = getComputedStyle(el)
-              return { boxShadow: c.boxShadow, border: c.border, borderRadius: c.borderRadius }
+              // An outline (or border) with no style, or zero width, paints NOTHING - and its
+              // colour and width are then whatever each library happens to leave lying around.
+              // Comparing those would fail two overlays that look identical: shadcn's dialog panel
+              // reports a 3px translucent grey `none` outline on one side and a 0px black `none`
+              // outline on the other, and neither draws a single pixel. Collapse both to "none" so
+              // the check only ever compares decoration that actually paints.
+              const drawn = (style: string, width: string, value: string) =>
+                style === "none" || parseFloat(width) === 0 ? "none" : value
+              return {
+                boxShadow: c.boxShadow,
+                border: drawn(c.borderStyle, c.borderWidth, c.border),
+                borderRadius: c.borderRadius,
+                // Kumo draws the tooltip and popover edge with an OUTLINE, which sits outside the
+                // border box and therefore outside every capture of the pair. Its offset is part of
+                // it: kumo pulls the tooltip's outline inward in dark mode only.
+                outline: drawn(c.outlineStyle, c.outlineWidth, c.outline),
+                outlineOffset: drawn(c.outlineStyle, c.outlineWidth, c.outlineOffset),
+              }
             })
             .then((p) => ({ ...p, boxShadow: significantShadowLayers(p.boxShadow) })),
-        }
+        })
         await resetState(page)
       }
       expect(
         measured.mui,
-        `${id}: the MUI overlay does not match the shadcn one\n` +
-          `  shadcn: ${JSON.stringify(measured.shadcn)}\n  mui:    ${JSON.stringify(measured.mui)}`,
-      ).toEqual(measured.shadcn)
+        `${id}: the MUI overlay does not match the reference one\n` +
+          `  ref: ${JSON.stringify(measured.ref)}\n  mui:    ${JSON.stringify(measured.mui)}`,
+      ).toEqual(measured.ref)
+    }
+  })
+})
+
+test.describe("anchored-to-trigger", () => {
+  // The numeric equivalent of the "anchored" pixel state: it proves an overlay opens on the same
+  // side of its trigger, at the same distance, at the same size - without putting the trigger in
+  // the picture.
+  //
+  // That distinction is what this exists for. The "anchored" capture frames the trigger and the
+  // overlay together, so it also compares the TRIGGER, and for some pairs the trigger legitimately
+  // looks different while the overlay is open: the harness opens an overlay by clicking, which
+  // leaves the pointer on the trigger, and MUI renders Menu/Select/Popover inside a Modal whose
+  // invisible backdrop covers the trigger and suppresses its `:hover`, while Base UI deliberately
+  // keeps a menu trigger live so a second click closes the menu. Measured on kumo's dropdown: the
+  // panels matched exactly and the pair still reported 12478 differing pixels, every one of them
+  // the trigger's own hover fill. No theme can reconcile that - it is Modal versus non-modal
+  // behavior - so those pairs prove placement here and leave the trigger to its own pairs.
+  //
+  // Distances are relative to the trigger, because the two cells sit at unrelated absolute
+  // positions. Sub-pixel differences survive: this catches the half-pixel divergence between
+  // Popper's rounding and Floating UI's that the pixel diff needs a capture to see.
+  test("each tagged pair's overlay opens at the same offset from its trigger", async ({ page }) => {
+    const pairs = (await discover(page)).filter((p) => p.behaviors.includes("anchored-to-trigger"))
+    skipIfNothingToCheck(pairs.length, "anchored-to-trigger")
+
+    for (const { id } of pairs) {
+      const row = page.locator(`[data-pair-id="${id}"]`)
+      await row.scrollIntoViewIfNeeded()
+      const measured: Record<string, unknown> = {}
+      for (const side of ["ref", "mui"] as const) {
+        const cell = row.locator(`[data-side="${side}"]`)
+        const trigger = cell.locator("[data-target]").first()
+        await trigger.click()
+        const overlay = await openContentLocator(page, cell, id)
+        await expect(overlay, `${id} (${side}): no overlay appeared after opening`).toBeVisible({
+          timeout: 5000,
+        })
+        // Both libraries open an overlay with a scale/opacity transition, and a box measured while
+        // one is still running is the INTERPOLATED box - a 144px panel reports 108px a frame in.
+        // Same 300ms settle the pixel harness's own applyState waits out.
+        await page.waitForTimeout(400)
+        const [triggerBox, overlayBox] = await Promise.all([trigger.boundingBox(), overlay.boundingBox()])
+        if (!triggerBox || !overlayBox) throw new Error(`${id} (${side}): missing bounding box`)
+        const round = (n: number) => Math.round(n * 1000) / 1000
+        measured[side] = {
+          size: `${round(overlayBox.width)}x${round(overlayBox.height)}`,
+          fromTriggerLeft: round(overlayBox.x - triggerBox.x),
+          fromTriggerTop: round(overlayBox.y - triggerBox.y),
+          // The gap on the side the overlay actually opens on, stated as its own number so a
+          // failure reads as "8px became 4px" rather than as a pair of coordinates.
+          gapBelow: round(overlayBox.y - (triggerBox.y + triggerBox.height)),
+          gapAbove: round(triggerBox.y - (overlayBox.y + overlayBox.height)),
+        }
+        await resetState(page)
+      }
+      const ref = measured.ref as Record<string, string | number>
+      const mui = measured.mui as Record<string, string | number>
+      const context =
+        `\n  ref: ${JSON.stringify(measured.ref)}\n  mui:    ${JSON.stringify(measured.mui)}`
+      // Size is compared exactly - two overlays of different sizes are a real difference, and
+      // nothing rounds a box's dimensions.
+      expect(mui.size, `${id}: the two overlays are different sizes${context}`).toBe(ref.size)
+      // Offsets are compared to within half a pixel, and that is the tightest this check can
+      // honestly be: MUI's Popover rounds every overlay position with Math.round, so a whole CSS
+      // pixel is the finest placement it can express, and any target is met to within half of one.
+      // Measured on kumo's Select, whose popup Base UI places at an unrounded -70.5 from its
+      // trigger where MUI can only manage -70.875. A real placement error - the wrong side, a
+      // missing gap, an overlap - moves whole pixels and still fails here, and sub-pixel placement
+      // is what the pixel states see for the pairs that can use them.
+      for (const key of ["fromTriggerLeft", "fromTriggerTop", "gapBelow", "gapAbove"] as const) {
+        expect(mui[key] as number, `${id}: ${key} differs by more than a pixel's rounding${context}`).toBeCloseTo(
+          ref[key] as number,
+          0,
+        )
+      }
     }
   })
 })
@@ -194,16 +403,16 @@ test.describe("item-hover-highlights", () => {
   // background across the two sides, which is the thing that differed.
   test("each tagged pair's overlay items highlight the same way on hover", async ({ page }) => {
     const pairs = (await discover(page)).filter((p) => p.behaviors.includes("item-hover-highlights"))
-    expect(pairs.length, "no pairs tagged with the item-hover-highlights behavior").toBeGreaterThan(0)
+    skipIfNothingToCheck(pairs.length, "item-hover-highlights")
 
     for (const { id } of pairs) {
       const row = page.locator(`[data-pair-id="${id}"]`)
       await row.scrollIntoViewIfNeeded()
       const measured: Record<string, string> = {}
-      for (const side of ["shadcn", "mui"] as const) {
+      for (const side of ["ref", "mui"] as const) {
         const cell = row.locator(`[data-side="${side}"]`)
         await cell.locator("[data-target]").first().click()
-        const overlay = openContentLocator(page, cell, id)
+        const overlay = await openContentLocator(page, cell, id)
         await expect(overlay).toBeVisible({ timeout: 5000 })
         // The LAST item, so the result cannot be confused with whatever the overlay autofocuses.
         const item = overlay.locator("[role='menuitem'], [role='option']").last()
@@ -215,10 +424,10 @@ test.describe("item-hover-highlights", () => {
       expect(
         measured.mui,
         `${id}: hovering an item paints a different background on the two sides\n` +
-          `  shadcn: ${measured.shadcn}\n  mui:    ${measured.mui}`,
-      ).toBe(measured.shadcn)
+          `  ref: ${measured.ref}\n  mui:    ${measured.mui}`,
+      ).toBe(measured.ref)
       expect(
-        measured.shadcn,
+        measured.ref,
         `${id}: hovering an item paints nothing on either side - the check proves nothing`,
       ).not.toBe("rgba(0, 0, 0, 0)")
     }
@@ -251,7 +460,7 @@ test.describe("accepts input", () => {
     let checked = 0
     for (const id of pairIds) {
       const row = page.locator(`[data-pair-id="${id}"]`)
-      for (const side of ["shadcn", "mui"] as const) {
+      for (const side of ["ref", "mui"] as const) {
         const control = row.locator(`[data-side="${side}"]`).locator(EDITABLE).first()
         if ((await control.count()) === 0) continue
         if (!(await control.isVisible())) continue
@@ -276,7 +485,7 @@ test.describe("accepts input", () => {
       }
     }
 
-    expect(checked, "no editable controls found in the gallery").toBeGreaterThan(0)
+    skipIfNothingToCheck(checked, "an editable control")
     expect(offenders, `these controls ignored typed input:\n${offenders.join("\n")}`).toEqual([])
   })
 })
@@ -325,17 +534,17 @@ test.describe("no ripple", () => {
 test.describe("hover-opens", () => {
   test("each tagged pair's overlay opens on hover alone, no click", async ({ page }) => {
     const pairs = (await discover(page)).filter((p) => p.behaviors.includes("hover-opens"))
-    expect(pairs.length, "no pairs tagged with the hover-opens behavior").toBeGreaterThan(0)
+    skipIfNothingToCheck(pairs.length, "hover-opens")
 
     for (const { id } of pairs) {
       const row = page.locator(`[data-pair-id="${id}"]`)
       await row.scrollIntoViewIfNeeded()
-      for (const side of ["shadcn", "mui"] as const) {
+      for (const side of ["ref", "mui"] as const) {
         const cell = row.locator(`[data-side="${side}"]`)
         const target = cell.locator("[data-target]").first()
         await target.hover()
         await expect(
-          openContentLocator(page, cell, id),
+          await openContentLocator(page, cell, id),
           `${id} (${side}): overlay did not become visible on hover (no click was performed)`,
         ).toBeVisible({ timeout: 3000 })
         await resetState(page)
@@ -347,16 +556,16 @@ test.describe("hover-opens", () => {
 test.describe("escape-closes", () => {
   test("each tagged pair's open overlay detaches on Escape", async ({ page }) => {
     const pairs = (await discover(page)).filter((p) => p.behaviors.includes("escape-closes"))
-    expect(pairs.length, "no pairs tagged with the escape-closes behavior").toBeGreaterThan(0)
+    skipIfNothingToCheck(pairs.length, "escape-closes")
 
     for (const { id } of pairs) {
       const row = page.locator(`[data-pair-id="${id}"]`)
       await row.scrollIntoViewIfNeeded()
-      for (const side of ["shadcn", "mui"] as const) {
+      for (const side of ["ref", "mui"] as const) {
         const cell = row.locator(`[data-side="${side}"]`)
         const target = cell.locator("[data-target]").first()
         await target.click()
-        const overlay = openContentLocator(page, cell, id)
+        const overlay = await openContentLocator(page, cell, id)
         await expect(
           overlay,
           `${id} (${side}): overlay never opened on click, so Escape-close cannot be tested`,
@@ -453,7 +662,7 @@ test.describe("text metrics", () => {
           }
           return seen
         }
-        const a = collect("shadcn")
+        const a = collect("ref")
         const b = collect("mui")
         const out: string[] = []
         for (const [text, m] of a) {
@@ -464,7 +673,7 @@ test.describe("text metrics", () => {
             // omitted means "does not apply here", not "differs".
             if (m[k] === undefined || other[k] === undefined) continue
             if (m[k] !== other[k]) {
-              out.push(`"${text.slice(0, 24)}" ${k}: shadcn ${m[k]} (${m.__tag}) vs mui ${other[k]} (${other.__tag})`)
+              out.push(`"${text.slice(0, 24)}" ${k}: ref ${m[k]} (${m.__tag}) vs mui ${other[k]} (${other.__tag})`)
             }
           }
         }
@@ -505,23 +714,49 @@ test.describe("painted geometry", () => {
    */
   // Pairs whose painted boxes differ BY DESIGN, with the reason. Adding to this list means claiming
   // the difference is intended and pixel-neutral - the parity diff still has to agree.
-  const BY_DESIGN = new Set([
-    // buttongroup-basic: the two libraries build the shared seam differently and neither is wrong.
-    // shadcn drops the left border off every non-first child, so each of those buttons is 1px
-    // narrower and the seam is the previous button's right border. MUI keeps the border, makes the
-    // earlier button's right border transparent, and pulls the next button 1px left to overlap. The
-    // outer edges and the seam land on identical pixels either way - which the parity diff confirms
-    // at 0 differing pixels in light - but the intermediate boxes are a pixel apart. See the
-    // MuiButtonGroup banner in the theme.
-    "buttongroup-basic",
-  ])
+  // Scoped PER THEME, for the reason thresholds.ts gives: a pair id is only unique within one
+  // gallery, and `button-destructive` exists in both. A flat set would exempt the shadcn pair too,
+  // silently, and an exemption is always a claim about one specific pair of implementations.
+  const BY_DESIGN: Record<ThemeName, Set<string>> = {
+    shadcn: new Set([
+      // buttongroup-basic: the two libraries build the shared seam differently and neither is wrong.
+      // shadcn drops the left border off every non-first child, so each of those buttons is 1px
+      // narrower and the seam is the previous button's right border. MUI keeps the border, makes the
+      // earlier button's right border transparent, and pulls the next button 1px left to overlap. The
+      // outer edges and the seam land on identical pixels either way - which the parity diff confirms
+      // at 0 differing pixels in light - but the intermediate boxes are a pixel apart. See the
+      // MuiButtonGroup banner in the theme.
+      "buttongroup-basic",
+    ]),
+    kumo: new Set([
+      // The two emphasis buttons: kumo paints its gradient on an absolutely positioned child SPAN,
+      // and MUI's Button renders its children as bare text nodes - there is no element to style - so
+      // the theme uses a ::before of identical geometry instead. A pseudo-element is not a DOM node,
+      // so it contributes no rectangle here while kumo's span does. That substitution is deliberate
+      // and is what makes the pair MATCH: folding the gradient onto the root's own background-image
+      // instead scores Δ41, against Δ1 for the pseudo-element. Measurements in thresholds.ts.
+      "button-primary",
+      "button-destructive",
+
+      // radio-group: kumo draws the selected dot as a child element; MUI draws it as a second,
+      // scaled SVG icon inside the same control. Same 8x8 dot on the same pixels - the pair is at
+      // zero - but one side reaches it with an extra box.
+      "radio-group",
+
+      // tabs-underline: same shape of difference twice over. Kumo's tab icons are wrapped in their
+      // own sized span where MUI renders the svg directly, and kumo's active underline is a child
+      // element where MUI's Tabs paints its indicator as a separate absolutely positioned span that
+      // this collector sees at a different depth. Both land on identical pixels.
+      "tabs-underline",
+    ]),
+  }
 
   test("each pair paints the same rectangles on both sides", async ({ page }) => {
     const pairs: string[] = (
       await page.evaluate(() =>
         Array.from(document.querySelectorAll("[data-pair-id]")).map((el) => el.getAttribute("data-pair-id")!),
       )
-    ).filter((id) => !BY_DESIGN.has(id))
+    ).filter((id) => !BY_DESIGN[targetOf(test.info().project.name).theme].has(id))
     expect(pairs.length).toBeGreaterThan(0)
 
     const offenders: string[] = []
@@ -529,6 +764,12 @@ test.describe("painted geometry", () => {
       const row = page.locator(`[data-pair-id="${id}"]`)
       await row.scrollIntoViewIfNeeded()
       const found = await row.evaluate((rowEl) => {
+        // A DERIVED pair has no reference cell at all (see Pair.ref) - there is no second side to
+        // compare rectangles against, so every box the MUI side paints would otherwise be reported
+        // as "extra". Skipped rather than special-cased below, so the comparison only ever runs on
+        // pairs that actually have two sides.
+        if (!rowEl.querySelector('[data-side="ref"]')) return []
+
         const transparent = (c: string) => c === "transparent" || /^(rgba?|oklab|oklch|color)\(.*[,/]\s*0\s*\)$/.test(c)
 
         const collect = (side: string): string[] => {
@@ -582,7 +823,7 @@ test.describe("painted geometry", () => {
           return boxes.sort()
         }
 
-        const a = collect("shadcn")
+        const a = collect("ref")
         const b = collect("mui")
         if (a.length === b.length && a.every((v, i) => v === b[i])) return []
 
@@ -595,7 +836,7 @@ test.describe("painted geometry", () => {
         const out: string[] = []
         for (const [box, n] of ca) {
           const extra = n - (cb.get(box) ?? 0)
-          if (extra > 0) out.push(`shadcn only (x${extra}): ${box}`)
+          if (extra > 0) out.push(`ref only (x${extra}): ${box}`)
         }
         for (const [box, n] of cb) {
           const extra = n - (ca.get(box) ?? 0)
@@ -628,18 +869,18 @@ test.describe("filters-on-type", () => {
    */
   test("each tagged pair narrows to the same options on both sides", async ({ page }) => {
     const pairs = (await discover(page)).filter((p) => p.behaviors.includes("filters-on-type"))
-    expect(pairs.length, "no pairs tagged with the filters-on-type behavior").toBeGreaterThan(0)
+    skipIfNothingToCheck(pairs.length, "filters-on-type")
 
     for (const { id } of pairs) {
       const row = page.locator(`[data-pair-id="${id}"]`)
       await row.scrollIntoViewIfNeeded()
 
       const seen: Record<string, { all: string[]; filtered: string[]; query: string }> = {}
-      for (const side of ["shadcn", "mui"] as const) {
+      for (const side of ["ref", "mui"] as const) {
         const cell = row.locator(`[data-side="${side}"]`)
         const input = cell.locator("[data-target]").first()
         await input.click()
-        const list = openContentLocator(page, cell, id)
+        const list = await openContentLocator(page, cell, id)
         await expect(list, `${id} (${side}): list did not open`).toBeVisible({ timeout: 5000 })
 
         const optionsOf = () => list.locator('[role="option"]').allInnerTexts()
@@ -663,18 +904,18 @@ test.describe("filters-on-type", () => {
       expect(
         seen.mui.query,
         `${id}: the two sides rendered different options, so they were typed different queries ` +
-          `(shadcn ${JSON.stringify(seen.shadcn.all)}, mui ${JSON.stringify(seen.mui.all)})`,
-      ).toEqual(seen.shadcn.query)
+          `(ref ${JSON.stringify(seen.ref.all)}, mui ${JSON.stringify(seen.mui.all)})`,
+      ).toEqual(seen.ref.query)
       expect(
-        seen.shadcn.filtered.length,
-        `${id}: typing "${seen.shadcn.query}" did not narrow shadcn's list at all ` +
-          `(${JSON.stringify(seen.shadcn.filtered)}) - nothing is being filtered`,
-      ).toBeLessThan(seen.shadcn.all.length)
+        seen.ref.filtered.length,
+        `${id}: typing "${seen.ref.query}" did not narrow the reference list at all ` +
+          `(${JSON.stringify(seen.ref.filtered)}) - nothing is being filtered`,
+      ).toBeLessThan(seen.ref.all.length)
       expect(
         seen.mui.filtered,
         `${id}: the two sides filtered "${seen.mui.query}" differently\n` +
-          `  shadcn: ${JSON.stringify(seen.shadcn.filtered)}\n  mui:    ${JSON.stringify(seen.mui.filtered)}`,
-      ).toEqual(seen.shadcn.filtered)
+          `  ref:    ${JSON.stringify(seen.ref.filtered)}\n  mui:    ${JSON.stringify(seen.mui.filtered)}`,
+      ).toEqual(seen.ref.filtered)
     }
   })
 })

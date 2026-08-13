@@ -9,6 +9,17 @@ import { defineConfig } from "vite"
 export default defineConfig(({ command }) => ({
   base: command === "build" ? "/xui/" : "/",
   plugins: [react(), tailwindcss()],
+  // Honour PORT so a second checkout can run its own dev server without colliding with the primary
+  // one. Vite does not read PORT on its own, and this repo needs it: a worktree that shares 5173
+  // with another checkout does not merely fail to start - Playwright's `reuseExistingServer`
+  // silently ATTACHES to whichever server got there first and measures that checkout's code
+  // instead (see PARITY_PORT in playwright.config.ts). Unset, this is Vite's usual 5173.
+  server: {
+    port: process.env.PORT ? Number(process.env.PORT) : 5173,
+    // Fail loudly on a collision rather than drifting to 5174, which would leave the harness
+    // pointing at whatever else is on the port it expected.
+    strictPort: true,
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
@@ -16,9 +27,20 @@ export default defineConfig(({ command }) => ({
   },
   build: {
     rollupOptions: {
+      // One entry per theme, plus its Tailwind-free preflight twin. Each page compiles its own
+      // independent CSS graph, which is the point: the two design systems' Tailwind themes, base
+      // layers and fonts must never load together, or a 0-threshold pixel harness would be
+      // measuring whichever one won the cascade.
+      //
+      // `index` is the exception that proves it: the showcase renders only MUI, under all three
+      // themes side by side, so it pulls in NEITHER design system's stylesheet and the two themes
+      // can share a page safely. The real components live on the parity pages.
       input: {
-        main: path.resolve(__dirname, "index.html"),
+        index: path.resolve(__dirname, "index.html"),
+        shadcn: path.resolve(__dirname, "shadcn.html"),
         pure: path.resolve(__dirname, "pure.html"),
+        kumo: path.resolve(__dirname, "kumo.html"),
+        kumoPure: path.resolve(__dirname, "kumo-pure.html"),
       },
     },
   },

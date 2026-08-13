@@ -15,7 +15,21 @@ export type PairState =
   | "hover-child"
 
 /** Non-pixel behaviors asserted by e2e/behavior.spec.ts (declarative discovery via `data-behaviors`). */
-export type PairBehavior = "animates" | "hover-opens" | "escape-closes" | "overlay-matches" | "item-hover-highlights" | "filters-on-type"
+export type PairBehavior =
+  | "animates"
+  | "hover-opens"
+  | "escape-closes"
+  | "overlay-matches"
+  | "item-hover-highlights"
+  | "anchored-to-trigger"
+  | "filters-on-type"
+
+/**
+ * The two cells of a pair. `ref` is the real component of whichever design system the page is
+ * replicating (shadcn, kumo, ...) - named for the ROLE rather than the system, so one gallery
+ * harness serves every theme.
+ */
+export type Side = "ref" | "mui"
 
 export interface Pair {
   id: string
@@ -42,7 +56,53 @@ export interface Pair {
    * component. Only needed for pairs whose overlay actually extends past the row.
    */
   roomBelow?: number
-  shadcn: ReactNode
+  /**
+   * CSS selector that finds this pair's open overlay when it CANNOT be tagged with
+   * `data-portal-target`.
+   *
+   * The harness normally identifies a portalled overlay by a `data-portal-target="<pairId>"`
+   * attribute both sides carry, which is exact and needs no knowledge of the component's internals.
+   * Some reference components give you nowhere to put it: kumo's `Tooltip` spreads its rest props
+   * onto the Base UI root and puts `className` on the TRIGGER, so nothing reaches the popup. Its
+   * `container` prop portals into a node you supply, but that wrapper is `position: static` and
+   * 0x0, so it is not the box to screenshot either.
+   *
+   * When set, the selector participates in overlay lookup and in resetState's "everything closed"
+   * assertion alongside the attribute, so only the side that needs it uses it - the MUI side of the
+   * same pair still carries `data-portal-target` as usual. Only one side's overlay is ever open at
+   * a time, so the two never collide.
+   *
+   * Keep it a stable, component-owned class the package ships deliberately (kumo's popup carries
+   * `kumo-tooltip-popup`), never a hashed/utility class, or a package update silently stops
+   * matching and the pair fails as "overlay never opened" rather than as a style difference.
+   */
+  openSelector?: string
+  /**
+   * The real reference-system component this pair is judged against.
+   *
+   * OMITTED for a DERIVED component - one MUI ships and the reference design system does not, so
+   * there is nothing to diff against. MUI's surface is wider than either system's: shadcn has no
+   * Slider or Rating, kumo has no Avatar, Skeleton or Stepper. Left unthemed those render as stock
+   * Material - a blue, Roboto-metric control sitting next to the themed ones - which is worse for a
+   * drop-in theme than an imperfect derivation, so they are styled from the system's own tokens and
+   * neighbouring components instead.
+   *
+   * A pair without a `ref` is held to a DIFFERENT standard, and the harness enforces the
+   * difference rather than trusting the author to remember it:
+   *
+   *   - PairRow emits `data-states=""` for it no matter what `states` says, so the pixel harness
+   *     structurally cannot be asked to diff it. There is no reference; a green number would be
+   *     meaningless.
+   *   - No `[data-side="ref"]` cell is rendered at all, so the gallery-wide behavior sweeps
+   *     (`accepts input`, `text metrics`) skip the missing side on their own.
+   *   - preflight still covers it in full: it compares the MUI cell WITH Tailwind against the same
+   *     cell WITHOUT it, which needs no reference and is exactly the check that catches a derived
+   *     block leaning on Tailwind's reset.
+   *
+   * So a derived pair is proved Tailwind-independent and typed correctly; it is NOT proved to match
+   * anything. Say so where it is declared.
+   */
+  ref?: ReactNode
   mui: ReactNode
 }
 

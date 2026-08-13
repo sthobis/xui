@@ -5,12 +5,14 @@ import { diffPngs } from "./lib/compare"
 import {
   anchoredClip,
   applyState,
-  normalizeOverlayPosition,
+  matchOverlayPhase,
   openContentLocator,
   resetState,
   snapToPixelGrid,
+  type OverlayPhase,
   type PairState,
 } from "./lib/states"
+import { activateDark, GALLERY_PAGE, targetOf } from "./lib/themes"
 import { ruleFor } from "./thresholds"
 
 const RESULTS_DIR = "e2e/results"
@@ -26,25 +28,33 @@ const rows: Array<{
 /**
  * Captures the screenshot to diff for a given state, per pair/side. Three shapes:
  *  - "open": overlay content (Tooltip/Select, etc.) renders in a portal outside the cell, so
- *    capture the overlay itself instead of the (visually empty) cell. Portalled overlays can
- *    land at a fractional sub-pixel position (Radix/Floating UI vs MUI's integer rounding) -
- *    normalize both sides to the same phase first so the diff isn't dominated by capture-clip/
- *    glyph-AA artifacts (see normalizeOverlayPosition's own banner).
+ *    capture the overlay itself instead of the (visually empty) cell. The two libraries settle an
+ *    overlay on different sub-pixel fractions (Floating UI rounds to the device grid, MUI's
+ *    Popover to whole CSS pixels, Base UI's item-aligned Select not at all), which changes how
+ *    everything inside it rasterizes - so the reference side is captured exactly where it landed
+ *    and the MUI side is moved onto that same PHASE (see matchOverlayPhase's own banner).
  *  - "anchored": same open overlay, but captured together with its trigger via a page-level clip
  *    over their union bounding box (see anchoredClip's own banner for why - this is the only
  *    capture shape that can see anchor distance/placement at all).
  *  - everything else (default/hover/focus/active): the cell itself, which is where the
  *    :active press nudge - and every other inline visual state - actually renders.
  */
-async function captureState(page: Page, cell: Locator, state: PairState, pairId: string): Promise<Buffer> {
+async function captureState(
+  page: Page,
+  cell: Locator,
+  state: PairState,
+  pairId: string,
+  /** The phase the other side of this pair rasterized at, or null when this side goes first. */
+  phase: OverlayPhase | null,
+): Promise<{ shot: Buffer; phase: OverlayPhase | null }> {
   if (state === "anchored") {
     const clip = await anchoredClip(page, cell, pairId)
-    return page.screenshot({ animations: "disabled", clip })
+    return { shot: await page.screenshot({ animations: "disabled", clip }), phase: null }
   }
   if (state === "open") {
-    const overlay = openContentLocator(page, cell, pairId)
-    await normalizeOverlayPosition(overlay)
-    return overlay.screenshot({ animations: "disabled" })
+    const overlay = await openContentLocator(page, cell, pairId)
+    const settled = await matchOverlayPhase(overlay, phase)
+    return { shot: await overlay.screenshot({ animations: "disabled" }), phase: settled }
   }
   // Inline states capture the cell via a page-level clip with ROUNDED integer bounds rather than
   // an element screenshot. Element screenshots clip at the element's own fractional device-pixel
@@ -61,28 +71,33 @@ async function captureState(page: Page, cell: Locator, state: PairState, pairId:
   await snapToPixelGrid(cell)
   const box = await cell.boundingBox()
   if (!box) throw new Error(`cell for ${pairId} (${state}) has no bounding box`)
-  return page.screenshot({
-    animations: "disabled",
-    clip: {
-      x: Math.round(box.x),
-      y: Math.round(box.y),
-      width: Math.round(box.width),
-      height: Math.round(box.height),
-    },
-  })
+  return {
+    shot: await page.screenshot({
+      animations: "disabled",
+      clip: {
+        x: Math.round(box.x),
+        y: Math.round(box.y),
+        width: Math.round(box.width),
+        height: Math.round(box.height),
+      },
+    }),
+    phase: null,
+  }
 }
 
 test.beforeEach(async ({ page }, testInfo) => {
-  await page.goto("/")
+  const { theme, mode } = targetOf(testInfo.project.name)
+  await page.goto(GALLERY_PAGE[theme])
   await page.waitForLoadState("networkidle")
-  if (testInfo.project.name === "dark") {
-    await page.getByTestId("mode-toggle").click()
-    await expect(page.locator("html")).toHaveClass(/dark/)
-    await page.waitForTimeout(300)
-  }
+  if (mode === "dark") await activateDark(page, theme)
 })
 
 test("all pairs match within threshold", async ({ page }, testInfo) => {
+  // Which gallery this project drives. The duration budget is set further down, once the pair
+  // count is known - a per-pair budget rather than the flat constant this branch carried, since
+  // that is the invariant that survives the gallery growing.
+  const { theme } = targetOf(testInfo.project.name)
+
   // Iteration speedup: `PARITY_PAIR=slider` (comma-separated id prefixes) restricts the run to
   // matching pairs, so a single-component check takes ~seconds instead of the whole suite. A
   // filtered run writes a separate `.filtered.md` report and leaves prior diffs in place, so it
@@ -99,7 +114,13 @@ test("all pairs match within threshold", async ({ page }, testInfo) => {
   const allPairs: Array<{ id: string; states: PairState[] }> = await page.evaluate(() =>
     Array.from(document.querySelectorAll("[data-pair-id]")).map((el) => ({
       id: el.getAttribute("data-pair-id")!,
-      states: (el.getAttribute("data-states") ?? "default").split(",") as PairState[],
+      // `states: []` is a legitimate declaration, not a mistake: a pair can exist to be judged by
+      // e2e/behavior.spec.ts alone when the pixel harness structurally cannot compare it (kumo's
+      // Select popup - see its section for the measurements). Filtering the empty string keeps that
+      // from being read as one state named "".
+      states: (el.getAttribute("data-states") ?? "default")
+        .split(",")
+        .filter(Boolean) as PairState[],
     })),
   )
   expect(allPairs.length).toBeGreaterThan(0)
@@ -137,45 +158,37 @@ test("all pairs match within threshold", async ({ page }, testInfo) => {
     // Centring gives every overlay the same room to open into no matter what precedes it.
     await row.evaluate((el) => el.scrollIntoView({ block: "center" }))
     for (const state of states) {
-      const shadcnCell = row.locator('[data-side="shadcn"]')
+      const refCell = row.locator('[data-side="ref"]')
       const muiCell = row.locator('[data-side="mui"]')
 
-      // An overlay is positioned FROM its trigger at the moment it opens, so a trigger sitting at a
-      // fractional coordinate has to be squared up before the state is applied - afterwards is too
-      // late, the panel's position is already computed.
+      // The trigger is squared onto whole pixels before an overlay opens, because an overlay is
+      // positioned FROM its trigger at the moment it opens - afterwards is too late, the panel's
+      // position is already computed. The two positioning engines round to different grids
+      // (Floating UI to the device grid, MUI's Popover to whole CSS pixels with Math.round), so
+      // from a fractional trigger they round the same intention to different places.
       //
-      // This matters because the two libraries round differently: Radix places content on the
-      // device-pixel grid (0.5 CSS px at this harness's deviceScaleFactor of 2) while MUI's Popover
-      // rounds to whole CSS pixels. From a trigger at y=483.5 they resolve gaps of 4 and 4.5, and
-      // the anchored capture - which deliberately skips normalization so it can still see real
-      // placement errors - has nothing to absorb that half pixel. It re-rasterizes every glyph and
-      // the panel outline, scoring 2.5% at Δ255 on pairs where the panels are byte-identical.
+      // That snap now lives inside `applyState`, which does it for both `open` and `anchored`
+      // rather than only `anchored` here - see the note there, and its measurement on kumo's
+      // popover. It is not repeated in this file.
       //
-      // menu.tsx already pins its trigger to an even whole WIDTH for exactly this reason, on the x
-      // axis. The y axis has no such knob - it depends on where the row lands - which is why this
-      // surfaced as two long-green pairs "breaking" when an unrelated row was added above them.
-      if (state === "anchored") {
-        await snapToPixelGrid(shadcnCell)
-        await snapToPixelGrid(muiCell)
-      }
-
-      await applyState(page, shadcnCell, state, id)
-      const shadcnShot = await captureState(page, shadcnCell, state, id)
+      // The reference side then goes FIRST and un-nudged, and its sub-pixel phase is what the MUI
+      // side is matched to - see matchOverlayPhase. The reference is the one being replicated, so
+      // it is the one whose rasterization the comparison is held to.
+      await applyState(page, refCell, state, id)
+      const ref = await captureState(page, refCell, state, id, null)
       await resetState(page)
 
-      if (state === "anchored") {
-        await snapToPixelGrid(shadcnCell)
-        await snapToPixelGrid(muiCell)
-      }
       await applyState(page, muiCell, state, id)
-      const muiShot = await captureState(page, muiCell, state, id)
+      const mui = await captureState(page, muiCell, state, id, ref.phase)
       await resetState(page)
+      const refShot = ref.shot
+      const muiShot = mui.shot
 
-      const result = diffPngs(shadcnShot, muiShot)
+      const result = diffPngs(refShot, muiShot)
       // A pair with a maxDelta override is judged on the size of its worst per-channel error
       // instead of on how many pixels differ - see thresholds.ts maxDeltaOverrides. Both numbers
       // are always reported so a delta-judged pair's pixel count stays visible.
-      const rule = ruleFor(id, state)
+      const rule = ruleFor(theme, id, state)
       // A size difference is its own failure and is NEVER judged by a threshold. diffPngs pads the
       // smaller capture to the union with transparent pixels, so two differently-shaped captures
       // produce a percentage - and a percentage cannot distinguish "one side is a pixel taller"
@@ -183,7 +196,7 @@ test("all pairs match within threshold", async ({ page }, testInfo) => {
       // same size in the same browser, so unequal captures always mean a real geometry difference
       // (or a capture bug); either way the number underneath is meaningless and the run should say
       // so in those terms rather than quoting a mismatch percentage.
-      const { shadcn: sizeA, mui: sizeB } = result.sizes
+      const { ref: sizeA, mui: sizeB } = result.sizes
       const sizeMismatch = sizeA.width !== sizeB.width || sizeA.height !== sizeB.height
       const overPixels = result.mismatchedPixels > rule.maxPixels
       const overDelta = result.maxChannelDelta > rule.maxDelta
@@ -203,7 +216,7 @@ test("all pairs match within threshold", async ({ page }, testInfo) => {
       // pixel count in the report - and diagnosing one used to mean temporarily editing
       // thresholds.ts to force a failure, which is both fiddly and easy to commit by accident.
       if (failed || process.env.PARITY_DUMP) {
-        writeFileSync(`${RESULTS_DIR}/diffs/${slug}-shadcn.png`, shadcnShot)
+        writeFileSync(`${RESULTS_DIR}/diffs/${slug}-ref.png`, refShot)
         writeFileSync(`${RESULTS_DIR}/diffs/${slug}-mui.png`, muiShot)
         writeFileSync(`${RESULTS_DIR}/diffs/${slug}-diff.png`, PNG.sync.write(result.diff))
       }
@@ -211,7 +224,7 @@ test("all pairs match within threshold", async ({ page }, testInfo) => {
         const detail = `${result.mismatchedPixels}px differ, worst channel Δ${result.maxChannelDelta} (${result.mismatchPct.toFixed(2)}% of the capture); rule is ${rule.label}`
         failures.push(
           sizeMismatch
-            ? `${slug}: captures are different sizes - shadcn ${sizeA.width}x${sizeA.height}, mui ${sizeB.width}x${sizeB.height}. The two sides do not render the same geometry; the numbers below are padding noise, not a colour difference.`
+            ? `${slug}: captures are different sizes - ref ${sizeA.width}x${sizeA.height}, mui ${sizeB.width}x${sizeB.height}. The two sides do not render the same geometry; the numbers below are padding noise, not a colour difference.`
             : overPixels && overDelta
               ? `${slug}: too many differing pixels AND too large a channel error - ${detail}`
               : overPixels

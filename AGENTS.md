@@ -1,50 +1,78 @@
 # Working in this repo
 
 xui is a collection of Material UI (MUI) v9 themes that make MUI components look pixel-for-pixel identical to another design system.
-The first and current theme replicates shadcn/ui's default look (new-york style, neutral base, Geist, light and dark).
-The bar is literal: a regular eye must not be able to tell a themed MUI component from the real shadcn component.
+The bar is literal: a regular eye must not be able to tell a themed MUI component from the real one.
+
+Two themes ship today:
+
+- **shadcn** - shadcn/ui's default look (new-york style, neutral base, Geist, light and dark). Complete.
+- **kumo** - Kumo, Cloudflare's design system (https://kumo-ui.com), Inter, light and dark. Complete, including the portalled tier (Tooltip, DropdownMenu, Select, Popover, Dialog, Toast).
+
+Everything below applies to both. Where they differ, the theme name is called out.
 
 ## Layout
 
-- `packages/xui/src/themes/shadcn.ts` is the deliverable: one self-contained file exporting `shadcnTheme`.
-  It imports only from `@mui/material/*` and `lucide-react` so it can be copied into any app as a single file.
-  It is a `.ts` file, so any icon element is built with `React.createElement`, never JSX.
+- `packages/xui/src/themes/<name>.ts` is the deliverable, one self-contained file per theme exporting `<name>Theme`.
+  Each imports only from `@mui/material/*` plus that design system's icon package (`lucide-react` for shadcn, `@phosphor-icons/react` for kumo), so it can be copied into any app as a single file.
+  They are `.ts` files, so any icon element is built with `React.createElement`, never JSX.
 - `apps/showcase` is a Vite app used for development and verification.
-  `src/gallery/` holds theme-agnostic sections, one per component, rendering each variant/size/state as a pair: the real shadcn component next to the themed MUI component.
-  `src/components/ui/` is the real shadcn/ui source installed by the shadcn CLI.
-  This installed source is the ground truth for every styling value.
-- `e2e/` is the parity harness: Playwright screenshots each shadcn/MUI cell pair and pixelmatch diffs them.
+  `src/gallery/` holds the theme-agnostic plumbing (`PairGrid`, `Sidebar`, `ThemePanel`, `types`).
+  `src/themes/<name>/` is one theme's own page: its entry, App, Providers, CSS, Tailwind-free `pure` entry, and `sections/`.
+  A section renders each variant/size/state as a pair: the real component (`ref`) next to the themed MUI one (`mui`).
+- Each theme's PARITY page is its own Vite page, and that isolation is the point: the two design systems' Tailwind themes, base layers and fonts must never load together, or a 0-threshold pixel harness would be measuring whichever won the cascade.
+  `shadcn.html` + `pure.html` are shadcn's; `kumo.html` + `kumo-pure.html` are kumo's.
+  Those four are where the real components live and where every pixel claim is made.
+- `index.html` is the SHOWCASE, and it is the one page that may hold both themes at once - one row per component, three columns: stock MUI, shadcn-themed, kumo-themed.
+  It can do that precisely because it renders no reference component, so it loads neither system's Tailwind and there is no cascade to fight over.
+  It reads the kumo gallery's `mui` nodes as its component list, since that theme now covers everything shadcn's does.
+  Two things there are load-bearing and are commented at the code: each column re-declares its theme's CSS custom properties inline (both themes emit `--mui-palette-*` on `:root`, so without that you get one theme, whichever wrote `:root` last), and each column uses `ScopedCssBaseline` rather than the global one (which would otherwise hand the whole page one theme's typography).
+  The showcase is light-only: the two systems' dark conventions (`.dark` against `data-mode`) cannot both be driven by one toggle, so dark mode stays on the per-theme pages.
+- Ground truth per theme:
+  - shadcn - `apps/showcase/src/components/ui/<name>.tsx`, the real source installed by the shadcn CLI.
+  - kumo - the installed `@cloudflare/kumo` package, pinned to an exact version. The real component source is in `node_modules/@cloudflare/kumo/dist/chunks/<name>-<hash>.js` (the files under `dist/components/` are 200-byte re-exports), and the tokens are in `dist/styles/`.
+- `e2e/` is the parity harness: Playwright screenshots each ref/MUI cell pair and pixelmatch diffs them.
 - Design specs and implementation plans live under `docs/superpowers/` and are gitignored.
   Never commit them.
 
 ## The one rule that matters most
 
 Ground truth always wins.
-Every value in the theme must be extracted from the specific installed shadcn component you are theming, not guessed, and not copied by analogy from another component's block.
+Every value in the theme must be extracted from the specific installed component you are theming, not guessed, and not copied by analogy from another component's block.
 Copying a value from a different component ("Button had this, so Input probably does too") has caused every serious bug in this project.
 Radius, padding, colors, and icon sizes differ per component.
-Read the component's own source in `apps/showcase/src/components/ui/<name>.tsx` and trace each value.
 
-Every value in the theme carries a `// shadcn: <class-or-source>` provenance comment.
+Every value carries a provenance comment naming where it came from - `// shadcn: <class-or-source>` or `// kumo: <class-or-token>`.
 If a value has no ground-truth backing, it does not ship, even if MUI exposes that API surface.
-Ship only what a gallery pair actually covers.
+Ship only what a gallery pair actually covers - and if a component cannot be paired, say so where the sections are registered rather than theming it blind.
+
+**And a source file is only EVIDENCE about the ground truth; what paints is the ground truth.**
+That distinction is not pedantic - it has cost real time twice on the kumo theme:
+
+- Its tokens are written `light-dark(var(--color-neutral-900, <fallback>), ...)`, and the inline fallback is often NOT Tailwind's real value, which always wins. Seven token values were wrong from reading the file.
+- Its Switch styles a track with Tailwind `dark:` variants that never fire, because kumo drives dark mode through `light-dark()` switched by `data-mode` and its own docs say never to use `dark:`. Transcribing them as real overrides was worth Δ230+.
+
+So: read the source to find out WHICH declarations exist, then read the rendered values out of the browser (`getComputedStyle`, once per colour mode) to find out what they resolve to.
 
 ## The loop for adding or fixing a component
 
-1. Extract the installed twin `apps/showcase/src/components/ui/<name>.tsx`.
-   Quote its real class strings into the theme's `// ---- <Component> ----` banner and resolve them to CSS against the installed Tailwind (`--radius: 0.625rem`; the radius scale is multiplicative: `--radius-sm` is `calc(var(--radius) * 0.6)`, `--radius-md` is `* 0.8`, `--radius-lg` is `var(--radius)`; `--spacing` is `0.25rem`).
-2. Add a gallery section `apps/showcase/src/gallery/sections/<name>.tsx` and register it in `sections/index.ts`.
+1. Extract the installed twin.
+   - shadcn: `apps/showcase/src/components/ui/<name>.tsx`, resolved against the installed Tailwind (`--radius: 0.625rem`; the radius scale is multiplicative: `--radius-sm` is `calc(var(--radius) * 0.6)`, `--radius-md` is `* 0.8`, `--radius-lg` is `var(--radius)`; `--spacing` is `0.25rem`).
+   - kumo: `node_modules/@cloudflare/kumo/dist/chunks/<name>-<hash>.js`. Kumo REDEFINES Tailwind's type scale (`text-xs` 12px, `text-sm` 13px, `text-base` **14px**, `text-lg` 16px), so reading Tailwind's defaults puts every label 2px out.
+   Quote the real class strings into the theme's `// ---- <Component> ----` banner, then confirm what they resolve to in the browser (see the rule above).
+2. Add a gallery section `apps/showcase/src/themes/<theme>/sections/<name>.tsx` and register it in that theme's `sections/index.ts`.
    The MUI side is idiomatic MUI (plain props, no `sx` hacks, no wrapper components, no props that compensate for the theme).
-   The shadcn side imports the real component.
-   Put `data-target` on the element that receives hover/focus.
+   The `ref` side imports the real component.
+   Put `data-target` on the element that receives hover/focus - and check it actually lands in the DOM, since some components forward no unknown attributes (kumo's `Radio.Item` does not, so those pairs are default-state only).
    Give each pair the `states` it needs (`default`, `hover`, `focus`, and `open` for portalled overlays).
-3. Append the component's overrides to `packages/xui/src/themes/shadcn.ts`.
+3. Append the component's overrides to `packages/xui/src/themes/<theme>.ts`.
    Colors come from `theme.vars.palette.*` so both schemes work from one definition; scheme-specific deltas use `theme.applyStyles("dark", ...)`.
-   Alpha blends use `color-mix(in oklab, <color> N%, transparent)` where `N` matches the extracted Tailwind `/NN` suffix exactly (watch for the occasional one-off `in oklch` mix and transcribe it as-is).
-4. Verify: run `pnpm verify:parity` and drive every new pair to 0.00% in both light and dark, with no regression on existing pairs.
-   Diagnose failures with a computed-style diff in the browser before staring at diff images - it is faster than the diff image and it is what catches the cases the diff cannot see.
+   Alpha blends use `color-mix(in oklab, <color> N%, transparent)` where `N` matches the extracted `/NN` suffix exactly (watch for the occasional one-off `in oklch` mix and transcribe it as-is).
+4. Verify: run `pnpm verify:parity` and drive every new pair to 0 in both light and dark, with no regression on existing pairs.
+   Diagnose failures with a computed-style diff in the browser before staring at diff images; when the styles all match, sample the captured PNGs' pixels to find WHERE they differ.
    Run `pnpm exec playwright test e2e/behavior.spec.ts` too if the change touches box geometry; parity alone will not catch a transparent box or a differently-built seam.
-5. Commit with a conventional message, no `Co-Authored-By` trailer.
+5. Sabotage-test the new pair - perturb one themed value, confirm the pair fails, revert.
+   Make it a real perturbation: a font-weight of 401 against 400 renders identically in a variable font and proves nothing.
+6. Commit with a conventional message, no `Co-Authored-By` trailer.
 
 ## The parity harness is strict on purpose
 
@@ -64,8 +92,15 @@ Every bug this suite ever missed was missed that way; the pagination line-height
 
 Never raise either cap to make a pair pass.
 Fix the theme instead.
-If a pair truly cannot reach zero for a provable rounding reason, prove the geometry is identical and add it to `maxDeltaOverrides`, which judges it on channel error alone and ignores the count.
-`slider-disabled` is the worked example: a 1/255 rail artifact spread over more than a thousand pixels, invisible, and stable at `Δ ≤ 1`.
+If a pair truly cannot reach zero for a provable rounding reason, prove it and add an entry to `maxPixelOverrides` or `maxDeltaOverrides` - they override INDEPENDENTLY, so an exception never silently widens both axes.
+Overrides are scoped per theme, because pair ids are only unique within a gallery (both have a `button-*` family) and an exception is always a proof about one specific pair of implementations.
+Worked examples, each carrying its measurements in the file:
+
+- `slider-disabled` (shadcn) - a 1/255 rail artifact over a thousand pixels, judged on delta alone.
+- `button-primary` / `button-destructive` (kumo) - gradient dithering. Kumo paints its gradient on a child span and MUI's Button has no element to style, so the theme uses a `::before`; same picture, different paint op, and the delta histogram is literally `{1: 802}`.
+- `switch-checked` (kumo) - `corner-shape: squircle` rasterizes differently at different device x positions. Only the COUNT is relaxed; the delta cap stays at the default.
+
+`e2e/preflight.spec.ts` has its own, much tighter `maxDeltaOverrides` (default Δ2). An entry there has to show the two captures differ for a reason unrelated to Tailwind at all - not merely that the difference is small.
 
 Four things the pixel diff structurally **cannot** see, so do not rely on it for them:
 
@@ -138,8 +173,32 @@ Verify your override actually wins by reading computed styles in the browser, no
 
 The global `MuiButtonBase` `disableRipple` default does not reach `Checkbox`, `Radio`, or `Switch`; they resolve their own default and forward it, so restate `disableRipple: true` on each.
 
-Portalled components (Select, Tooltip, and the coming Menu/Dialog/Popover) render outside their cell.
-The harness handles them via an `open` state: both the MUI overlay and the shadcn overlay must carry `data-portal-target="<pairId>"` on their outermost portalled element so they are captured and diffed symmetrically.
+Portalled components (Select, Tooltip, Menu, Dialog, Popover) render outside their cell.
+The harness handles them via an `open` state: both the MUI overlay and the reference overlay must carry `data-portal-target="<pairId>"` on their outermost portalled element so they are captured and diffed symmetrically.
+When the reference component gives you nowhere to put that attribute, the pair declares `openSelector` instead - a stable, component-owned class the package ships deliberately (kumo's Tooltip spreads its rest props onto the Base UI root and puts `className` on the trigger, but its popup carries `kumo-tooltip-popup`).
+The MUI side of such a pair still uses the attribute; only one side's overlay is ever open at a time, so the two never collide.
+
+Popper places an overlay differently from Floating UI, and both differences are visible at 0 threshold:
+
+- Popper's default "adaptive" mode splits the position between a `bottom` offset and a transform and rounds only the transform half, so the overlay lands a fraction of a pixel off Floating UI's device-grid-rounded position. `popperOptions: { modifiers: [{ name: "computeStyles", options: { adaptive: false } }] }` makes both round the same way.
+- Popper centres an ARROW with an inline `translate3d`, which promotes it to its own compositing layer; a design system that places its arrow with plain `left` draws it in the parent's raster instead, and an arrow that is not symmetric about its own centre then lands a device pixel off. Popper's `gpuAcceleration: false` fixes the arrow but drags the popup off the grid; a `beforeWrite` modifier that rewrites `state.styles.arrow` to `left`/`top` fixes only the arrow (see `ARROW_BY_LAYOUT` in the kumo theme).
+
+MUI renders Menu, Select and Popover inside a Modal whose invisible backdrop covers the trigger and suppresses its `:hover`, while Base UI deliberately leaves a trigger live so a second click closes the overlay.
+The harness opens an overlay by clicking, so the pointer is still on the trigger - and the `anchored` capture frames the trigger too, which means those pairs compare hover states rather than placement (measured on kumo's dropdown: 12478 pixels, every one of them trigger fill).
+No theme can reconcile that, so such a pair drops `anchored` and declares `anchored-to-trigger` instead, which measures where the overlay opens relative to its trigger without putting the trigger in the picture.
+A pair that needs `anchored` anyway - kumo's popover, whose arrow hangs outside every other capture - uses an unstyled trigger so there is no hover to differ.
+
+Popper and MUI's Popover round an overlay's position to different grids than Floating UI does (`Math.round` to whole CSS pixels against the device grid), so an overlay anchored to a trigger at a fractional position lands half a pixel out.
+`applyState` snaps a cell onto whole pixels before opening for this reason, and `matchOverlayPhase` then puts the overlay itself on a whole pixel before it is captured.
+
+That last step is the one to read before touching it (`e2e/lib/states.ts`).
+An overlay has to be moved onto a whole pixel or its capture picks up a sliver of the page behind the cell, and the two cells have different content behind them.
+But every obvious way to move it damages what is inside: a transform promotes the overlay to a compositing layer, where Chrome draws text with grayscale rather than subpixel antialiasing, so a nudge on one side alone re-rasterizes every glyph in it; a margin changes the element's outer size, which Base UI's and Floating UI's ResizeObservers feed straight back into positioning.
+What works is rewriting the position as pure layout - fold whatever translate the positioner carries into `left`/`top`, drop the transform, and pin the opposite edges to `auto` so a height-auto box cannot stretch instead of moving.
+Two details are load-bearing and each cost a real failure: the element rewritten is the outermost one carrying a transform, not the popup (making a static popup `relative` re-parents its absolutely positioned ARROW - 535 pixels at Δ241 on shadcn's tooltip; leaving the transform on an ancestor keeps the whole subtree in a layer - 1202 at Δ230 on kumo's), and an overlay already on a whole pixel is left completely alone.
+
+Decoration painted OUTSIDE an overlay's border box - an outline band, a shadow's reach - is what the `overlay-matches` behavior exists for; the `open` capture clips at that box and the `anchored` capture's union box is only the overlay's and the trigger's.
+That check compares colours in sRGB, because `getComputedStyle` preserves the space a value was authored in and Tailwind routes every shadow colour through an `oklab` `color-mix` - the same colour, spelled two ways.
 
 ## Adding a second theme
 
@@ -169,17 +228,25 @@ When a pair is mysteriously off, check what the MUI component *is* structurally 
 
 ## Commands
 
-- `pnpm dev` runs the showcase.
-- `pnpm verify:parity` runs the full pixel-parity suite (light and dark, all pairs, ~4 minutes at ~100 pairs).
+- `pnpm dev` runs the showcase at `/` (three themes side by side); the parity galleries are at `/shadcn.html` and `/kumo.html`.
+- `pnpm verify:parity` runs the full pixel-parity suite (every theme, light and dark, all pairs).
+  Playwright projects are named `<theme>-<mode>`: `shadcn-light`, `shadcn-dark`, `kumo-light`, `kumo-dark`, and each writes its own `e2e/results/report-<project>.md`.
   The per-test budget is derived from the pair count rather than fixed, so adding a pair cannot quietly eat the margin - it used to be a flat 240s, which was generous at ~90s and had become a near-miss that failed intermittently inside `resetState`, looking like a stuck overlay rather than a clock.
-- While iterating on ONE component, filter to it for a ~5s loop instead of the full suite: `PARITY_PAIR=slider pnpm exec playwright test e2e/parity.spec.ts --project=light` (comma-separated id prefixes; add `--project=dark` or drop it for both). Run the full `pnpm verify:parity` once at the end to confirm no regressions.
+- While iterating on ONE component, filter to it for a ~5s loop instead of the full suite: `PARITY_PAIR=slider pnpm exec playwright test e2e/parity.spec.ts --project=shadcn-light` (comma-separated id prefixes; swap in `kumo-light` for the kumo gallery, or pass both projects). Run the full `pnpm verify:parity` once at the end to confirm no regressions.
+- **Working in a git worktree? Set `PARITY_PORT`.** Playwright reuses whatever dev server is already on the port instead of starting one, so with a server running from another checkout the whole suite silently measures THAT checkout - a fresh worktree once "failed" on a pair that did not exist in it. Run `PARITY_PORT=5273 pnpm verify` (any free port), and start the dev server on the same port. The default 5173 is unchanged for the primary checkout.
 - `pnpm verify` runs parity plus the preflight suite (proves the theme does not depend on Tailwind's reset).
 - `pnpm typecheck` typechecks every package and the e2e harness.
 - `pnpm test:unit` runs the compare-utility unit tests.
 
 ## Conventions
 
-Colors stay as shadcn's oklch strings; converting them away from oklch breaks parity against the reference.
-Dark mode activates via the `.dark` class on `<html>`.
+Colors stay as the design system's own oklch strings; converting them away from oklch breaks parity against the reference.
+
+Dark mode is each design system's OWN convention, not a normalized one - the themes are drop-ins, so they follow the system they replicate:
+
+- shadcn - a `.dark` class on `<html>` (`colorSchemeSelector: "class"`).
+- kumo - `data-mode="dark"` on `<html>` (`colorSchemeSelector: "data-mode"`, which MUI expands to `[data-mode="%s"]`).
+
+Either way MUI's own `useColorScheme().setMode` writes it, so one toggle moves the MUI theme and the reference system's stylesheet together.
 Gallery presentation components use inline styles only, so they render identically on the Tailwind-free `pure.html` page.
 Do not commit anything under `docs/superpowers/` or `.superpowers/`.
