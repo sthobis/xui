@@ -473,6 +473,148 @@ export const blinkTheme = createTheme({
       ],
     },
 
+    // ---- Checkbox / Radio ----
+    //
+    // Ground truth: reference/primitives/Checkbox/Checkbox.module.css and Radio/Radio.module.css.
+    //
+    // The kit styles a NATIVE input with `appearance: none`: the control IS the 16x16 box, with no
+    // wrapper and no hit padding. MUI wraps a hidden input and a 24x24 SVG in a 34x34 ButtonBase.
+    // So the box itself is rebuilt on MUI's root, the SVG is switched off, and the marks are drawn
+    // as pseudo-elements - the same shapes the kit's CSS draws.
+    //
+    // `padding: 0` is load-bearing rather than cosmetic. MUI's 9px of padding is a hit area, and
+    // normally a larger hit area than the reference's is fine (the harness knows MUI's invisible
+    // boxes are bigger). Not here: the padding is on the ROOT, so it changes the element's own
+    // size, the cell around it, and therefore the capture - a 34x34 capture cannot be diffed
+    // against a 16x16 one at all. The kit's control genuinely has no hit padding either.
+    //
+    // `disableRipple` is restated on both. The global `MuiButtonBase` default does not reach
+    // Checkbox, Radio or Switch: each resolves its own default and forwards it.
+    MuiCheckbox: {
+      defaultProps: {
+        disableRipple: true,
+        // MUI tints the box with `primary.main` via its own colour machinery, which would fight the
+        // background this block sets per state. `default` opts out of that and leaves the styling
+        // here.
+        color: "default",
+      },
+      styleOverrides: {
+        root: ({ theme }) => ({
+          padding: 0, // see the note above - this one is not optional
+          width: 16, // blink: .root `width: 16px`
+          height: 16, // blink: .root `height: 16px`
+          flex: "none", // blink: .root `flex: none`
+          boxSizing: "border-box",
+          background: theme.vars.palette.surface, // blink: .root `background: var(--color-surface)`
+          border: `1px solid ${theme.vars.palette.borderStrong}`, // blink: .root `border: 1px solid var(--color-border-strong)`
+          borderRadius: 4, // blink: .root `border-radius: var(--radius-1)`
+          // blink: .root `transition: background-color 120ms var(--ease-out), border-color ..., box-shadow ...`
+          transition:
+            "background-color 120ms cubic-bezier(0.165, 0.84, 0.44, 1), border-color 120ms cubic-bezier(0.165, 0.84, 0.44, 1), box-shadow 120ms cubic-bezier(0.165, 0.84, 0.44, 1)",
+          // The kit has no icon. MUI's SVG would otherwise paint a Material tick inside the box.
+          "& svg": { display: "none" },
+          "&:hover": {
+            // blink: .root:hover:not(:disabled) `border-color: var(--color-border-input)`. MUI also
+            // paints an action-hover background on the root; the kit changes only the border.
+            background: theme.vars.palette.surface,
+            borderColor: theme.vars.palette.borderInput,
+          },
+          "&.Mui-focusVisible": {
+            // blink: .root:focus-visible - `outline: none` plus the ring as a box-shadow
+            outline: "none",
+            boxShadow: `color-mix(in srgb, ${theme.vars.palette.primary.main} 50%, transparent) 0px 0px 0px 4px`,
+          },
+          // blink: .root:checked, .root:indeterminate
+          "&.Mui-checked, &.MuiCheckbox-indeterminate": {
+            background: theme.vars.palette.primary.main,
+            borderColor: theme.vars.palette.primary.main,
+          },
+          // blink: .root:checked:hover:not(:disabled), .root:indeterminate:hover:not(:disabled)
+          "&.Mui-checked:hover, &.MuiCheckbox-indeterminate:hover": {
+            background: theme.vars.palette.primary.dark,
+            borderColor: theme.vars.palette.primary.dark,
+          },
+          // blink: .root:checked:not(:indeterminate)::after - a 4x8 box showing only its right and
+          // bottom borders, rotated into a tick.
+          "&.Mui-checked:not(.MuiCheckbox-indeterminate)::after": {
+            content: '""',
+            position: "absolute",
+            boxSizing: "border-box",
+            width: 4,
+            height: 8,
+            border: `solid ${theme.vars.palette.primary.contrastText}`,
+            borderWidth: "0 2px 2px 0",
+            transform: "translateY(-1px) rotate(45deg)",
+          },
+          // blink: .root:indeterminate::after
+          "&.MuiCheckbox-indeterminate::after": {
+            content: '""',
+            position: "absolute",
+            width: 8,
+            height: 2,
+            background: theme.vars.palette.primary.contrastText,
+            borderRadius: 1,
+          },
+          "&.Mui-disabled": {
+            opacity: 0.5, // blink: .root:disabled `opacity: 0.5`
+          },
+        }),
+      },
+    },
+    MuiRadio: {
+      defaultProps: {
+        disableRipple: true,
+        color: "default",
+      },
+      styleOverrides: {
+        root: ({ theme }) => ({
+          padding: 0,
+          width: 16, // blink: .root `width: 16px`
+          height: 16, // blink: .root `height: 16px`
+          flex: "none", // blink: .root `flex: none`
+          boxSizing: "border-box",
+          background: theme.vars.palette.surface, // blink: .root `background: var(--color-surface)`
+          border: `1px solid ${theme.vars.palette.borderStrong}`, // blink: .root `border: 1px solid ...`
+          borderRadius: "50%", // blink: .root `border-radius: 50%`
+          transition:
+            "background-color 120ms cubic-bezier(0.165, 0.84, 0.44, 1), border-color 120ms cubic-bezier(0.165, 0.84, 0.44, 1), box-shadow 120ms cubic-bezier(0.165, 0.84, 0.44, 1)",
+          "& svg": { display: "none" },
+          // `disableRipple` above is not enough for Radio, and this is the surprise: the same
+          // default DOES suppress the ripple on Checkbox (whose children are just the input and an
+          // svg), but Radio still mounts a `MuiTouchRipple-root`, and on focus it paints a disc
+          // over the whole 14x14 interior. The ripple root itself is transparent, so a computed
+          // style read on the root shows white and looks perfectly correct - it took sampling the
+          // captured PNGs to see it: the kit's interior is (255,255,255) and MUI's (222,222,224),
+          // 555 pixels of it, which the diff image renders as a solid disc.
+          "& .MuiTouchRipple-root": { display: "none" },
+          "&:hover": {
+            background: theme.vars.palette.surface,
+            borderColor: theme.vars.palette.borderInput, // blink: .root:hover:not(:disabled)
+          },
+          "&.Mui-focusVisible": {
+            outline: "none",
+            // MUI paints its own action-focus tint on the root; the kit changes nothing but the
+            // ring, so the surface fill is restated to keep the interior white.
+            background: theme.vars.palette.surface,
+            boxShadow: `color-mix(in srgb, ${theme.vars.palette.primary.main} 50%, transparent) 0px 0px 0px 4px`, // blink: .root:focus-visible
+          },
+          // blink: .root:checked - there is NO dot element. The border simply thickens to 5px in the
+          // brand colour, leaving a 6px hole of the surface fill in the middle. Reproducing it as a
+          // border (rather than a ::after dot) is what keeps the ring's inner edge identical.
+          "&.Mui-checked": {
+            borderColor: theme.vars.palette.primary.main,
+            borderWidth: 5,
+          },
+          "&.Mui-checked:hover": {
+            borderColor: theme.vars.palette.primary.dark, // blink: .root:checked:hover:not(:disabled)
+          },
+          "&.Mui-disabled": {
+            opacity: 0.5, // blink: .root:disabled `opacity: 0.5`
+          },
+        }),
+      },
+    },
+
     // ---- Input ----
     //
     // Ground truth: reference/primitives/Input/Input.module.css.
