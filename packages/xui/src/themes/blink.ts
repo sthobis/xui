@@ -29,7 +29,13 @@
  * from.
  */
 import { createTheme } from "@mui/material/styles"
-import { CircleAlertIcon, CircleCheckIcon, InfoIcon, TriangleAlertIcon } from "lucide-react"
+import {
+  ChevronDownIcon,
+  CircleAlertIcon,
+  CircleCheckIcon,
+  InfoIcon,
+  TriangleAlertIcon,
+} from "lucide-react"
 // createElement rather than JSX: this is a plain .ts module, and JSX is only valid in .tsx. React
 // is not a new dependency - it is already xui's peer, required by every MUI component.
 import { createElement } from "react"
@@ -1313,6 +1319,98 @@ export const blinkTheme = createTheme({
         { props: { size: "small" }, style: { height: 32 } }, // blink: .sm `var(--control-h-sm)`
         { props: { size: "large" }, style: { height: 40 } }, // blink: .lg `var(--control-h-lg)`
       ],
+    },
+
+    // ---- Accordion ----
+    //
+    // Ground truth: reference/primitives/Accordion/Accordion.module.css, plus the two prop defaults
+    // reference/primitives/Accordion/index.tsx hardcodes.
+    //
+    // Same shape as Tabs below: the kit's Accordion IS MUI's, wrapped with a CSS module on the
+    // root, summary, content and details slots. It also pins `disableGutters` and `square` on every
+    // instance, which is a DEFAULT rather than a style - so it belongs in defaultProps, where a
+    // consumer can still opt out, rather than being frozen into styleOverrides.
+    MuiAccordion: {
+      defaultProps: {
+        disableGutters: true, // blink: Accordion/index.tsx `disableGutters = true`
+        square: true, // blink: Accordion/index.tsx `square = true`
+      },
+      styleOverrides: {
+        root: ({ theme }) => ({
+          background: theme.vars.palette.surface, // blink: .root `background: var(--color-surface)`
+          // The lighter `--color-border`, NOT the `--color-border-strong` the Input and the Tabs
+          // rule use. Transcribed from this module rather than carried across from theirs.
+          border: `1px solid ${theme.vars.palette.border}`, // blink: .root `border: 1px solid var(--color-border)`
+          borderRadius: 8, // blink: .root `border-radius: var(--radius-3)`
+          boxShadow: "none", // blink: .root `box-shadow: none` - MUI ships an accordion at elevation 1
+          // MUI paints a 1px divider above every panel with a ::before pseudo-element, so a lone
+          // bordered panel gets a stray line inside its own top border.
+          "&::before": { display: "none" }, // blink: .root::before `display: none`
+          "&.Mui-disabled": {
+            background: theme.vars.palette.surfaceMuted, // blink: .root.Mui-disabled
+            // MUI fades a disabled panel to 0.38; the kit states the fill outright.
+            opacity: 1, // blink: .root.Mui-disabled `opacity: 1`
+          },
+        }),
+      },
+    },
+    MuiAccordionSummary: {
+      defaultProps: {
+        // blink: Accordion/index.tsx defaults `expandIcon` to `<ChevronDownIcon size={16} />`.
+        // MUI renders no chevron at all unless one is passed, so this is what puts it there.
+        expandIcon: createElement(ChevronDownIcon, { size: 16 }),
+      },
+      styleOverrides: {
+        root: ({ theme }) => ({
+          padding: "0 16px", // blink: .summary `padding: 0 var(--space-4)`
+          minHeight: 44, // blink: .summary `min-height: 44px`
+          fontFamily: "inherit", // blink: .summary `font-family: inherit`
+          fontSize: 15, // blink: .summary `font-size: var(--text-md)`
+          fontWeight: 600, // blink: .summary `font-weight: 600`
+          lineHeight: 1.4, // blink: .summary `line-height: 1.4`
+          color: theme.vars.palette.text.primary, // blink: .summary `color: var(--color-text-default)`
+          borderRadius: 8, // blink: .summary `border-radius: var(--radius-3)`
+          "&.Mui-expanded": {
+            // MUI grows an expanded summary to 64px. The kit holds it at 44 and squares off the
+            // two corners the details block now sits under.
+            minHeight: 44, // blink: .summary.Mui-expanded `min-height: 44px`
+            borderBottomLeftRadius: 0, // blink: .summary.Mui-expanded
+            borderBottomRightRadius: 0, // blink: .summary.Mui-expanded
+          },
+          "&.Mui-disabled": {
+            color: theme.vars.palette.textSubtle, // blink: .summary.Mui-disabled
+            opacity: 1, // blink: .summary.Mui-disabled `opacity: 1`
+          },
+          // blink: `.summary:hover:not(.Mui-disabled) .expandIcon`. The kit puts its class on the
+          // ICON element; MUI wraps the icon in `.MuiAccordionSummary-expandIconWrapper`, and
+          // lucide draws with `stroke: currentColor`, so colouring the wrapper paints the same
+          // pixels. The `:not` guard is transcribed as written - a disabled summary keeps the
+          // muted chevron.
+          "&:hover:not(.Mui-disabled) .MuiAccordionSummary-expandIconWrapper": {
+            color: theme.vars.palette.text.primary,
+          },
+        }),
+        content: {
+          margin: "12px 0", // blink: .summaryContent `margin: var(--space-3) 0`
+          // Restated because MUI grows the expanded content's margin to 20px; the kit's module
+          // states the same 12px for both cases, so the summary's height never changes.
+          "&.Mui-expanded": { margin: "12px 0" }, // blink: .summaryContent.Mui-expanded
+        },
+        expandIconWrapper: ({ theme }) => ({
+          color: theme.vars.palette.textMuted, // blink: .expandIcon `color: var(--color-text-muted)`
+          transition: "color 120ms cubic-bezier(0.165, 0.84, 0.44, 1)", // blink: .expandIcon `transition`
+        }),
+      },
+    },
+    MuiAccordionDetails: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          padding: "0 16px 16px", // blink: .details `padding: 0 var(--space-4) var(--space-4)`
+          color: theme.vars.palette.textMuted, // blink: .details `color: var(--color-text-muted)`
+          fontSize: 15, // blink: .details `font-size: var(--text-md)`
+          lineHeight: 1.5, // blink: .details `line-height: 1.5`
+        }),
+      },
     },
 
     // ---- Tabs ----
