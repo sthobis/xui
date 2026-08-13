@@ -77,6 +77,13 @@ declare module "@mui/material/Button" {
   }
 }
 
+// The kit's Input has three heights (32/36/40); MUI's InputBase has two. `large` is the 40px step.
+declare module "@mui/material/InputBase" {
+  interface InputBasePropsSizeOverrides {
+    large: true
+  }
+}
+
 /**
  * The kit's light token set, transcribed from reference/tokens.css exactly as written there -
  * `#5a63b0` stays hex, `rgb(229, 49, 10)` stays rgb(). Both parse; neither is converted, because a
@@ -463,6 +470,117 @@ export const blinkTheme = createTheme({
             fontSize: 15, // blink: .lg `font-size: var(--text-md)`
           },
         },
+      ],
+    },
+
+    // ---- Input ----
+    //
+    // Ground truth: reference/primitives/Input/Input.module.css.
+    //
+    // The kit's Input is a bordered box - `1px solid var(--color-border-strong)` on a surface fill
+    // at `--radius-2` - wrapping a borderless <input>. That is MUI's OUTLINED input. `mui-themed`
+    // also ships a `filled` block; it is compatibility with the app's older `common/TextField`
+    // wrapper, has no twin in the kit, and is deliberately not ported.
+    //
+    // The two are built differently: the kit paints the border on the root <div>, MUI on an
+    // absolutely positioned <fieldset> (the notched outline) inset 5px above the root. Everything
+    // border-shaped therefore has to be aimed at `.MuiOutlinedInput-notchedOutline`, not the root,
+    // and the root's own border stays off.
+    MuiOutlinedInput: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          background: theme.vars.palette.surface, // blink: .root `background: var(--color-surface)`
+          color: theme.vars.palette.text.primary, // blink: .root `color: var(--color-text-default)`
+          borderRadius: 6, // blink: .root `border-radius: var(--radius-2)`
+          fontSize: 15, // blink: .root `font-size: var(--text-md)`
+          lineHeight: 1.4, // blink: .root `line-height: 1.4`
+          gap: 8, // blink: .root `gap: var(--space-2)`
+          // blink: .root `padding: 0 var(--space-3)` (12px) PLUS the 1px the kit's own border
+          // occupies. This is the notched-outline construction leaking into layout: the kit puts a
+          // real `1px solid` border on the root, so it takes part in the box and the text starts
+          // 13px from the outer edge, while MUI paints its border on an ABSOLUTELY POSITIONED
+          // <fieldset> that occupies no space at all - leaving the text at 12px and the whole
+          // control 2px narrower (measured 166.5px against the kit's 168.5px).
+          //
+          // Adding the pixel to the padding rather than giving the root a transparent border keeps
+          // the fieldset where it belongs: it is inset `left: 0; right: 0` against the root's
+          // PADDING box, so a real border would pull the painted outline 1px inward on each side.
+          padding: "0 13px",
+          // blink: .md `height: var(--control-h-md)`, the kit's default size.
+          //
+          // Here rather than in a `size: "medium"` variant, and the difference is not cosmetic:
+          // unlike Button, MUI's InputBase does not default its `size` prop to "medium" - it leaves
+          // it undefined and only emits a class for `small`. A `props: { size: "medium" }` variant
+          // therefore matches only when a caller writes `size="medium"` by hand, so every plain
+          // <OutlinedInput> got no height at all (measured: 19px against the kit's 36px). The
+          // default belongs on the root; the other two sizes override it below.
+          height: 36,
+          // blink: .root `transition: border-color 120ms var(--ease-out), box-shadow 120ms ...`
+          transition: "border-color 120ms cubic-bezier(0.165, 0.84, 0.44, 1), box-shadow 120ms cubic-bezier(0.165, 0.84, 0.44, 1)",
+          cursor: "text", // blink: .root `cursor: text`
+          "& .MuiOutlinedInput-notchedOutline": {
+            borderColor: theme.vars.palette.borderStrong, // blink: .root `border: 1px solid var(--color-border-strong)`
+            borderWidth: 1,
+            transition: "border-color 120ms cubic-bezier(0.165, 0.84, 0.44, 1)",
+          },
+          // blink: .root:hover:not(.disabled):not(.error) `border-color: var(--color-border-input)`.
+          // The kit's guards are transcribed as MUI's state classes; note it hovers on the ROOT but
+          // the colour lands on the outline.
+          "&:hover:not(.Mui-focused):not(.Mui-error):not(.Mui-disabled) .MuiOutlinedInput-notchedOutline": {
+            borderColor: theme.vars.palette.borderInput,
+          },
+          // blink: .root:has(.input:focus):not(.error). MUI raises the outline to 2px on focus and
+          // the kit does not, so the width is restated.
+          "&.Mui-focused:not(.Mui-error) .MuiOutlinedInput-notchedOutline": {
+            borderColor: theme.vars.palette.primary.main,
+            borderWidth: 1,
+          },
+          "&.Mui-focused:not(.Mui-error)": {
+            // blink: tokens.css --focus-ring
+            boxShadow: `color-mix(in srgb, ${theme.vars.palette.primary.main} 50%, transparent) 0px 0px 0px 4px`,
+          },
+          "&.Mui-error .MuiOutlinedInput-notchedOutline": {
+            borderColor: theme.vars.palette.error.main, // blink: .root.error `border-color: var(--color-error)`
+            borderWidth: 1,
+          },
+          "&.Mui-error.Mui-focused": {
+            // blink: .root.error:has(.input:focus) `box-shadow: var(--focus-ring-destructive)`
+            boxShadow: `color-mix(in srgb, ${theme.vars.palette.error.main} 35%, transparent) 0px 0px 0px 4px`,
+          },
+          "&.Mui-disabled": {
+            background: theme.vars.palette.surfaceMuted, // blink: .root.disabled `background: var(--color-surface-muted)`
+            cursor: "not-allowed", // blink: .root.disabled `cursor: not-allowed`
+            // MUI fades a disabled outline to its own `action.disabled`; the kit leaves the border
+            // exactly as it was and only changes the fill and the text.
+            "& .MuiOutlinedInput-notchedOutline": {
+              borderColor: theme.vars.palette.borderStrong,
+            },
+          },
+        }),
+        input: ({ theme }) => ({
+          // blink: .input - the inner control carries no box of its own; the root owns the padding.
+          padding: 0,
+          height: "100%",
+          font: "inherit",
+          color: "inherit",
+          "&::placeholder": {
+            color: theme.vars.palette.textMuted, // blink: .input::placeholder
+            // Browsers ship ::placeholder at less than full opacity and MUI keeps that. The kit
+            // states a colour outright, so the opacity has to go or the token is diluted.
+            opacity: 1,
+          },
+          "&:disabled": {
+            color: theme.vars.palette.textSubtle, // blink: .input:disabled
+            WebkitTextFillColor: theme.vars.palette.textSubtle, // blink: .input:disabled
+            cursor: "not-allowed",
+          },
+        }),
+      },
+      variants: [
+        // Only the two NON-default sizes. `medium` is the root's own height above, because MUI
+        // leaves `size` undefined rather than defaulting it to "medium" (see the note there).
+        { props: { size: "small" }, style: { height: 32 } }, // blink: .sm `var(--control-h-sm)`
+        { props: { size: "large" }, style: { height: 40 } }, // blink: .lg `var(--control-h-lg)`
       ],
     },
 
