@@ -8,6 +8,7 @@ import { avatarSection, cardSection, dividerSection } from "./card"
 import { checkboxSection, radioSection } from "./checkbox"
 import { inputSection } from "./input"
 import { linkSection } from "./link"
+import { menuSection, popoverSection, tooltipSection } from "./overlay"
 import { selectSection } from "./select"
 import { switchSection } from "./switch"
 import { tableSection } from "./table"
@@ -25,11 +26,14 @@ export const sections: Section[] = [
   checkboxSection,
   dividerSection,
   radioSection,
+  menuSection,
+  popoverSection,
   selectSection,
   switchSection,
   tableSection,
   tabsSection,
   toggleGroupSection,
+  tooltipSection,
   inputSection,
   linkSection,
 ]

@@ -1951,6 +1951,127 @@ export const blinkTheme = createTheme({
       ],
     },
 
+    // ---- The portalled tier: Tooltip, Popover, Menu ----
+    //
+    // Ground truth: reference/primitives/{Tooltip,Popover,Menu}/*.module.css, plus the prop defaults
+    // each primitive's index.tsx hardcodes.
+    //
+    // All three are MUI components with a CSS module attached, so these blocks are transcriptions in
+    // the same shape as Accordion and Tabs.
+    //
+    // ONE THING THE THEME DELIBERATELY DOES NOT CARRY. Each primitive passes
+    // `slots={{ transition: PopTransition }}` with a 150ms duration - a custom entrance that fades
+    // and scales from 0.95, replacing MUI's Grow. That is a COMPONENT, not a style: reproducing it
+    // means shipping a react-transition-group wrapper, and this file's contract is that it imports
+    // only @mui/material, lucide-react and React. The SETTLED overlay - the only thing a consumer
+    // sees once it has opened, and the only thing the harness captures - is identical either way, so
+    // what is lost is the entrance animation. An app that wants it passes the same `slots` prop the
+    // kit does.
+    MuiTooltip: {
+      defaultProps: {
+        // blink: Tooltip/index.tsx pins all four on every instance.
+        arrow: true,
+        placement: "top",
+        enterDelay: 200,
+        leaveDelay: 0,
+      },
+      styleOverrides: {
+        tooltip: ({ theme }) => ({
+          background: theme.vars.palette.tooltipBg, // blink: .tooltip `background: var(--color-tooltip-bg)`
+          color: theme.vars.palette.tooltipText, // blink: .tooltip `color: var(--color-tooltip-text)`
+          fontFamily: "inherit", // blink: .tooltip `font-family: inherit`
+          fontSize: 15, // blink: .tooltip `font-size: var(--text-md)` - MUI's own is 11
+          lineHeight: "20px", // blink: .tooltip `line-height: 20px`, a LENGTH rather than a ratio
+          fontWeight: 400, // blink: .tooltip `font-weight: 400` - MUI's own is 500
+          padding: "8px 12px 9px", // blink: .tooltip - note the asymmetric bottom pixel
+          borderRadius: 6, // blink: .tooltip `border-radius: var(--radius-2)`
+          boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)", // blink: .tooltip `box-shadow`
+          maxWidth: 280, // blink: .tooltip `max-width: 280px`
+          // blink: `.tooltip b { font-weight: 700 }`. A descendant rule over markup the CONSUMER
+          // puts in the title, so no MUI prop reaches it - carried because the surface is the
+          // theme's and a consumer passing <b> should get the kit's weight.
+          "& b": { fontWeight: 700 },
+        }),
+        arrow: ({ theme }) => ({
+          color: theme.vars.palette.tooltipBg, // blink: .arrow `color: var(--color-tooltip-bg)`
+        }),
+      },
+    },
+    MuiPopover: {
+      defaultProps: {
+        // blink: Popover/index.tsx pins both origins. MUI's own defaults are top/left for both,
+        // which opens the panel OVER its trigger rather than under it.
+        anchorOrigin: { vertical: "bottom", horizontal: "left" },
+        transformOrigin: { vertical: "top", horizontal: "left" },
+      },
+      styleOverrides: {
+        paper: ({ theme }) => ({
+          background: theme.vars.palette.surface, // blink: .paper `background: var(--color-surface)`
+          // The lighter `--color-border`, as on the Accordion and NOT the `--color-border-strong`
+          // the Input and Tabs use.
+          border: `1px solid ${theme.vars.palette.border}`, // blink: .paper `border`
+          borderRadius: 8, // blink: .paper `border-radius: var(--radius-3)`
+          boxShadow: "0 8px 32px rgba(0, 0, 0, 0.1)", // blink: tokens.css --shadow-popover
+          fontFamily: "inherit", // blink: .paper `font-family: inherit`
+          fontSize: 15, // blink: .paper `font-size: var(--text-md)`
+          lineHeight: 1.5, // blink: .paper `line-height: 1.5`
+          color: theme.vars.palette.text.primary, // blink: .paper `color: var(--color-text-default)`
+        }),
+      },
+    },
+    MuiMenu: {
+      styleOverrides: {
+        paper: ({ theme }) => ({
+          // blink: .paper `padding: var(--space-2)`. The kit's comment is worth keeping: an even
+          // gutter on all sides is what lets a rounded item highlight sit INSET from the paper
+          // edge, so a menu reads as a card of pills rather than a bordered list.
+          padding: 8,
+          background: theme.vars.palette.surface, // blink: .paper `background: var(--color-surface)`
+          border: `1px solid ${theme.vars.palette.border}`, // blink: .paper `border`
+          borderRadius: 8, // blink: .paper `border-radius: var(--radius-3)`
+          boxShadow: "0 8px 32px rgba(0, 0, 0, 0.1)", // blink: tokens.css --shadow-popover
+          color: theme.vars.palette.text.primary, // blink: .paper `color: var(--color-text-default)`
+        }),
+        // blink: .list `padding: 0`. MUI's List ships 8px of block padding, which would sit on top
+        // of the paper's own gutter and double it.
+        list: { padding: 0 },
+      },
+    },
+    MuiMenuItem: {
+      defaultProps: {
+        disableRipple: true, // blink: Menu/index.tsx passes `disableRipple` to every MuiMenuItem
+      },
+      styleOverrides: {
+        root: ({ theme }) => ({
+          display: "flex", // blink: .item `display: flex`
+          alignItems: "center", // blink: .item `align-items: center`
+          gap: 8, // blink: .item `gap: var(--space-2)`
+          minHeight: 32, // blink: .item `min-height: var(--control-h-sm)`
+          padding: 8, // blink: .item `padding: var(--space-2)`
+          borderRadius: 6, // blink: .item `border-radius: var(--radius-2)`
+          fontSize: 15, // blink: .item `font-size: var(--text-md)`
+          lineHeight: 1.4, // blink: .item `line-height: 1.4`
+          // blink: `.list .item:hover`. The kit reaches for a two-class selector deliberately - its
+          // own comment says `.list .item` (0,3,0) has to outweigh MUI's `.MuiMenuItem-root:hover`
+          // (0,2,0) - and the token is there because MUI's faint black tint disappears on a dark
+          // surface.
+          //
+          // HOVER ONLY, and this is the "a source file is only EVIDENCE" rule earning its place
+          // again. That same CSS rule also lists `.list .item.Mui-focusVisible`, and it does not
+          // compile: the selector is written bare, so the CSS-modules pipeline treats
+          // `Mui-focusVisible` as a LOCAL class and hashes it into something that matches nothing.
+          // (The kit's Accordion module gets this right - `.summary:global(.Mui-expanded)` - so it
+          // is an omission there, not a convention.) Measured on the open menu, whose first item
+          // MUI auto-focuses: the kit's item paints rgba(0, 0, 0, 0.12), MUI's own action.focus,
+          // not the surface-muted token its stylesheet asks for.
+          //
+          // Transcribing the INTENT would have made the theme differ from the thing it replicates
+          // by 10204 pixels. If the kit ever adds the `:global()`, add the state back here.
+          "&:hover": { backgroundColor: theme.vars.palette.surfaceMuted },
+        }),
+      },
+    },
+
     // ---- Select ----
     //
     // Ground truth: reference/primitives/Select/Select.module.css.
