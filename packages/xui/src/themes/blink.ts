@@ -29,6 +29,10 @@
  * from.
  */
 import { createTheme } from "@mui/material/styles"
+import { CircleAlertIcon, CircleCheckIcon, InfoIcon, TriangleAlertIcon } from "lucide-react"
+// createElement rather than JSX: this is a plain .ts module, and JSX is only valid in .tsx. React
+// is not a new dependency - it is already xui's peer, required by every MUI component.
+import { createElement } from "react"
 
 // The kit carries neutral and semantic-text tokens that MUI's palette has no slot for. Declaring
 // them here (rather than reaching for `sx` at every call site) is what turns them into real
@@ -471,6 +475,144 @@ export const blinkTheme = createTheme({
           },
         },
       ],
+    },
+
+    // ---- Alert ----
+    //
+    // Ground truth: reference/primitives/Alert/Alert.module.css.
+    //
+    // The accent bar is an INSET BOX-SHADOW, not a border, and the kit's own comment says why: a
+    // border would shift the box model, so the padding would stop being symmetric and the icon's
+    // left gutter would no longer match the icon-to-text gap. Transcribed as the shadow it is.
+    //
+    // Each variant sets three things - a 10% background tint, `--alert-bar` (the saturated accent,
+    // used only for that shadow) and `--alert-accent` (the AA text cut, used for the icon, title
+    // and body). `info` is the exception: it has no separate text cut, so its accent IS the plain
+    // colour. That is the kit's table, not a simplification.
+    //
+    // The stacked/inline distinction is the kit's `hasTitle` flag; `:has(.MuiAlertTitle-root)` asks
+    // MUI the same question without needing a prop.
+    //
+    // SCOPE: `md` only. The kit's `sm` density has no MUI counterpart - Alert has no size prop -
+    // and adding one would mean augmenting AlertProps and forwarding an unknown attribute.
+    MuiAlert: {
+      defaultProps: {
+        // The kit always takes its icon from the caller and ships no default mapping. MUI does ship
+        // one, in Material icons, which would be the wrong icon SET entirely - so each severity is
+        // mapped to the lucide icon the kit's own showcase (AlertShowcase.tsx) pairs with it.
+        iconMapping: {
+          error: createElement(CircleAlertIcon),
+          warning: createElement(TriangleAlertIcon),
+          success: createElement(CircleCheckIcon),
+          info: createElement(InfoIcon),
+        },
+      },
+      styleOverrides: {
+        root: {
+          display: "flex", // blink: .root `display: flex`
+          alignItems: "flex-start", // blink: .stacked `align-items: flex-start`
+          gap: 12, // blink: .md `gap: var(--space-3)`
+          padding: "12px 16px", // blink: .md `padding: var(--space-3) var(--space-4)`
+          borderRadius: 8, // blink: .md `border-radius: var(--radius-3)`
+          fontSize: 15, // blink: .md `font-size: var(--text-md)`
+          lineHeight: 1.5, // blink: .md `line-height: 1.5`
+          // blink: .inline `align-items: center` - the kit picks this layout when there is no
+          // title, which is exactly what this asks.
+          "&:not(:has(.MuiAlertTitle-root))": { alignItems: "center" },
+          // blink: .stacked.md .icon `margin-top: 2px`. With the box top-aligned, an 18px icon sits
+          // a little above the title's cap height, so the kit nudges it onto the first text line -
+          // but only in the stacked layout, since the inline one centres the icon instead. Stated
+          // here rather than in the `icon` slot because the condition is about the ROOT.
+          "&:has(.MuiAlertTitle-root) .MuiAlert-icon": { marginTop: 2 },
+        },
+        icon: {
+          // blink: .icon - MUI gives the icon its own padding, right margin and 0.9 opacity; the
+          // kit gives it none of those. The gap on the root is what separates it from the text.
+          padding: 0,
+          marginRight: 0,
+          opacity: 1,
+          flex: "none", // blink: .icon `flex: none`
+          // blink: .md .icon svg - the kit sizes the icon itself, overriding whatever size the
+          // caller's lucide icon was created with.
+          "& svg": { width: 18, height: 18, display: "block" },
+        },
+        message: {
+          // blink: .content `flex: 1; min-width: 0` - and no padding, which MUI adds.
+          padding: 0,
+          flex: 1,
+          minWidth: 0,
+          display: "flex",
+          flexDirection: "column",
+          gap: 4, // blink: .content `gap: var(--space-1)`
+        },
+        action: {
+          // blink: .actions
+          padding: 0,
+          marginRight: 0,
+          marginLeft: 8,
+          alignItems: "center",
+          gap: 8,
+        },
+      },
+      // Each variant sets the same three things from its own pair of tokens: the tint, the bar, and
+      // the ink. Written out four times rather than generated, both because it keeps every value
+      // greppable to its token and because `info` genuinely differs (see its note).
+      variants: [
+        {
+          props: { severity: "error" },
+          style: ({ theme }) => ({
+            // blink: .error `background: var(--color-error-bg)` - a 10% tint in the light scheme
+            backgroundColor: `color-mix(in srgb, ${theme.vars.palette.error.main} 10%, transparent)`,
+            // blink: .root `box-shadow: inset 3px 0 0 0 var(--alert-bar)`, bar = --color-error
+            boxShadow: `inset 3px 0 0 0 ${theme.vars.palette.error.main}`,
+            color: theme.vars.palette.errorText, // blink: --alert-accent = --color-error-text
+            "& .MuiAlert-icon": { color: theme.vars.palette.errorText }, // blink: .icon
+          }),
+        },
+        {
+          props: { severity: "warning" },
+          style: ({ theme }) => ({
+            backgroundColor: `color-mix(in srgb, ${theme.vars.palette.warning.main} 10%, transparent)`,
+            boxShadow: `inset 3px 0 0 0 ${theme.vars.palette.warning.main}`,
+            color: theme.vars.palette.warningText,
+            "& .MuiAlert-icon": { color: theme.vars.palette.warningText },
+          }),
+        },
+        {
+          props: { severity: "success" },
+          style: ({ theme }) => ({
+            backgroundColor: `color-mix(in srgb, ${theme.vars.palette.success.main} 10%, transparent)`,
+            boxShadow: `inset 3px 0 0 0 ${theme.vars.palette.success.main}`,
+            color: theme.vars.palette.successText,
+            "& .MuiAlert-icon": { color: theme.vars.palette.successText },
+          }),
+        },
+        {
+          props: { severity: "info" },
+          style: ({ theme }) => ({
+            backgroundColor: `color-mix(in srgb, ${theme.vars.palette.info.main} 10%, transparent)`,
+            boxShadow: `inset 3px 0 0 0 ${theme.vars.palette.info.main}`,
+            // blink: .info sets `--alert-accent: var(--color-info)` - the ONE variant whose accent
+            // is the plain colour rather than a separate AA text cut, because tokens.css defines no
+            // `--color-info-text`. Not an oversight in the transcription; it is the kit's table.
+            color: theme.vars.palette.info.main,
+            "& .MuiAlert-icon": { color: theme.vars.palette.info.main },
+          }),
+        },
+      ],
+    },
+    MuiAlertTitle: {
+      styleOverrides: {
+        root: {
+          // blink: .title. MUI's AlertTitle ships its own margins and a bumped font size; the kit's
+          // title is the same size as the body, just heavier, and the gap comes from .content.
+          margin: 0,
+          fontSize: "inherit",
+          fontWeight: 600, // blink: .title `font-weight: 600`
+          lineHeight: 1.3, // blink: .title `line-height: 1.3`
+          color: "inherit", // blink: .title `color: var(--alert-accent)`, inherited from the root
+        },
+      },
     },
 
     // ---- Checkbox / Radio ----
