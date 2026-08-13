@@ -99,6 +99,19 @@ declare module "@mui/material/Chip" {
   }
 }
 
+// The kit's ToggleGroup has the same four-step ladder as its Button, and MUI has three. `xs` is the
+// 24px strip. Declared on both halves because a ToggleButtonGroup forwards `size` to its children.
+declare module "@mui/material/ToggleButtonGroup" {
+  interface ToggleButtonGroupPropsSizeOverrides {
+    xs: true
+  }
+}
+declare module "@mui/material/ToggleButton" {
+  interface ToggleButtonPropsSizeOverrides {
+    xs: true
+  }
+}
+
 // The kit's Input has three heights (32/36/40); MUI's InputBase has two. `large` is the 40px step.
 declare module "@mui/material/InputBase" {
   interface InputBasePropsSizeOverrides {
@@ -1600,6 +1613,211 @@ export const blinkTheme = createTheme({
           },
         },
       ],
+    },
+
+    // ---- ToggleGroup ----
+    //
+    // Ground truth: reference/primitives/ToggleGroup/ToggleGroup.module.css.
+    //
+    // The kit's ToggleGroup has TWO modes and they are shaped differently, which maps exactly onto
+    // MUI's `exclusive` flag:
+    //
+    //   single (`role="radiogroup"`, MUI's `exclusive`) - every pill keeps the full radius, there
+    //     are no dividers, and the white selection is a separate absolutely positioned `.slider`
+    //     div sized `100/n%` and translated into place.
+    //   multiple (`role="group"`, MUI's default) - the pills read as one strip: only the outer
+    //     corners round, a 1px divider sits between every pair, and each active pill carries the
+    //     white fill itself.
+    //
+    // The slider is the one construction MUI cannot reproduce, and it does not need to: the kit's
+    // root is a grid of EQUAL columns, so the slider's box is exactly the active pill's box, and
+    // painting the pill's own background puts the same rectangle in the same place. What is lost is
+    // the slide ANIMATION between selections, which the harness disables anyway.
+    //
+    // The equal columns are load-bearing and are why the root is a grid rather than MUI's
+    // inline-flex: `grid-auto-columns: minmax(0, 1fr)` gives every option the width of the widest
+    // one for any number of options, which is what `repeat(n, minmax(0, 1fr))` does in the kit
+    // without the theme having to know n.
+    //
+    // `--toggle-radius` is a per-size token used by BOTH the root and the pills, so the size
+    // variants set it on the root and the pills take `border-radius: inherit`.
+    MuiToggleButtonGroup: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          position: "relative", // blink: .root `position: relative`
+          display: "grid", // blink: .root `display: grid`
+          gridAutoFlow: "column" as const,
+          gridAutoColumns: "minmax(0, 1fr)", // blink: the root's `repeat(n, minmax(0, 1fr))`
+          width: "fit-content", // blink: .root `width: fit-content`
+          backgroundColor: theme.vars.palette.surfaceMuted, // blink: .root `background-color`
+          border: `2px solid ${theme.vars.palette.surfaceMuted}`, // blink: .root `border: 2px solid`
+          fontFamily: "inherit", // blink: .root `font-family: inherit`
+          // The md tier, which is the kit's default size. Here rather than in a `size: "medium"`
+          // variant for the same reason the Input's height is: MUI leaves `size` undefined unless a
+          // caller states it, so a medium-keyed variant would never match a plain group.
+          borderRadius: 8, // blink: .md inherits `--toggle-radius: var(--radius-3)`
+          height: 36, // blink: .md `height: var(--control-h-md)`
+          fontSize: 15, // blink: .md `font-size: var(--text-md)`
+          "& .MuiToggleButton-root": { padding: "0 12px" }, // blink: .md .option `padding: 0 var(--space-3)`
+          // MUI's horizontal grouping rules, all of which the kit's SINGLE mode does without: it
+          // squares the inner corners, overlaps the pills by a pixel and gives each a transparent
+          // left border. The multiple-mode variant below puts the parts of that back which the kit
+          // actually has.
+          "& .MuiToggleButtonGroup-grouped": {
+            marginLeft: 0,
+            border: "none", // blink: .option `border: none`
+            borderRadius: "inherit", // blink: .option `border-radius: var(--toggle-radius)`
+          },
+          // A SECOND, more specific rule for the disabled case, and it is needed rather than
+          // tidy-able away: MUI states its transparent seam border twice, once at one class of
+          // specificity and again as `.middleButton.Mui-disabled` at two - so the rule above wins
+          // for an enabled group and loses for a disabled one. Left alone it made a disabled strip
+          // 3px wider than the kit's, because every equal-width column grew by the widest item's
+          // extra border. The multiple-mode variant restates the real divider at this specificity.
+          "& .MuiToggleButtonGroup-grouped.Mui-disabled": { borderLeft: "none" },
+        }),
+      },
+      variants: [
+        // The three non-default sizes. Each sets the root's radius, height and type size, and the
+        // pill padding that goes with them - `.xs` is the only one that also tightens the gap.
+        {
+          props: { size: "xs" as const },
+          style: {
+            borderRadius: 6, // blink: .xs `--toggle-radius: var(--radius-2)`
+            height: 24, // blink: .xs `height: var(--control-h-xs)`
+            fontSize: 13, // blink: .xs `font-size: var(--text-xs)`
+            "& .MuiToggleButton-root": { padding: "0 8px", gap: 4 }, // blink: .xs .option
+          },
+        },
+        {
+          props: { size: "small" as const },
+          style: {
+            borderRadius: 6, // blink: .sm `--toggle-radius: var(--radius-2)`
+            height: 32, // blink: .sm `height: var(--control-h-sm)`
+            fontSize: 14, // blink: .sm `font-size: var(--text-sm)`
+            "& .MuiToggleButton-root": { padding: "0 12px" }, // blink: .sm .option
+          },
+        },
+        {
+          props: { size: "large" as const },
+          style: {
+            borderRadius: 8, // blink: .lg keeps the default `--toggle-radius`
+            height: 40, // blink: .lg `height: var(--control-h-lg)`
+            fontSize: 15, // blink: .lg `font-size: var(--text-md)`
+            "& .MuiToggleButton-root": { padding: "0 16px" }, // blink: .lg .option `padding: 0 var(--space-4)`
+          },
+        },
+        {
+          // blink: `.root.disabled { opacity: 0.6; cursor: not-allowed }`. A variant rather than a
+          // state class, because ToggleButtonGroup emits no `Mui-disabled` on its ROOT - it only
+          // forwards the prop to the children - so there is no class to hang this on.
+          props: { disabled: true },
+          style: { opacity: 0.6, cursor: "not-allowed" },
+        },
+        {
+          // blink: every `.root[role="group"] ...` rule - the kit's MULTIPLE mode, which is MUI's
+          // non-exclusive default. The pills become segments of one strip.
+          //
+          // A predicate rather than `props: { exclusive: false }`, and the difference is not
+          // stylistic: MUI destructures `exclusive` with a default of false, so it only reaches
+          // ownerState when a caller passes it BY HAND. An object matcher therefore misses exactly
+          // the common case - a plain multi-select `<ToggleButtonGroup>` - which is what it did
+          // here: the reference strip came out 3px wider than the MUI one because its dividers were
+          // the only ones being drawn.
+          props: (state: { exclusive?: boolean }) => !state.exclusive,
+          style: ({ theme }) => ({
+            "& .MuiToggleButtonGroup-grouped": { borderRadius: 0 }, // blink: .root[role=group] .option
+            "& .MuiToggleButtonGroup-firstButton": {
+              borderTopLeftRadius: "inherit", // blink: .root[role=group] .option:first-child
+              borderBottomLeftRadius: "inherit",
+            },
+            "& .MuiToggleButtonGroup-lastButton": {
+              borderTopRightRadius: "inherit", // blink: .root[role=group] .option:last-child
+              borderBottomRightRadius: "inherit",
+            },
+            // blink: `.root[role="group"] .option:not(:first-child) { border-left: 1px solid
+            // var(--color-surface-muted) }` - the divider is the same colour as the strip, so it
+            // only shows where a white active pill meets an inactive one.
+            "& .MuiToggleButtonGroup-middleButton, & .MuiToggleButtonGroup-lastButton": {
+              borderLeft: `1px solid ${theme.vars.palette.surfaceMuted}`,
+              marginLeft: 0,
+            },
+            // MUI drops the divider between two ADJACENT SELECTED buttons so a run of them reads as
+            // one block. The kit's comment is explicit that its hairline "sits between every pair of
+            // pills regardless of state", so the rule has to be put back - 187 pixels at Δ200
+            // before this, all of them the missing line between two active pills.
+            "& .MuiToggleButtonGroup-grouped.Mui-selected + .MuiToggleButtonGroup-grouped.Mui-selected":
+              {
+                borderLeft: `1px solid ${theme.vars.palette.surfaceMuted}`,
+                marginLeft: 0,
+              },
+            // The divider survives a disabled strip - the kit's rule carries no disabled guard -
+            // and has to be restated at two classes to outrank the reset on the root above.
+            "& .MuiToggleButtonGroup-middleButton.Mui-disabled, & .MuiToggleButtonGroup-lastButton.Mui-disabled":
+              { borderLeft: `1px solid ${theme.vars.palette.surfaceMuted}` },
+          }),
+        },
+      ],
+    },
+    MuiToggleButton: {
+      defaultProps: { disableRipple: true }, // blink: the kit's options are plain <button>s
+      styleOverrides: {
+        root: ({ theme }) => ({
+          position: "relative", // blink: .option `position: relative`
+          display: "flex", // blink: .option `display: flex`
+          alignItems: "center", // blink: .option `align-items: center`
+          justifyContent: "center", // blink: .option `justify-content: center`
+          gap: 8, // blink: .option `gap: var(--space-2)`
+          color: theme.vars.palette.textMuted, // blink: .option `color: var(--color-text-muted)`
+          backgroundColor: "transparent", // blink: .option `background: transparent`
+          border: "none", // blink: .option `border: none`
+          borderRadius: "inherit", // blink: .option `border-radius: var(--toggle-radius)`
+          // The kit states only `font-family: inherit` and `font-weight: 600` on an option; the
+          // size comes from the ROOT and the line-height from the document. MUI spreads
+          // `typography.button` here, so the rest has to be handed back.
+          fontFamily: "inherit", // blink: .option `font-family: inherit`
+          fontSize: "inherit", // blink: .option inherits the root's size class
+          fontWeight: 600, // blink: .option `font-weight: 600`
+          lineHeight: 1.5, // blink: reset.css `body { line-height: 1.5 }`, inherited
+          letterSpacing: "normal",
+          textTransform: "none" as const,
+          cursor: "pointer", // blink: .option `cursor: pointer`
+          whiteSpace: "nowrap" as const, // blink: .option `white-space: nowrap`
+          // blink: .option `transition: color 150ms var(--ease-out), background-color 150ms ...`
+          transition:
+            "color 150ms cubic-bezier(0.165, 0.84, 0.44, 1), background-color 150ms cubic-bezier(0.165, 0.84, 0.44, 1)",
+          // blink: `.option:hover:not(:disabled)`. MUI also tints the background on hover; the kit
+          // changes only the ink.
+          "&:hover:not(.Mui-disabled)": {
+            color: theme.vars.palette.text.primary,
+            backgroundColor: "transparent",
+          },
+          // blink: `.option:disabled { cursor: not-allowed }` and nothing else - MUI greys both the
+          // label and the border out, and the kit dims the whole group from the root instead.
+          "&.Mui-disabled": {
+            cursor: "not-allowed",
+            color: theme.vars.palette.textMuted,
+            border: "none",
+          },
+          // After the disabled rule on purpose: `.option.active` carries no `:not(:disabled)`
+          // guard, so a disabled active pill keeps the default ink.
+          "&.Mui-selected": {
+            color: theme.vars.palette.text.primary, // blink: .option.active
+            // In SINGLE mode this fill is the kit's `.slider` - a separate div covering exactly
+            // this pill's column - and in MULTIPLE mode it is the pill's own
+            // `.root[role="group"] .option.active`. Same rectangle, same colour, one rule.
+            backgroundColor: theme.vars.palette.surface, // blink: .slider / .option.active `background-color`
+            boxShadow: "0 1px 2px rgba(0, 0, 0, 0.04)", // blink: tokens.css --shadow-card
+            "&:hover": { backgroundColor: theme.vars.palette.surface },
+          },
+          "&.Mui-focusVisible": {
+            outline: "2px solid transparent", // blink: .option:focus-visible
+            outlineOffset: 2, // blink: .option:focus-visible `outline-offset: 2px`
+            boxShadow: `color-mix(in srgb, ${theme.vars.palette.primary.main} 50%, transparent) 0px 0px 0px 4px`, // blink: --focus-ring
+            zIndex: 1, // blink: .option:focus-visible `z-index: 1`
+          },
+        }),
+      },
     },
 
     // ---- Table ----

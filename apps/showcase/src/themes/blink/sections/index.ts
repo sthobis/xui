@@ -10,6 +10,7 @@ import { inputSection } from "./input"
 import { linkSection } from "./link"
 import { switchSection } from "./switch"
 import { tableSection } from "./table"
+import { toggleGroupSection } from "./toggle-group"
 import { tabsSection } from "./tabs"
 
 export const sections: Section[] = [
@@ -26,6 +27,7 @@ export const sections: Section[] = [
   switchSection,
   tableSection,
   tabsSection,
+  toggleGroupSection,
   inputSection,
   linkSection,
 ]
