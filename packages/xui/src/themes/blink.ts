@@ -1275,6 +1275,26 @@ export const blinkTheme = createTheme({
           // <OutlinedInput> got no height at all (measured: 19px against the kit's 36px). The
           // default belongs on the root; the other two sizes override it below.
           height: 36,
+          // ...but a MULTILINE input is the kit's TEXTAREA, whose height is content-driven. Both
+          // the fixed height above and the horizontal-only padding have to be scoped away from it,
+          // and getting that wrong is what sank the first attempt at pairing the Textarea: the
+          // height crops the box and the missing vertical padding puts the first line against the
+          // border.
+          //
+          // blink: Textarea.module.css `.root` + `.md` (`padding: var(--space-2) var(--space-3)`),
+          // carrying the same extra pixel the single-line padding does - here on all four sides,
+          // because a textarea's box is built from its padding rather than pinned to a height.
+          "&.MuiInputBase-multiline": {
+            height: "auto",
+            padding: "9px 13px",
+            lineHeight: 1.5, // blink: Textarea .root `line-height: 1.5` - the Input's is 1.4
+            // The kit's Textarea root states neither of these, so both take their initial value.
+            // MUI's InputBase root centres its child and puts an 8px gap between adornments, which
+            // is right for the single-line Input (whose own `.root` says exactly that) and wrong
+            // here - a centred flex item keeps its intrinsic height instead of filling the box.
+            alignItems: "normal",
+            gap: "normal",
+          },
           // blink: .root `transition: border-color 120ms var(--ease-out), box-shadow 120ms ...`
           transition: "border-color 120ms cubic-bezier(0.165, 0.84, 0.44, 1), box-shadow 120ms cubic-bezier(0.165, 0.84, 0.44, 1)",
           cursor: "text", // blink: .root `cursor: text`
@@ -1327,6 +1347,21 @@ export const blinkTheme = createTheme({
           // blink: .input - the inner control carries no box of its own; the root owns the padding.
           padding: 0,
           height: "100%",
+          // ...except a TEXTAREA, which sizes to its rows. The rule above is the single-line one and
+          // would otherwise stretch the control to fill the root it is already defining.
+          //
+          // Keyed off the ROOT's `.MuiInputBase-multiline`, not off the input's own class: MUI v9
+          // emits no `inputMultiline` class on the element (verified in the browser - a multiline
+          // textarea carries exactly `MuiInputBase-input MuiOutlinedInput-input`), so a `&.`-style
+          // rule matches nothing and fails silently.
+          ".MuiInputBase-multiline &": {
+            height: "auto",
+            resize: "vertical", // blink: Textarea `.textarea { resize: vertical }` - MUI ships none
+            // MUI puts `box-sizing: content-box` on an input, against the border-box every element
+            // on the kit's page inherits from its reset. On a single-line input with no padding of
+            // its own that is invisible; on a textarea whose height comes from `rows` it is not.
+            boxSizing: "border-box",
+          },
           font: "inherit",
           color: "inherit",
           "&::placeholder": {
@@ -1345,8 +1380,23 @@ export const blinkTheme = createTheme({
       variants: [
         // Only the two NON-default sizes. `medium` is the root's own height above, because MUI
         // leaves `size` undefined rather than defaulting it to "medium" (see the note there).
-        { props: { size: "small" }, style: { height: 32 } }, // blink: .sm `var(--control-h-sm)`
-        { props: { size: "large" }, style: { height: 40 } }, // blink: .lg `var(--control-h-lg)`
+        // Each size carries its multiline padding beside its height, because the two are the same
+        // fact expressed for the two constructions - blink: Textarea `.sm` / `.lg`, again +1px on
+        // every side for the border the kit's root owns and MUI's fieldset does not.
+        {
+          props: { size: "small" },
+          style: {
+            height: 32, // blink: Input .sm `var(--control-h-sm)`
+            "&.MuiInputBase-multiline": { height: "auto", padding: "5px 13px" }, // blink: Textarea .sm
+          },
+        },
+        {
+          props: { size: "large" },
+          style: {
+            height: 40, // blink: Input .lg `var(--control-h-lg)`
+            "&.MuiInputBase-multiline": { height: "auto", padding: "13px 13px" }, // blink: Textarea .lg
+          },
+        },
       ],
     },
 
@@ -2242,6 +2292,82 @@ export const blinkTheme = createTheme({
           color: theme.vars.palette.textMuted, // blink: .chevron `color: var(--color-text-muted)`
           "&.Mui-disabled": {
             color: theme.vars.palette.textSubtle, // blink: `.root.disabled .chevron`
+          },
+        }),
+      },
+    },
+
+    // ---- FormField ----
+    //
+    // Ground truth: reference/primitives/FormField/FormField.module.css.
+    //
+    // The kit's FormField is a flex column - label, control, message - with an 8px gap and nothing
+    // else, so the mapping onto MUI's FormControl is direct. What takes the work is everything MUI
+    // LAYERS on a label and a helper text, because the kit layers none of it.
+    //
+    // SCOPE: MUI's InputLabel is a FLOATING label that shrinks into the outline's notch, and the kit
+    // ships no floating label anywhere - its label is a plain block above the control, which is
+    // MUI's static FormLabel. InputLabel renders a FormLabel, so it inherits the type and colour
+    // below; its POSITIONING is left as MUI's, because there is nothing to extract for it.
+    MuiFormControl: {
+      styleOverrides: {
+        root: {
+          display: "flex", // blink: .root `display: flex` - MUI's own is inline-flex
+          flexDirection: "column" as const, // blink: .root `flex-direction: column`
+          gap: 8, // blink: .root `gap: var(--space-2)`
+          minWidth: 0, // blink: .root `min-width: 0`
+        },
+      },
+    },
+    MuiFormLabel: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          fontSize: 15, // blink: .label `font-size: var(--text-md)`
+          lineHeight: 1.4, // blink: .label `line-height: 1.4`
+          fontWeight: 400, // blink: .label `font-weight: 400`
+          color: theme.vars.palette.textMuted, // blink: .label `color: var(--color-text-muted)`
+          // The kit's label is ONE grey in every state - `.label` has no `:focus-within`, no error
+          // variant and no disabled variant. MUI turns it primary on focus and red on error, so
+          // each of those has to be handed back. The colour that DOES change on error is the
+          // message below, which is a different element.
+          "&.Mui-focused": { color: theme.vars.palette.textMuted },
+          "&.Mui-error": { color: theme.vars.palette.textMuted },
+          "&.Mui-disabled": { color: theme.vars.palette.textMuted },
+        }),
+        asterisk: ({ theme }) => ({
+          color: theme.vars.palette.error.main, // blink: .required `color: var(--color-error)`
+          marginLeft: 4, // blink: .required `margin-left: var(--space-1)`
+          // MUI recolours the asterisk again under `.Mui-error`; the kit's is error-coloured
+          // always, so the state rule would be a no-op at best and a different red at worst.
+          "&.Mui-error": { color: theme.vars.palette.error.main },
+          // MUI's asterisk is the two characters `\u2009*` - a THIN SPACE and a star - where the
+          // kit's is a bare `*` spaced by the margin above. Left alone the two spacings stack and
+          // the star lands about 3px right of the kit's, which measured 37 pixels at Δ230.
+          //
+          // The thin space is markup rather than style, so it cannot be removed - it is collapsed
+          // instead, by zeroing the span's type and drawing the star from a pseudo-element at the
+          // label's own size. Font-independent, unlike compensating the margin by a guess at how
+          // wide one font renders U+2009.
+          fontSize: 0,
+          "&::after": {
+            content: '"*"',
+            fontSize: 15, // blink: .label `font-size: var(--text-md)`, which the star shares
+          },
+        }),
+      },
+    },
+    MuiFormHelperText: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          fontSize: 13, // blink: .helperText `font-size: var(--text-xs)` - note 13, not 12
+          lineHeight: 1.4, // blink: .helperText `line-height: 1.4`
+          color: theme.vars.palette.textMuted, // blink: .helperText `color: var(--color-text-muted)`
+          // MUI spaces its helper text with a 3px top margin, and 14px of side margin in the
+          // `contained` form. The kit's message is just another child of the column, spaced by the
+          // 8px gap - so any margin here is added on top of that.
+          margin: 0,
+          "&.Mui-error": {
+            color: theme.vars.palette.error.main, // blink: .errorText `color: var(--color-error)`
           },
         }),
       },

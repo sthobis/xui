@@ -5,11 +5,18 @@ import { RefProviders } from "../Providers"
 import type { ReactNode } from "react"
 import type { Section } from "../../../gallery/types"
 
-// A fixed-width box around both sides. A Tabs bar is a block-level flex container, so it would
-// otherwise take whatever width its cell happens to have - and its border-bottom would run the
-// whole way, which makes the capture width a property of the grid rather than of the component.
+// A CONTENT-WIDTH box around both sides rather than a fixed one.
+//
+// A Tabs bar is a block-level flex container, so an unconstrained one takes whatever width its cell
+// happens to have - which would make the capture width a property of the grid rather than of the
+// component. Shrink-wrapping keeps the bar the width of its own tabs.
+//
+// It is NOT what fixed the stale-indicator bug this pair uncovered - see
+// gallery/mountWhenFontsReady.tsx for that, and for the measurements. Tried first and recorded
+// because it is the obvious guess: making the root's width depend on the tabs does not make MUI
+// re-measure, because the total came out at the same 236px under both faces.
 const Box = ({ children }: { children: ReactNode }) => (
-  <div style={{ width: 320 }}>{children}</div>
+  <div style={{ display: "inline-block" }}>{children}</div>
 )
 
 // Tabs. The kit's primitive IS MUI's Tabs - it wraps MuiTabs/MuiTab and bolts a CSS module onto

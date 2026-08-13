@@ -6,6 +6,7 @@ import { buttonSection } from "./button"
 import { badgeSection } from "./badge"
 import { avatarSection, cardSection, dividerSection } from "./card"
 import { checkboxSection, radioSection } from "./checkbox"
+import { formFieldSection, textareaSection } from "./form-field"
 import { inputSection } from "./input"
 import { linkSection } from "./link"
 import { dialogSection, menuSection, popoverSection, tooltipSection } from "./overlay"
@@ -35,6 +36,8 @@ export const sections: Section[] = [
   tabsSection,
   toggleGroupSection,
   tooltipSection,
+  formFieldSection,
   inputSection,
+  textareaSection,
   linkSection,
 ]

@@ -798,6 +798,13 @@ test.describe("painted geometry", () => {
       "select-error",
       "select-disabled",
       "select-sm",
+
+      // And the FormField pairs, for the third time and the same reason: each wraps an
+      // OutlinedInput, so each shows MUI's notched-outline fieldset as a second painted box. The
+      // field's own parts - the label, the message, the column gap - are ordinary elements and are
+      // compared normally; both pairs diff at 0 or 1 px.
+      "formfield-helper",
+      "formfield-error",
     ]),
   }
 
