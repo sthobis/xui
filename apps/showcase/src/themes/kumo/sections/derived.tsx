@@ -1,3 +1,4 @@
+import { useState } from "react"
 import MuiAppBar from "@mui/material/AppBar"
 import MuiAutocomplete from "@mui/material/Autocomplete"
 import MuiAvatar from "@mui/material/Avatar"
@@ -37,6 +38,49 @@ import type { Section } from "../../../gallery/types"
 //
 // They are here to be LOOKED AT. A derived value is a considered choice, not ground truth, and the
 // only way it gets caught being wrong is a human seeing it next to the extracted components above.
+// Looking includes clicking, so the ones MUI makes controlled-only hold their own state below - a
+// selected-state colour nobody can reach is a colour nobody checks. Nothing here is diffed against
+// a reference, so the only constraint on that state is that it starts where it used to.
+
+/** MUI's BottomNavigation is controlled-only; without `onChange` no action can ever be picked. */
+function BottomNavigationDemo() {
+  const [value, setValue] = useState(0)
+  return (
+    <MuiBottomNavigation value={value} onChange={(_, next: number) => setValue(next)} style={{ width: 240 }}>
+      <MuiBottomNavigationAction label="Overview" icon={<HouseIcon />} />
+      <MuiBottomNavigationAction label="Settings" icon={<GearIcon />} />
+    </MuiBottomNavigation>
+  )
+}
+
+/**
+ * The list, with its selection held here rather than pinned to the second row.
+ *
+ * The composition is deliberate and is the one MUI itself documents for a clickable list -
+ * `ListItem > ListItemButton > ListItemIcon + ListItemText` - which is a DIFFERENT shape from the
+ * flat `ListItem > ListItemIcon` that most of these themes extract their list styling from. Keeping
+ * it that way is what caught the shadcn theme applying an icon rule written for the flat case to
+ * this one, where it removed the icon's slot and left the label flush against the glyph.
+ */
+function ListDemo() {
+  const [selected, setSelected] = useState(1)
+  const items = [
+    { label: "Overview", icon: <HouseIcon /> },
+    { label: "Settings", icon: <GearIcon /> },
+  ]
+  return (
+    <MuiList style={{ width: 200 }}>
+      {items.map((item, i) => (
+        <MuiListItem key={item.label}>
+          <MuiListItemButton selected={i === selected} onClick={() => setSelected(i)}>
+            <MuiListItemIcon>{item.icon}</MuiListItemIcon>
+            <MuiListItemText primary={item.label} />
+          </MuiListItemButton>
+        </MuiListItem>
+      ))}
+    </MuiList>
+  )
+}
 
 export const derivedSection: Section = {
   title: "Derived (no Kumo counterpart)",
@@ -69,26 +113,7 @@ export const derivedSection: Section = {
     },
     {
       id: "derived-list",
-      mui: (
-        <MuiList style={{ width: 200 }}>
-          <MuiListItem>
-            <MuiListItemButton>
-              <MuiListItemIcon>
-                <HouseIcon />
-              </MuiListItemIcon>
-              <MuiListItemText primary="Overview" />
-            </MuiListItemButton>
-          </MuiListItem>
-          <MuiListItem>
-            <MuiListItemButton selected>
-              <MuiListItemIcon>
-                <GearIcon />
-              </MuiListItemIcon>
-              <MuiListItemText primary="Settings" />
-            </MuiListItemButton>
-          </MuiListItem>
-        </MuiList>
-      ),
+      mui: <ListDemo />,
     },
     {
       id: "derived-app-bar",
@@ -123,7 +148,9 @@ export const derivedSection: Section = {
       id: "derived-rating-badge",
       mui: (
         <MuiStack direction="row" spacing={3}>
-          <MuiRating defaultValue={3} readOnly />
+          {/* Not `readOnly`: the hover preview and the click-to-set are half of what a Rating's
+              derived styling has to get right, and neither is reachable through a read-only one. */}
+          <MuiRating defaultValue={3} />
           <MuiBadge badgeContent={4}>
             <MuiAvatar variant="rounded">KU</MuiAvatar>
           </MuiBadge>
@@ -135,7 +162,9 @@ export const derivedSection: Section = {
     },
     {
       id: "derived-pagination",
-      mui: <MuiPagination count={5} page={2} />,
+      // `defaultPage`, not `page` - the controlled prop with no `onChange` renders a set of
+      // buttons that cannot change the page they claim to select.
+      mui: <MuiPagination count={5} defaultPage={2} />,
     },
     {
       id: "derived-stepper",
@@ -157,12 +186,7 @@ export const derivedSection: Section = {
     },
     {
       id: "derived-bottom-navigation",
-      mui: (
-        <MuiBottomNavigation value={0} style={{ width: 240 }}>
-          <MuiBottomNavigationAction label="Overview" icon={<HouseIcon />} />
-          <MuiBottomNavigationAction label="Settings" icon={<GearIcon />} />
-        </MuiBottomNavigation>
-      ),
+      mui: <BottomNavigationDemo />,
     },
     {
       id: "derived-autocomplete",

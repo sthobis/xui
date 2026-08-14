@@ -1,3 +1,4 @@
+import { useState } from "react"
 import MuiTabs from "@mui/material/Tabs"
 import MuiTab from "@mui/material/Tab"
 import { Tabs } from "@cloudflare/kumo/components/tabs"
@@ -19,19 +20,27 @@ const ITEMS = [
   { value: "contact", label: "Contact" },
 ]
 
+// Kumo's `selectedValue` is its UNCONTROLLED default (`value` is the controlled one), so the
+// reference already switches tabs on its own. MUI has no such prop - `value` is the only one - so
+// the MUI side holds the selection here to match. The initial render is "home" either way.
+function MuiTabsDemo() {
+  const [value, setValue] = useState("home")
+  return (
+    <MuiTabs value={value} onChange={(_, next: string) => setValue(next)}>
+      {ITEMS.map((t) => (
+        <MuiTab key={t.value} value={t.value} label={t.label} />
+      ))}
+    </MuiTabs>
+  )
+}
+
 export const tabsSection: Section = {
   title: "Tabs",
   pairs: [
     {
       id: "tabs-underline",
       ref: <Tabs variant="underline" tabs={ITEMS} selectedValue="home" />,
-      mui: (
-        <MuiTabs value="home">
-          {ITEMS.map((t) => (
-            <MuiTab key={t.value} value={t.value} label={t.label} />
-          ))}
-        </MuiTabs>
-      ),
+      mui: <MuiTabsDemo />,
     },
   ],
 }

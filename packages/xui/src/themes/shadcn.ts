@@ -4671,29 +4671,45 @@ export const shadcnTheme = createTheme({
         }),
       },
     },
+    // SCOPE: every rule below is keyed to `.MuiListItem-root > &` - a ListItemIcon that is a DIRECT
+    // child of a ListItem, which is the composition `Item > ItemMedia` maps to and the only one a
+    // pair covers (list.tsx).
+    //
+    // MUI's other, equally common list composition puts a ListItemButton in between
+    // (`ListItem > ListItemButton > ListItemIcon`), and shadcn has no twin for it: an Item is one
+    // flat row, and the spacing that separates its media from its content is the ITEM's own
+    // `gap-2.5` (MuiListItem above) - which a ListItemButton in the middle does not carry. So the
+    // interesting value here, `minWidth: auto`, is only correct WITH that gap.
+    //
+    // Unscoped it reached the button case anyway and removed MUI's own 36px icon slot with nothing
+    // to replace it, so the icon sat flush against the label with zero space - visible in the
+    // showcase's shadcn column as "<icon>Overview". Scoped, that composition keeps MUI's geometry,
+    // which is the honest outcome: no ground truth exists for it, so the theme does not invent one.
     MuiListItemIcon: {
       styleOverrides: {
         root: {
-          display: "flex", // shadcn: flex (MUI uses inline-flex)
-          alignItems: "center", // shadcn: items-center
-          justifyContent: "center", // shadcn: justify-center
-          gap: "0.5rem", // shadcn: gap-2
-          minWidth: "auto", // shadcn: no min-width - the box is the icon (MUI reserves 36px)
-          color: "inherit", // shadcn: no colour of its own (MUI uses action.active)
+          ".MuiListItem-root > &": {
+            display: "flex", // shadcn: flex (MUI uses inline-flex)
+            alignItems: "center", // shadcn: items-center
+            justifyContent: "center", // shadcn: justify-center
+            gap: "0.5rem", // shadcn: gap-2
+            minWidth: "auto", // shadcn: no min-width - the box is the icon (MUI reserves 36px)
+            color: "inherit", // shadcn: no colour of its own (MUI uses action.active)
+            "& svg": {
+              width: "1rem", // shadcn: [&_svg:not([class*='size-'])]:size-4
+              height: "1rem",
+              pointerEvents: "none", // shadcn: [&_svg]:pointer-events-none
+            },
+          },
           // ItemMedia moves when the item has a description, rather than staying centred on the
           // whole row: `group-has-data-[slot=item-description]/item:self-start` plus
           // `group-has-data-[slot=item-description]/item:translate-y-0.5`, which lines the icon up
           // with the TITLE instead of with the title-and-description block. MUI has no equivalent
           // notion, so the condition is expressed the same way shadcn expresses it - a parent-scoped
           // :has() - keyed on MUI's own secondary slot, which is what a description renders as.
-          ".MuiListItem-root:has(.MuiListItemText-secondary) &": {
+          ".MuiListItem-root:has(.MuiListItemText-secondary) > &": {
             alignSelf: "flex-start", // shadcn: group-has-data-[slot=item-description]/item:self-start
             transform: "translateY(0.125rem)", // shadcn: ...:translate-y-0.5
-          },
-          "& svg": {
-            width: "1rem", // shadcn: [&_svg:not([class*='size-'])]:size-4
-            height: "1rem",
-            pointerEvents: "none", // shadcn: [&_svg]:pointer-events-none
           },
         },
       },

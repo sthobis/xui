@@ -1,3 +1,4 @@
+import { useState } from "react"
 import MuiSwitch from "@mui/material/Switch"
 import MuiFormControlLabel from "@mui/material/FormControlLabel"
 import MuiTypography from "@mui/material/Typography"
@@ -14,6 +15,13 @@ import type { Section } from "../../../gallery/types"
 
 const s: Array<"default" | "hover" | "focus"> = ["default", "hover", "focus"]
 
+// Starts on, and can be switched off. Kumo's Switch is controlled-only, the same way its Checkbox
+// is - see checkbox.tsx for why holding the state here does not move any capture.
+function KumoCheckedSwitch() {
+  const [checked, setChecked] = useState(true)
+  return <Switch data-target aria-label="Enable" checked={checked} onCheckedChange={setChecked} />
+}
+
 export const switchSection: Section = {
   title: "Switch",
   pairs: [
@@ -26,8 +34,8 @@ export const switchSection: Section = {
     {
       id: "switch-checked",
       states: s,
-      ref: <Switch data-target aria-label="Enable" checked />,
-      mui: <MuiSwitch data-target checked slotProps={{ input: { "aria-label": "Enable" } }} />,
+      ref: <KumoCheckedSwitch />,
+      mui: <MuiSwitch data-target defaultChecked slotProps={{ input: { "aria-label": "Enable" } }} />,
     },
     {
       id: "switch-disabled",

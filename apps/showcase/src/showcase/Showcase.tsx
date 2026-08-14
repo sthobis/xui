@@ -1,4 +1,4 @@
-import type { CSSProperties, ReactNode } from "react"
+import { useMemo, useState, type CSSProperties, type ReactNode } from "react"
 import { ThemeProvider } from "@mui/material/styles"
 import CssBaseline from "@mui/material/CssBaseline"
 import ScopedCssBaseline from "@mui/material/ScopedCssBaseline"
@@ -103,6 +103,58 @@ function cssVarStyle(theme: ShowcaseTheme): CSSProperties {
 }
 
 /**
+ * A portal host, sitting INSIDE the column, that every overlay in that column renders into.
+ *
+ * The scoping this page depends on - the variables re-declared on the column wrapper, the
+ * typography written by its ScopedCssBaseline - reaches an element by INHERITANCE, and a portal
+ * leaves the subtree that inherits it. MUI portals Dialog, Drawer, Menu, Select, Popover, Tooltip
+ * and Autocomplete's popup to `document.body` by default, so all four columns' overlays land in the
+ * same place, outside every wrapper: they resolve `--mui-palette-*` from `:root` (one theme,
+ * whichever wrote it last) and take Material's own Roboto stack instead of the column's font.
+ * Measured before this existed: opening the shadcn column's Dialog produced a panel whose
+ * font-family was `Roboto, Helvetica, Arial, sans-serif` - the page renders no design system's
+ * stylesheet, so nothing about it looked broken, it just was not the theme under test.
+ *
+ * This was invisible while nothing on the page could be opened. It stops being invisible the moment
+ * the gallery is interactive, which is the point of the pairs carrying their own state.
+ *
+ * `position: fixed` rather than a static box, for two reasons: a fixed element is not clipped by an
+ * ancestor's `overflow: hidden` (the cell has one, to keep a wide component from bleeding into its
+ * neighbour), and it gives Popper a containing block at the viewport origin, so the coordinates it
+ * computes mean the same thing they would at `document.body`. No z-index: an `auto` one leaves the
+ * overlays' own stacking to MUI, where a stacking context here would trap them under the page.
+ */
+const portalHostStyle: CSSProperties = { position: "fixed", top: 0, left: 0 }
+
+/**
+ * The three components that decide where an overlay is portalled, each of which has to be told
+ * separately - a Popover does NOT inherit Modal's default.
+ *
+ *   MuiModal     Dialog and Drawer render one directly.
+ *   MuiPopover   Menu and Select render one, and it computes its own container from the anchor
+ *                (`ownerDocument(anchorEl).body`) and passes that to Modal explicitly, which
+ *                overrides anything set on MuiModal. Setting it here is what actually moves them.
+ *   MuiPopper    Tooltip and Autocomplete's popup.
+ */
+function withPortalHost(theme: ShowcaseTheme, host: HTMLElement | null): ShowcaseTheme {
+  if (!host) return theme
+  const components = (theme as { components?: Record<string, { defaultProps?: object }> }).components
+  const withContainer = (name: string) => ({
+    ...components?.[name],
+    defaultProps: { ...components?.[name]?.defaultProps, container: host },
+  })
+  return {
+    ...theme,
+    components: {
+      ...components,
+      MuiModal: withContainer("MuiModal"),
+      MuiPopover: withContainer("MuiPopover"),
+      MuiPopper: withContainer("MuiPopper"),
+    },
+  } as ShowcaseTheme
+}
+
+/**
  * Each column gets its own ThemeProvider, its own scoped variables, and its own ScopedCssBaseline.
  *
  * ScopedCssBaseline rather than the global CssBaseline is load-bearing too: a global baseline
@@ -111,10 +163,18 @@ function cssVarStyle(theme: ShowcaseTheme): CSSProperties {
  * onto a wrapper element instead, so each column keeps its own theme's defaults.
  */
 function ThemedCell({ theme, children }: { theme: ShowcaseTheme; children: ReactNode }) {
+  // State rather than a ref, because the theme has to be rebuilt once the host exists: a ref's
+  // `.current` fills in after the render that would have read it, so the first open still portals
+  // to the body.
+  const [portalHost, setPortalHost] = useState<HTMLElement | null>(null)
+  const scopedTheme = useMemo(() => withPortalHost(theme, portalHost), [theme, portalHost])
   return (
     <div style={{ ...cellStyle, ...cssVarStyle(theme) }}>
-      <ThemeProvider theme={theme} defaultMode="light">
-        <ScopedCssBaseline sx={{ background: "transparent" }}>{children}</ScopedCssBaseline>
+      <ThemeProvider theme={scopedTheme} defaultMode="light">
+        <ScopedCssBaseline sx={{ background: "transparent" }}>
+          {children}
+          <div ref={setPortalHost} style={portalHostStyle} />
+        </ScopedCssBaseline>
       </ThemeProvider>
     </div>
   )

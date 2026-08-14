@@ -2853,6 +2853,12 @@ export const blinkTheme = createTheme({
           fontSize: 14, // --text-sm
           fontWeight: 600, // the kit's control weight
           color: theme.vars.palette.textMuted,
+          // MUI spaces pagination items with a per-item `margin: 0 3px` of its own, and the list
+          // below already spaces them with `gap: 4` (--space-1). Both applied, so the real
+          // separation was 10px, not the 4 the gap states - which pushed a 5-page control 37px
+          // wider than it should be and wrapped its last arrow onto a second line inside a column
+          // narrow enough to matter. The gap is the kit's spacing; the margin is Material's.
+          margin: 0,
           "&:hover": { backgroundColor: theme.vars.palette.surfaceMuted },
           "&.Mui-selected": {
             backgroundColor: theme.vars.palette.primary.main,
