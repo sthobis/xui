@@ -2408,30 +2408,33 @@ export const blinkTheme = createTheme({
           "&.Mui-error": { color: theme.vars.palette.textMuted },
           "&.Mui-disabled": { color: theme.vars.palette.textMuted },
         }),
-        asterisk: ({ theme }) => ({
-          color: theme.vars.palette.error.main, // blink: .required `color: var(--color-error)`
-          // blink: `.required { margin-left: var(--space-1) }`. Carried by the root's `gap` above
-          // rather than here, so it applies to every appended child; restated as 0 so the two
-          // cannot add up to 8px.
-          marginLeft: 0,
-          // MUI recolours the asterisk again under `.Mui-error`; the kit's is error-coloured
-          // always, so the state rule would be a no-op at best and a different red at worst.
-          "&.Mui-error": { color: theme.vars.palette.error.main },
+        asterisk: {
           // MUI's asterisk is the two characters `\u2009*` - a THIN SPACE and a star - where the
-          // kit's is a bare `*` spaced by the margin above. Left alone the two spacings stack and
-          // the star lands about 3px right of the kit's, which measured 37 pixels at Δ230.
+          // kit's is a bare `*` spaced by 4px. The thin space is MARKUP, so it cannot be styled
+          // away; the span is taken out of flow entirely and the star redrawn from the label's own
+          // `::after`, which the `gap` above then spaces exactly like any other appended child.
           //
-          // The thin space is markup rather than style, so it cannot be removed - it is collapsed
-          // instead, by zeroing the span's type and drawing the star from a pseudo-element at the
-          // label's own size. Font-independent, unlike compensating the margin by a guess at how
-          // wide one font renders U+2009.
-          fontSize: 0,
-          "&::after": {
-            content: '"*"',
-            fontSize: 15, // blink: .label `font-size: var(--text-md)`, which the star shares
-          },
-        }),
+          // An earlier attempt collapsed the span with `font-size: 0` and drew the star from the
+          // SPAN's `::after`. It measured zero on the pixel diff and the font-metrics sweep caught
+          // it: a real element reporting a 0px font-size and a 0px line-height against the kit's
+          // 15px/21px. A pseudo-element carries no such claim, because it is not an element.
+          display: "none",
+        },
       },
+      variants: [
+        {
+          // blink: `.required { color: var(--color-error); margin-left: var(--space-1) }`, drawn
+          // here rather than on the asterisk span - see the note above. `Mui-required` is MUI's own
+          // class for a required label, so this keys off a positive class rather than a negation.
+          props: {},
+          style: ({ theme }) => ({
+            "&.Mui-required::after": {
+              content: '"*"',
+              color: theme.vars.palette.error.main,
+            },
+          }),
+        },
+      ],
     },
     MuiFormHelperText: {
       styleOverrides: {

@@ -3,15 +3,16 @@
 xui is a collection of Material UI (MUI) v9 themes that make MUI components look pixel-for-pixel identical to another design system.
 The bar is literal: a regular eye must not be able to tell a themed MUI component from the real one.
 
-Two themes ship today:
+Three themes ship today:
 
 - **shadcn** - shadcn/ui's default look (new-york style, neutral base, Geist, light and dark). Complete.
 - **kumo** - Kumo, Cloudflare's design system (https://kumo-ui.com), Inter, light and dark. Complete, including the portalled tier (Tooltip, DropdownMenu, Select, Popover, Dialog, Toast).
+- **blink** - the Pulse Kit, the design system of Pulse / NeverBlink, Source Sans Pro. **Light only.** Complete across the same surface, portalled tier included. The kit ships a dark scheme and `blink.ts`'s palette is a factory over a token set precisely so adding it is a one-line change; until it is done there is deliberately no `blink-dark` project, so a future one cannot silently run in light and pass everything.
 
-Both cover the same MUI surface - every `Mui*` key one themes, the other themes too.
-Kumo reaches part of that surface through the derived tier described below, because Kumo ships fewer components than MUI does; that tier is marked in the theme file and is held to a different standard.
+All three cover the same MUI surface - every `Mui*` key one themes, the others theme too.
+Each reaches part of that surface through the derived tier described below, because every one of these systems ships fewer components than MUI does; that tier is marked in the theme file and is held to a different standard.
 
-Everything below applies to both. Where they differ, the theme name is called out.
+Everything below applies to all three. Where they differ, the theme name is called out.
 
 ## Layout
 
@@ -25,9 +26,12 @@ Everything below applies to both. Where they differ, the theme name is called ou
 - Each theme's PARITY page is its own Vite page, and that isolation is the point: the two design systems' Tailwind themes, base layers and fonts must never load together, or a 0-threshold pixel harness would be measuring whichever won the cascade.
   `shadcn.html` + `pure.html` are shadcn's; `kumo.html` + `kumo-pure.html` are kumo's.
   Those four are where the real components live and where every pixel claim is made.
-- `index.html` is the SHOWCASE, and it is the one page that may hold both themes at once - one row per component, three columns: stock MUI, shadcn-themed, kumo-themed.
+- `index.html` is the SHOWCASE, and it is the one page that may hold every theme at once - one row per component, four columns: stock MUI, shadcn-themed, kumo-themed, blink-themed.
   It can do that precisely because it renders no reference component, so it loads neither system's Tailwind and there is no cascade to fight over.
-  It reads the kumo gallery's `mui` nodes as its component list, since that theme now covers everything shadcn's does.
+  It reads the kumo gallery's `mui` nodes as its component list, since that theme covers everything the others do.
+  That reuse has one consequence worth knowing before you file a bug against it: a cell built around one theme's layout can look wrong under the rest, and legitimately so.
+  kumo's `label-optional` composes an "(optional)" marker with no separator and leans on kumo's `MuiFormLabel` being a flex row; under stock MUI it runs together, and that is stock MUI being stock MUI rather than a defect.
+  Check what the design system's own label does before "fixing" the cell - shadcn deliberately carries that layout on `MuiInputLabel`, the component its own system uses for a field label.
   Two things there are load-bearing and are commented at the code: each column re-declares its theme's CSS custom properties inline (both themes emit `--mui-palette-*` on `:root`, so without that you get one theme, whichever wrote `:root` last), and each column uses `ScopedCssBaseline` rather than the global one (which would otherwise hand the whole page one theme's typography).
   The showcase is light-only: the two systems' dark conventions (`.dark` against `data-mode`) cannot both be driven by one toggle, so dark mode stays on the per-theme pages.
 - Ground truth per theme:
@@ -64,11 +68,16 @@ What that does NOT buy is a pixel guarantee, and the harness enforces the weaker
 Treat a value there as a considered choice, not as ground truth.
 If the system ever ships the real component, re-extract it and move the block above the line.
 
+**A ref-less pair does not always mean "derived".** There is a second reason to omit `ref`, and it should say so where it is declared: the system HAS the component and the two implementations cannot be put on the same pixel. blink's Textarea is the case - MUI has no plain multiline input, so `rows` maps onto `minRows`/`maxRows` and renders a `TextareaAutosize`, which measures a hidden shadow element's integer `scrollHeight` and writes the result back as an INLINE pixel height: 3 x 23 against the kit's plain `<textarea rows={3}>` at 3 x 22.5 for 15px/1.5 type. An inline style is out of a theme's reach, and the 1.5px lands on the capture SIZE, which the harness refuses to absorb into a threshold and rightly. The block is still carried, because without it a multiline field is broken rather than merely unstyled.
+
 **And a source file is only EVIDENCE about the ground truth; what paints is the ground truth.**
 That distinction is not pedantic - it has cost real time twice on the kumo theme:
 
 - Its tokens are written `light-dark(var(--color-neutral-900, <fallback>), ...)`, and the inline fallback is often NOT Tailwind's real value, which always wins. Seven token values were wrong from reading the file.
 - Its Switch styles a track with Tailwind `dark:` variants that never fire, because kumo drives dark mode through `light-dark()` switched by `data-mode` and its own docs say never to use `dark:`. Transcribing them as real overrides was worth Δ230+.
+
+And a third, from the Pulse Kit, where the rule is written correctly and simply does not compile: its Menu asks for `--color-surface-muted` on `.list .item.Mui-focusVisible`, with `Mui-focusVisible` written BARE. CSS Modules hashes that as a local class, so the selector matches nothing and an auto-focused menu item paints MUI's own `action.focus` instead. (The kit's Accordion gets it right - `.summary:global(.Mui-expanded)` - so it is an omission there, not a convention.) Transcribing the INTENT would have put the theme 10204 pixels away from the thing it replicates.
+The habit that catches all three is the same: read the source to find out WHICH declarations exist, then read the rendered values out of the browser to find out what they resolve to - including "to nothing".
 
 So: read the source to find out WHICH declarations exist, then read the rendered values out of the browser (`getComputedStyle`, once per colour mode) to find out what they resolve to.
 
@@ -147,6 +156,8 @@ Each of these presents as a component bug and is not one:
 - **A cell wider than `MAX_PAIR_CONTENT_WIDTH`** slides under the fixed theme panel, whose left border then lands inside the screenshot - a crisp full-height line at Δ245 in a pair whose every computed style matches. Diagnosed twice before the limit was given a name in `PairGrid.tsx`.
 - **Page furniture compositing into a capture.** The mode toggle sat at a z-index above shadcn's overlays and below MUI's, so a full-width top Drawer covered it on one side only. `roomBelow` exists for the same reason at the bottom of a row.
 - **Anchored captures are timing- and position-sensitive.** They skip the sub-pixel snap on purpose, so they have nothing to absorb a box measured mid-animation (Radix animates with CSS *animations*; `transition: none` does not stop them, and Playwright's `animations: "disabled"` applies to the screenshot, not to `boundingBox()`). Round the capture's SIZE, never its far edges - size describes the components, an edge carries the row's position on the page. Rows are centred rather than minimally scrolled so an overlay always has the same room to open into.
+- **Vite serving a STALE copy of the theme.** `xui` is a workspace dependency, so Vite can pre-bundle it - and then a theme edit does not reach the page at all. This is nastier than the stale-server trap above, because the server is yours and the file on disk is right: the browser simply keeps answering with the old module. It cost two bisection steps that each reported "not the cause" about a change that WAS the cause. If an edit seems to have no effect - especially if a computed style in the browser contradicts the source you just read - `rm -rf apps/showcase/node_modules/.vite` and restart before concluding anything.
+- **A `pgrep -f "playwright test"` that matches your own watcher.** A shell loop waiting on the run contains that string in its own command line, so the check never goes false and a finished run looks like it is still going. Match on something the watcher does not contain, or read the reporter's summary line instead.
 - **A loaded machine.** A full run is ~4 minutes at ~100 pairs; if it takes 15 and sits at 5% CPU it is blocking, not computing, and the parity failures you see will be the per-test budget rather than pixels. Read `e2e/results/report-*.md` directly before believing a red run.
 
 ## The mistake this project keeps making
@@ -172,6 +183,13 @@ Three habits avoid all of it:
 2. **Ask what else renders this component.** MUI reuses internals aggressively - `MuiList` is inside Menu, Select and Autocomplete; `MuiToolbar` is inside AppBar and TablePagination; `MuiBackdrop` is inside Dialog, Drawer and Popover. An unscoped override reaches all of them.
 3. **Leaving a surface untreated is a real choice, and it has to be written that way.** "No pair covers it" must mean the component keeps MUI's own geometry there, not that your one rule silently applies. Scope it, then say so in the `SCOPE:` note.
 
+A sharper version of the same thing: **sometimes the obvious value is not merely redundant, it is wrong, and the right block is no block at all.** Two in blink, both measured before being left out, both with a comment where the block would have gone:
+
+- `MuiBackdrop` - MUI's default already IS the kit's scrim, so writing `rgba(0, 0, 0, 0.5)` into `root` changes nothing a user sees and breaks something they do: Menu, Select and Popover render an INVISIBLE backdrop to stay click-away-able without dimming, and `.MuiBackdrop-invisible` is one class, so a plain `root` override ties on specificity and wins on order. 230 differing pixels open, 12337 anchored.
+- `MuiTableHead` - a head reads white in the kit only because whatever is behind the table is; its container paints no background at all. `--color-surface` there does not match the kit, it overpaints the page: 57948 pixels at Δ18, exactly #fff against the #edeff0 canvas.
+
+Both look like harmless restatements of a value you can see on screen. Neither is.
+
 ## When MUI's props do not line up with shadcn's variants
 
 Sometimes there is no mapping, and the honest answer is that the gap is not the theme's to close.
@@ -183,6 +201,30 @@ Record which case you are in rather than leaving a blank:
 - **The harness cannot see it.** Animations are disabled for determinism and overlay positions are normalized, so a selection animation or a toast's placement is invisible here by construction.
 
 The README's surface table splits these out for exactly this reason - a gap someone can close and a gap nobody can look the same in a list, and only one is worth picking up.
+
+## When the reference system is itself built on MUI
+
+The Pulse Kit is: seven of its primitives (Accordion, Button, Dialog, Menu, Popover, Tabs, Tooltip) are MUI components with a CSS module bolted on. That changes two things, and getting either wrong produces a pair that passes while proving nothing.
+
+**A reference cell must be wrapped in `RefProviders`, or the pair compares the theme against itself.**
+The gallery page's provider is the theme under test, so an unwrapped kit primitive inherits it - and then anything the CSS module does NOT state moves on BOTH sides together and still measures zero. `RefProviders` re-wraps the reference cell in the app's own minimal `baselineTheme`, which is what the kit actually runs under.
+This is easy to forget because the pair looks fine either way. The blink Tabs section was written without it and read 0 differing pixels; it read 0 again after the fix, which is the only reason the omission was harmless that time.
+
+**The theme block becomes a transcription of the CSS module and nothing else.**
+Every property the module leaves alone is already identical on both sides, so restating it asserts a value nobody extracted. What the module DOES state is genuinely compared, because the module wins on the reference side and the theme wins on the MUI side.
+
+**Prop defaults the primitive hardcodes belong in `defaultProps`, not `styleOverrides`.**
+The kit's Accordion pins `disableGutters` and `square`; its Tooltip pins `arrow`, `placement`, `enterDelay` and `leaveDelay`. Those are defaults, not styles - putting them in `defaultProps` reproduces the kit while leaving a consumer able to opt out.
+
+## Components that MEASURE at mount
+
+Some MUI components size a child from `getBoundingClientRect()` once and keep it in sync with a ResizeObserver. Tabs is the one that caught this out: it sizes its indicator from the selected tab, so a page that renders while the webfont is still swapping records the FALLBACK font's width, and the observer only corrects it if some OBSERVED box later changes size - which a fixed-width tab bar never does.
+
+Measured on blink.html: three tabs 89/78/69 wide under an 89.5312px indicator, which is what "Overview" measures in the fallback face. preflight caught it as a 5px Δ147 difference between the styled and pure pages and reported it as "the theme is leaning on Tailwind", which it was not - the theme was identical on both.
+
+`gallery/mountWhenFontsReady.tsx` is the fix, and the subtle part is why `document.fonts.ready` alone is not: it resolves once no load is PENDING, and nothing is pending before the page has rendered any text, because a browser only fetches a face when something needs it. Awaiting it on an empty document resolves immediately. Every declared face has to be `.load()`ed explicitly first.
+
+Gate any new gallery entry on it. The cost is nothing on a warm load, and the class of bug it removes is invisible to the pixel diff whenever both sides happen to be stale together.
 
 ## MUI traps you will hit
 
@@ -219,20 +261,21 @@ Two details are load-bearing and each cost a real failure: the element rewritten
 Decoration painted OUTSIDE an overlay's border box - an outline band, a shadow's reach - is what the `overlay-matches` behavior exists for; the `open` capture clips at that box and the `anchored` capture's union box is only the overlay's and the trigger's.
 That check compares colours in sRGB, because `getComputedStyle` preserves the space a value was authored in and Tailwind routes every shadow colour through an `oklab` `color-mix` - the same colour, spelled two ways.
 
-## Adding a second theme
+## Adding another theme
 
-Nothing below has been done yet, so treat it as a starting position rather than a proven path.
-What the shadcn theme learned that generalises:
+This has now been done twice - kumo, then blink - so it is a walked path rather than a starting position.
+What held up, and what the two additions changed:
 
 **What is reusable as-is.** The harness (`e2e/`) knows nothing about shadcn - it diffs whatever a pair puts on each side.
 `PairGrid`, the state machinery, the thresholds and every behaviour sweep carry over untouched.
 
-**What is shaped around one theme today.** The gallery imports the reference components directly from `@/components/ui/*`, and the sections name shadcn's classes in their provenance comments.
-A second design system needs its own installed source alongside, and pairs that point at it - the `Section`/`Pair` types themselves need nothing.
+**What each theme brings for itself.** Its own installed reference source, its own page pair (`<name>.html` + `<name>-pure.html`), its own `src/themes/<name>/` gallery, and its own entry in `playwright.config.ts` and `e2e/lib/themes.ts`.
+The `Section`/`Pair` types have needed nothing new across all three.
+Threshold and behaviour exceptions are scoped per theme for the reason `thresholds.ts` gives - a pair id is only unique within one gallery, and an exception is always a claim about one specific pair of implementations.
 
-**Do not generalise the theme file until there are two.** `shadcn.ts` is one self-contained file on purpose, and the constraint is a feature: a consumer can copy it like a shadcn component.
-Extracting shared scaffolding from a sample size of one is how you get an abstraction that fits neither theme.
-Write the second theme as its own file first, then look at what actually repeated.
+**Do not generalise the theme files.** Each is one self-contained file on purpose, and the constraint is a feature: a consumer can copy it the way they copy a shadcn component.
+The advice used to be "wait until there are two, then look at what repeated". There are now three, and the answer is that almost nothing did: the repetition is in the SHAPE (a palette, a set of component blocks, provenance comments) and not in the values, and the values are the whole product.
+What did get shared is the harness and the gallery plumbing, which never belonged in a theme file anyway.
 
 **Budget for the reference system being inconsistent.** shadcn's Snackbar twin is the third-party `sonner`, which uses its own font stack, a 13px size off the type scale, a shadow that is not `shadow-lg`, and a raw `#3f3f3f` that ignores the theme.
 All of it was transcribed as found, because the pair exists to match what a user sees.
@@ -245,17 +288,22 @@ Say so at the top of the block, and keep the composition to utilities the system
 **A twin has to reproduce the component, not just its appearance.** MUI's Fab creates a stacking context because a FAB floats; a plain button does not, and the difference changed how the shadow rasterized.
 When a pair is mysteriously off, check what the MUI component *is* structurally before hunting for a colour.
 
+**Expect the reference system to be built on MUI itself.** The Pulse Kit is, in part - see the section on that above. It makes the transcription easier and the pair easier to fake, in that order.
+
+**Budget for a drop-in being a behaviour change, not only a skin.** blink's Spinner is the clearest case: the kit rotates a fixed quarter arc at 0.8s linear over a 20%-opacity track, where MUI rotates more slowly and grows and shrinks its arc over no track at all. Matching it meant `enableTrackSlot`, `disableShrink` and a pinned dash - a real change to how MUI animates. The frozen frame cannot tell a still spinner from a spinning one, so the `animates` sweep is what holds it.
+
 ## Commands
 
-- `pnpm dev` runs the showcase at `/` (three themes side by side); the parity galleries are at `/shadcn.html` and `/kumo.html`.
+- `pnpm dev` runs the showcase at `/` (stock MUI and all three themes side by side); the parity galleries are at `/shadcn.html`, `/kumo.html` and `/blink.html`.
 - `pnpm verify:parity` runs the full pixel-parity suite (every theme, light and dark, all pairs).
-  Playwright projects are named `<theme>-<mode>`: `shadcn-light`, `shadcn-dark`, `kumo-light`, `kumo-dark`, and each writes its own `e2e/results/report-<project>.md`.
+  Playwright projects are named `<theme>-<mode>`: `shadcn-light`, `shadcn-dark`, `kumo-light`, `kumo-dark`, `blink-light`, and each writes its own `e2e/results/report-<project>.md`.
   The per-test budget is derived from the pair count rather than fixed, so adding a pair cannot quietly eat the margin - it used to be a flat 240s, which was generous at ~90s and had become a near-miss that failed intermittently inside `resetState`, looking like a stuck overlay rather than a clock.
-- While iterating on ONE component, filter to it for a ~5s loop instead of the full suite: `PARITY_PAIR=slider pnpm exec playwright test e2e/parity.spec.ts --project=shadcn-light` (comma-separated id prefixes; swap in `kumo-light` for the kumo gallery, or pass both projects). Run the full `pnpm verify:parity` once at the end to confirm no regressions.
+- While iterating on ONE component, filter to it for a ~5s loop instead of the full suite: `PARITY_PAIR=slider pnpm exec playwright test e2e/parity.spec.ts --project=shadcn-light` (comma-separated id prefixes; swap in `kumo-light` or `blink-light` for those galleries, or pass several projects). Run the full `pnpm verify:parity` once at the end to confirm no regressions.
 - **Working in a git worktree? Set `PARITY_PORT`.** Playwright reuses whatever dev server is already on the port instead of starting one, so with a server running from another checkout the whole suite silently measures THAT checkout - a fresh worktree once "failed" on a pair that did not exist in it. Run `PARITY_PORT=5273 pnpm verify` (any free port), and start the dev server on the same port. The default 5173 is unchanged for the primary checkout.
 - `pnpm verify` runs parity plus the preflight suite (proves the theme does not depend on Tailwind's reset).
 - `pnpm typecheck` typechecks every package and the e2e harness.
 - `pnpm test:unit` runs the compare-utility unit tests.
+- Diagnosing a pair means a throwaway Playwright script that opens the page and reads computed styles out of the browser. Name it `.<something>.mjs` at the repo root: `.gitignore` covers that shape, and `git add -A` will otherwise commit it - two got in that way before the rule existed.
 
 ## Conventions
 
@@ -265,7 +313,9 @@ Dark mode is each design system's OWN convention, not a normalized one - the the
 
 - shadcn - a `.dark` class on `<html>` (`colorSchemeSelector: "class"`).
 - kumo - `data-mode="dark"` on `<html>` (`colorSchemeSelector: "data-mode"`, which MUI expands to `[data-mode="%s"]`).
+- blink - light only so far; the kit's own convention is `[data-theme="dark"]`, which is what a dark scheme here would use.
 
 Either way MUI's own `useColorScheme().setMode` writes it, so one toggle moves the MUI theme and the reference system's stylesheet together.
 Gallery presentation components use inline styles only, so they render identically on the Tailwind-free `pure.html` page.
+Links between pages must be built from `import.meta.env.BASE_URL`, never written as a bare `/kumo.html`: the built site is served from a `/xui/` subpath, and Vite rewrites asset references in the HTML entries but never an `<a href>` written in JSX - so all three of those links shipped dead.
 Do not commit anything under `docs/superpowers/` or `.superpowers/`.
