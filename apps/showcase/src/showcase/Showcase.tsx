@@ -180,6 +180,24 @@ function ThemedCell({ theme, children }: { theme: ShowcaseTheme; children: React
   )
 }
 
+/**
+ * A link to one theme's parity page, resolved against the app's BASE path.
+ *
+ * A bare `href="/shadcn.html"` is correct in dev and broken in production, and nothing catches it:
+ * Vite rewrites asset references it finds in the HTML entry files, but an `<a href>` written in JSX
+ * is a plain string it never sees. The built site is served from https://sthobis.github.io/xui/, so
+ * those links resolved to https://sthobis.github.io/shadcn.html - off the project subpath entirely,
+ * and 404 for every one of the three.
+ *
+ * `import.meta.env.BASE_URL` is the value vite.config.ts already sets (`/` in dev, `/xui/` in a
+ * build) and it always ends in a slash, so one expression covers both. The visible text shows the
+ * resolved path rather than a hardcoded one, so what a reader sees is what they get.
+ */
+function ParityLink({ page }: { page: string }) {
+  const href = `${import.meta.env.BASE_URL}${page}.html`
+  return <a href={href}>{href}</a>
+}
+
 export function Showcase() {
   return (
     <>
@@ -190,8 +208,8 @@ export function Showcase() {
           <p style={{ font: "400 13px/20px system-ui", opacity: 0.7, margin: 0, maxWidth: 640 }}>
             The same MUI components under each theme. Stock MUI on the left, then shadcn/ui, Kumo,
             and the Pulse Kit. For pixel comparison against the real design-system components, see{" "}
-            <a href="/shadcn.html">/shadcn.html</a>, <a href="/kumo.html">/kumo.html</a> and{" "}
-            <a href="/blink.html">/blink.html</a>.
+            <ParityLink page="shadcn" />, <ParityLink page="kumo" /> and <ParityLink page="blink" />
+            .
           </p>
         </header>
         {sections.map((section) => (

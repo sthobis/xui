@@ -6,6 +6,12 @@ dist/
 # working artifacts, never committed
 docs/superpowers/
 
+# Ad-hoc diagnostic scripts. Diagnosing a pair means opening the page and reading computed styles
+# out of the browser (see AGENTS.md's loop), which in practice means a throwaway Playwright script
+# at the repo root - and `git add -A` will happily commit one. Two got in this way before this
+# existed. Name them `.<something>.mjs` and they stay out.
+/.*.mjs
+
 # test output
 e2e/results/
 playwright-report/

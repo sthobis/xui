@@ -2383,6 +2383,19 @@ export const blinkTheme = createTheme({
     MuiFormLabel: {
       styleOverrides: {
         root: ({ theme }) => ({
+          // blink: FormField.module.css renders `{label}{required && <span class="required">*</span>}`
+          // and spaces that span with `margin-left: var(--space-1)`. So 4px IS the kit's step for
+          // content appended to a label - it just reaches it with a per-child margin rather than a
+          // gap, because a plain <label> is not a flex row.
+          //
+          // Stated as a GAP here so it covers every appended child rather than only the asterisk.
+          // A consumer writing an "(optional)" marker beside the text gets the kit's own 4px; with
+          // the margin alone they got nothing, which is what the showcase's Label row shows under a
+          // theme that does not do this. The asterisk's own margin is dropped below so the two
+          // mechanisms cannot stack - verified by the formfield-error pair, which stays at zero.
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 4,
           fontSize: 15, // blink: .label `font-size: var(--text-md)`
           lineHeight: 1.4, // blink: .label `line-height: 1.4`
           fontWeight: 400, // blink: .label `font-weight: 400`
@@ -2397,7 +2410,10 @@ export const blinkTheme = createTheme({
         }),
         asterisk: ({ theme }) => ({
           color: theme.vars.palette.error.main, // blink: .required `color: var(--color-error)`
-          marginLeft: 4, // blink: .required `margin-left: var(--space-1)`
+          // blink: `.required { margin-left: var(--space-1) }`. Carried by the root's `gap` above
+          // rather than here, so it applies to every appended child; restated as 0 so the two
+          // cannot add up to 8px.
+          marginLeft: 0,
           // MUI recolours the asterisk again under `.Mui-error`; the kit's is error-coloured
           // always, so the state rule would be a no-op at best and a different red at worst.
           "&.Mui-error": { color: theme.vars.palette.error.main },
