@@ -13,6 +13,9 @@
     "verify:preflight": "playwright test e2e/preflight.spec.ts"
   },
   "packageManager": "pnpm@10.30.1",
+  "engines": {
+    "node": ">=22"
+  },
   "devDependencies": {
     "@playwright/test": "^1.61.1",
     "@types/node": "^24.13.3",

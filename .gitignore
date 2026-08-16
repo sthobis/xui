@@ -18,6 +18,14 @@ docs/superpowers/
 # existed. Name them `.<something>.mjs` and they stay out.
 /.*.mjs
 
+# Git transfer artifacts. One (`kumo-tier-a.bundle`) was committed by accident the same way the
+# diagnostic scripts above were.
+*.bundle
+
+# Machine-local launch entries (absolute paths to checkouts that exist on one machine only).
+# The committed launch.json carries only entries that work from a fresh clone.
+.claude/launch.local.json
+
 # test output
 e2e/results/
 playwright-report/
