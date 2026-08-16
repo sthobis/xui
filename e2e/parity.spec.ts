@@ -8,6 +8,7 @@ import { discoverPairs, filterByParityPair } from "./lib/pairs"
 import {
   anchoredClip,
   applyState,
+  awaitRestingBox,
   matchOverlayPhase,
   openContentLocator,
   resetState,
@@ -40,12 +41,17 @@ async function captureState(
   /** The phase the other side of this pair rasterized at, or null when this side goes first. */
   phase: OverlayPhase | null,
 ): Promise<{ shot: Buffer; phase: OverlayPhase | null }> {
+  // For both overlay shapes, wait for the overlay's box to actually STOP before measuring: the
+  // flat settle in applyState is shorter than sonner's 400ms lift, and a box captured mid-flight
+  // is stable-wrong, not flaky - see awaitRestingBox's banner for the measurements.
   if (state === "anchored") {
+    await awaitRestingBox(await openContentLocator(page, cell, pairId))
     const clip = await anchoredClip(page, cell, pairId)
     return { shot: await page.screenshot({ animations: "disabled", clip }), phase: null }
   }
   if (state === "open") {
     const overlay = await openContentLocator(page, cell, pairId)
+    await awaitRestingBox(overlay)
     const settled = await matchOverlayPhase(overlay, phase)
     return { shot: await overlay.screenshot({ animations: "disabled" }), phase: settled }
   }

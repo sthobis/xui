@@ -131,6 +131,25 @@ const maxPixelOverrides: Record<ThemeName, Record<string, number>> = {
     // Only the COUNT is relaxed. The delta cap stays at the default 40, which a real regression
     // trips instantly - every defect this suite has caught moved a channel by 18 or more.
     "switch-disabled": 640,
+
+    // dialog-open (open state only): rasterizer dither on Chrome 149, measured from CI because it
+    // does not exist on Chrome 141 at all - the same panel measures a literal ZERO differing
+    // pixels there. On both CI platforms (macOS gate and the Linux advisory job, Chromium build
+    // 1228 / Chrome 149) the pair reports 4355 differing pixels whose worst channel is Δ2 - the
+    // shape of kumo's dialog-open corner-antialiasing entry and of the gradient-dither entries
+    // above: a one-or-two-level disagreement spread across a large area, invisible by
+    // construction, appearing when the rasterizer version changes and nothing in either theme
+    // does. The kit's Dialog is itself built ON MUI's, so the two sides are near-identical trees
+    // fading through the kit's PopTransition against MUI's Grow stand-in; what differs is how two
+    // Chrome versions composite that panel, not a value anyone can extract.
+    //
+    // The bound is not the measured worst, for the fab-primary reason: dither is layout- and
+    // version-dependent, and pinning 4355 bakes this Chrome build into the suite. 6000 stays an
+    // order of magnitude under the capture's area while the untouched Δ40 delta cap - against a
+    // measured Δ2 - is what actually holds the pair: any real change moves channels by tens of
+    // levels. Scoped to the open state; the pair's other states keep the defaults. Re-measure and
+    // tighten (or delete) when a Chrome 149 rasterizer is reproducible locally.
+    "dialog-open:open": 6000,
   },
 }
 
