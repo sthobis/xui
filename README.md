@@ -52,11 +52,12 @@ This is what keeps the "a regular eye cannot tell" promise honest and prevents d
 
 ```bash
 pnpm install
-pnpm dev              # run the showcase (side-by-side comparison at /, MUI-only at /pure.html)
-pnpm verify:parity    # pixel-compare every shadcn/MUI pair, light and dark
-pnpm verify           # parity plus the preflight independence check
+pnpm dev              # all four columns at /; parity galleries at /shadcn.html, /kumo.html, /blink.html
+pnpm verify:parity    # pixel-compare every theme's ref/MUI pairs (shadcn and kumo light+dark, blink light)
+pnpm verify           # parity, plus the preflight Tailwind-independence check, plus the behaviour sweeps
 pnpm typecheck
-pnpm test:unit          # the compare-utility tests
+pnpm lint               # oxlint over the showcase
+pnpm test:unit          # the compare-utility tests and the cross-theme surface ratchet
 pnpm --filter @sthobis/xui build # emit dist/ for publishing (consumers get the built output; this repo uses src)
 ```
 
@@ -196,6 +197,14 @@ The first table is the only one worth picking work from.
 Anything unchecked in either section still renders.
 It just renders in MUI's default look rather than the shadcn look, which is a cosmetic gap and never a broken component.
 The showcase is the source of truth for exactly what is covered today.
+
+### kumo's own open surfaces
+
+The two tables at the top are shadcn's. kumo's extracted tier covers every component listed in the intro - Button, Text, Label, Link, Input, InputArea, Field, Checkbox, Radio, Switch, Badge, Banner, Meter, LayerCard, Tabs, Collapsible, Table, Breadcrumbs, Toolbar, InputGroup, and the whole portalled tier - each held at zero by its own pairs.
+
+Everything else MUI ships is kumo's DERIVED tier (the banner in `kumo.ts` marks where extraction stops): Divider, TableContainer, Avatar, Skeleton, AppBar/Toolbar, the List family, Drawer, Autocomplete, Fab, SpeedDial, CircularProgress, Slider, Rating, Badge, Pagination, TablePagination, the Stepper family, BottomNavigation and ImageList are styled from Kumo's own tokens with no reference to diff against - a considered look, not a pixel claim. If Kumo ships one of them, it gets re-extracted and moved above the line.
+
+Two kumo-specific harness notes, both explained where they are declared: the Select popup pair is judged by the behaviour sweeps alone (the pixel harness structurally cannot frame it - see its section), and the two gradient buttons carry the delta-only threshold entries whose proofs live in `e2e/thresholds.ts`.
 
 ### blink's own open surfaces
 

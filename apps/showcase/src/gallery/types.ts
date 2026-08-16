@@ -81,8 +81,8 @@ export interface Pair {
    * The real reference-system component this pair is judged against.
    *
    * OMITTED for a DERIVED component - one MUI ships and the reference design system does not, so
-   * there is nothing to diff against. MUI's surface is wider than either system's: shadcn has no
-   * Slider or Rating, kumo has no Avatar, Skeleton or Stepper. Left unthemed those render as stock
+   * there is nothing to diff against. MUI's surface is wider than any of these systems': shadcn
+   * has no Rating or Stepper, kumo has no Avatar, Skeleton or Stepper. Left unthemed those render as stock
    * Material - a blue, Roboto-metric control sitting next to the themed ones - which is worse for a
    * drop-in theme than an imperfect derivation, so they are styled from the system's own tokens and
    * neighbouring components instead.

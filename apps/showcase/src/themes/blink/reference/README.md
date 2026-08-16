@@ -66,8 +66,10 @@ the kit's CSS modules and `tokens.css`, which are version-independent.
    Fonts. Inter is loaded in the app but never painted: `tokens.css` sets
    `--font-family-sans: "Source Sans Pro"`, and the live kit page measures
    `font-family: "Source Sans Pro"` on `<body>`. The kit's design spec confirms Inter is only the
-   documented fallback substitute. The showcase page loads Source Sans Pro with the same `<link>`
-   the app's renderer uses.
+   documented fallback substitute. The showcase page loads Source Sans Pro through
+   `@fontsource/source-sans-pro` imports in `blink.css` (the app fetches the same faces from
+   Google Fonts; bundling them keeps the harness's rasterization identical everywhere -
+   `blink.css`'s own note records the deviation).
 2. **Everything from `.echarts-tooltip` onward dropped** - chart tooltips, toastify,
    react-date-range, simplebar and bootstrap leftovers. App furniture, no primitive depends on it.
 
