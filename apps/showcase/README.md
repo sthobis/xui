@@ -14,6 +14,7 @@ maps the terrain.
 | `shadcn.html` / `pure.html` | shadcn's parity gallery (real shadcn/ui beside themed MUI), and the same MUI cells with no Tailwind loaded. |
 | `kumo.html` / `kumo-pure.html` | The same pair of pages for kumo. |
 | `blink.html` / `blink-pure.html` | The same pair for blink (the Pulse Kit). |
+| `export.html` | The EXPORT page: pick a theme, turn a few preset knobs (shadcn only - primary colour, font, radius), choose TypeScript or JavaScript and whether comments ship, and download the one-file theme. See `src/export/customize.ts` for the contract with the theme files. |
 
 The separation is the point, not an accident of growth: two design systems' Tailwind themes, base
 layers and fonts must never load on one page, or the 0-threshold pixel harness measures whichever

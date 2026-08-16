@@ -43,6 +43,8 @@ export default defineConfig(({ command }) => ({
         kumoPure: path.resolve(__dirname, "kumo-pure.html"),
         blink: path.resolve(__dirname, "blink.html"),
         blinkPure: path.resolve(__dirname, "blink-pure.html"),
+        // The export page is MUI-only like `index`, so it also loads no design-system stylesheet.
+        export: path.resolve(__dirname, "export.html"),
       },
     },
   },

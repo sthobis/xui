@@ -1,0 +1,13 @@
+/* The export page is MUI-only, like the showcase: no Tailwind, no design-system stylesheet.
+   All three themes' faces load so the preview renders whichever the evaluated theme asks for -
+   including the font OPTIONS (Inter), which the exported file would tell a consumer to install. */
+@import "@fontsource-variable/geist";
+@import "@fontsource-variable/inter";
+@import "@fontsource/source-sans-pro/300.css";
+@import "@fontsource/source-sans-pro/400.css";
+@import "@fontsource/source-sans-pro/600.css";
+@import "@fontsource/source-sans-pro/700.css";
+
+body {
+  margin: 0;
+}

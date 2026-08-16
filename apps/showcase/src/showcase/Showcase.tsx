@@ -239,7 +239,8 @@ export function Showcase() {
             The same MUI components under each theme. Stock MUI on the left, then shadcn/ui, Kumo,
             and the Pulse Kit. For pixel comparison against the real design-system components, see{" "}
             <ParityLink page="shadcn" />, <ParityLink page="kumo" /> and <ParityLink page="blink" />
-            .
+            . To download a theme - optionally customized with preset knobs - use{" "}
+            <ParityLink page="export" />.
           </p>
         </header>
         {sections.map((section) => (

@@ -36,7 +36,7 @@ export function App() {
 ```
 
 The theme is one self-contained file (`packages/xui/src/themes/shadcn.ts`).
-You can install the package, or copy that single file into your app the way you copy a shadcn component.
+You can install the package, or copy that single file into your app the way you copy a shadcn component - or generate a customized copy from the showcase's **export page** (`/export.html`), which offers a few preset knobs (primary colour, font, radius - shadcn only), TypeScript or JavaScript output, and comments kept or stripped. A customized file marks every changed line and is yours: the pixel-parity claims apply to the shipped values, not to a recolour.
 `kumoTheme` and `blinkTheme` work the same way from `@sthobis/xui/kumo` and `@sthobis/xui/blink` - each theme has its own subpath so its MUI prop-type extensions (kumo's `size="xsmall"`, blink's `variant="light"`, ...) only reach consumers who import that theme.
 
 Dark mode activates via the `.dark` class on `<html>`, the same mechanism shadcn uses, so a single toggle drives both systems in lockstep.
