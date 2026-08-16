@@ -18,10 +18,13 @@ jobs:
   # public repositories.
   verify:
     runs-on: macos-latest
-    # A hard ceiling far above any healthy run (~10 minutes all in). Without it, a wedged dev
-    # server or a hung overlay burns GitHub's 6-hour default on the macOS runner before anything
-    # kills it.
-    timeout-minutes: 30
+    # A hard ceiling with real headroom over a healthy run. Measured on the hosted macOS runner:
+    # ~27 minutes all in (the three suites alone are ~24, plus install and a browser-cache miss).
+    # The first cut of this ceiling was 30, guessed rather than measured, and it CANCELLED two
+    # healthy runs at the wire - a timeout kill reports as "cancelled", which reads like a manual
+    # stop and cost a diagnosis round. Without any ceiling, a wedged dev server burns GitHub's
+    # 6-hour default on the macOS runner before anything kills it.
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
 

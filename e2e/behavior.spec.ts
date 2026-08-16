@@ -931,7 +931,17 @@ test.describe("painted geometry", () => {
         // pairs that actually have two sides.
         if (!rowEl.querySelector('[data-side="ref"]')) return []
 
-        const transparent = (c: string) => c === "transparent" || /^(rgba?|oklab|oklch|color)\(.*[,/]\s*0\s*\)$/.test(c)
+        // Transparent means ALPHA zero, and the alpha has to be matched where alpha actually
+        // lives: as the 4th comma value of an rgba() or after a slash. The previous pattern
+        // accepted any colour ENDING in ", 0)" - which is also what a zero BLUE channel looks
+        // like in the 3-value rgb() form - so every solid colour with no blue (pure black, pure
+        // red, pure yellow) was silently dropped from the sweep on whichever side declared it.
+        // The harness canary caught it: its #000000 reference swatch vanished while its #010101
+        // twin counted, and the sweep reported a one-sided rectangle for a pair whose two boxes
+        // are identical. getComputedStyle spells opaque colours "rgb(r, g, b)" and transparent
+        // ones "rgba(r, g, b, 0)", so anchoring on rgba/slash forms is exact.
+        const transparent = (c: string) =>
+          c === "transparent" || /^rgba\([^)]*,\s*0\s*\)$/.test(c) || /^(?:rgb|oklab|oklch|color)a?\([^)]*\/\s*0\s*\)$/.test(c)
 
         const collect = (side: string): string[] => {
           const cell = rowEl.querySelector(`[data-side="${side}"]`)
