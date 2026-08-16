@@ -15,10 +15,18 @@ export type PairState =
 const OPEN_CONTENT_SELECTOR = "[data-portal-target], [data-open-target]"
 
 /**
+ * How long a state change is given to settle before anything is measured or captured: the
+ * galleries' transitions run at 150ms, so double that with margin. One named constant because the
+ * same wait appears in applyState, resetState, activateDark and several behavior sweeps, and the
+ * copies had already drifted - one site's comment claimed "same 300ms settle" over a literal 400.
+ */
+export const SETTLE_MS = 300
+
+/**
  * Make :focus-visible match on target: insert a helper button right before it,
  * focus the helper, then Tab so focus arrives via keyboard.
  */
-export async function focusVisible(target: Locator): Promise<void> {
+async function focusVisible(target: Locator): Promise<void> {
   try {
     await target.evaluate((el) => {
       const helper = document.createElement("button")
@@ -121,7 +129,7 @@ export async function applyState(page: Page, cell: Locator, state: PairState, pa
     await page.mouse.down()
   }
   // let 150ms transitions settle
-  await page.waitForTimeout(300)
+  await page.waitForTimeout(SETTLE_MS)
 }
 
 /** The sub-pixel position an overlay rasterizes at: the fractional part of its top-left corner. */
@@ -353,7 +361,7 @@ export async function snapToPixelGrid(target: Locator): Promise<void> {
 }
 
 /** Removes every nudge snapToPixelGrid left behind. Called from resetState. */
-export async function clearPixelSnap(page: Page): Promise<void> {
+async function clearPixelSnap(page: Page): Promise<void> {
   await page.evaluate(() => {
     for (const el of document.querySelectorAll("[data-pixel-snapped]")) {
       ;(el as HTMLElement).style.removeProperty("margin-left")
@@ -451,5 +459,5 @@ export async function resetState(page: Page): Promise<void> {
   await expect(page.locator([OPEN_CONTENT_SELECTOR, ...declared].join(", "))).toHaveCount(0, {
     timeout: 5000,
   })
-  await page.waitForTimeout(300)
+  await page.waitForTimeout(SETTLE_MS)
 }
