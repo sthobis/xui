@@ -18,12 +18,12 @@ xui lets you write ordinary MUI code and get that look, with no wrapper componen
 
 ## Usage
 
-Install MUI, xui, and the Geist font in your app, then wrap your tree in the theme.
+Install MUI, `@sthobis/xui`, and the theme's font (Geist for shadcn) in your app, then wrap your tree in the theme.
 
 ```tsx
 import { ThemeProvider } from "@mui/material/styles"
 import CssBaseline from "@mui/material/CssBaseline"
-import { shadcnTheme } from "xui"
+import { shadcnTheme } from "@sthobis/xui/shadcn"
 
 export function App() {
   return (
@@ -37,6 +37,7 @@ export function App() {
 
 The theme is one self-contained file (`packages/xui/src/themes/shadcn.ts`).
 You can install the package, or copy that single file into your app the way you copy a shadcn component.
+`kumoTheme` and `blinkTheme` work the same way from `@sthobis/xui/kumo` and `@sthobis/xui/blink` - each theme has its own subpath so its MUI prop-type extensions (kumo's `size="xsmall"`, blink's `variant="light"`, ...) only reach consumers who import that theme.
 
 Dark mode activates via the `.dark` class on `<html>`, the same mechanism shadcn uses, so a single toggle drives both systems in lockstep.
 
@@ -56,10 +57,10 @@ pnpm verify:parity    # pixel-compare every shadcn/MUI pair, light and dark
 pnpm verify           # parity plus the preflight independence check
 pnpm typecheck
 pnpm test:unit          # the compare-utility tests
-pnpm --filter xui build # emit dist/ for publishing (consumers get the built output; this repo uses src)
+pnpm --filter @sthobis/xui build # emit dist/ for publishing (consumers get the built output; this repo uses src)
 ```
 
-`xui`'s `exports` deliberately point at TypeScript source so a theme edit shows up in the showcase and the parity harness without a build step; `publishConfig` swaps in `dist/` for consumers.
+`@sthobis/xui`'s `exports` deliberately point at TypeScript source so a theme edit shows up in the showcase and the parity harness without a build step; `publishConfig` swaps in `dist/` for consumers.
 The published package ships both, because copying `src/themes/shadcn.ts` into your own app is a supported way to use it.
 
 Contributor and agent guidance lives in [AGENTS.md](AGENTS.md).

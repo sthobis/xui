@@ -1,7 +1,7 @@
 {
-  "name": "xui",
+  "name": "@sthobis/xui",
   "version": "0.1.0",
-  "description": "Material UI v9 themes that make MUI components look pixel-for-pixel identical to another design system. Ships shadcn/ui and Kumo (Cloudflare) themes.",
+  "description": "Material UI v9 themes that make MUI components look pixel-for-pixel identical to another design system. Ships shadcn/ui, Kumo (Cloudflare) and Pulse Kit (blink) themes.",
   "license": "MIT",
   "keywords": [
     "mui",
@@ -10,6 +10,7 @@
     "shadcn-ui",
     "kumo",
     "cloudflare",
+    "blink",
     "theme",
     "design-system"
   ],
@@ -25,14 +26,41 @@
     ".": {
       "types": "./src/index.ts",
       "default": "./src/index.ts"
-    }
+    },
+    "./shadcn": {
+      "types": "./src/themes/shadcn.ts",
+      "default": "./src/themes/shadcn.ts"
+    },
+    "./kumo": {
+      "types": "./src/themes/kumo.ts",
+      "default": "./src/themes/kumo.ts"
+    },
+    "./blink": {
+      "types": "./src/themes/blink.ts",
+      "default": "./src/themes/blink.ts"
+    },
+    "./package.json": "./package.json"
   },
   "publishConfig": {
+    "access": "public",
     "exports": {
       ".": {
         "types": "./dist/index.d.ts",
         "default": "./dist/index.js"
-      }
+      },
+      "./shadcn": {
+        "types": "./dist/themes/shadcn.d.ts",
+        "default": "./dist/themes/shadcn.js"
+      },
+      "./kumo": {
+        "types": "./dist/themes/kumo.d.ts",
+        "default": "./dist/themes/kumo.js"
+      },
+      "./blink": {
+        "types": "./dist/themes/blink.d.ts",
+        "default": "./dist/themes/blink.js"
+      },
+      "./package.json": "./package.json"
     }
   },
   "scripts": {
@@ -44,17 +72,25 @@
     "@emotion/react": "^11.5.0",
     "@emotion/styled": "^11.3.0",
     "@mui/material": "^9.0.0",
+    "@phosphor-icons/react": "^2.1.10",
+    "lucide-react": "^1.24.0",
     "react": "^18.0.0 || ^19.0.0"
   },
-  "dependencies": {
-    "@phosphor-icons/react": "^2.1.10",
-    "lucide-react": "^1.24.0"
+  "peerDependenciesMeta": {
+    "@phosphor-icons/react": {
+      "optional": true
+    },
+    "lucide-react": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
     "@mui/material": "^9.2.0",
+    "@phosphor-icons/react": "^2.1.10",
     "@types/react": "^19.2.17",
+    "lucide-react": "^1.24.0",
     "react": "^19.0.0",
     "typescript": "^7.0.2"
   }

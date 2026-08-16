@@ -1,6 +1,6 @@
 import { ThemeProvider, StyledEngineProvider } from "@mui/material/styles"
 import CssBaseline from "@mui/material/CssBaseline"
-import { blinkTheme } from "xui"
+import { blinkTheme } from "@sthobis/xui/blink"
 import type { ReactNode } from "react"
 import baselineTheme from "./reference/baselineTheme"
 
