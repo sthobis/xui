@@ -232,8 +232,12 @@ export const selectSection: Section = {
     },
     {
       id: "select-open",
+      // Plain "anchored" is SAFE here: the select trigger paints NO hover or open fill on either
+      // side (measured: background stays transparent before, during hover, and while open), so
+      // the capture framing it has nothing to disagree about. kumo's dropdown is the counter-case
+      // AGENTS.md documents.
       states: ["open", "anchored"],
-      behaviors: ["escape-closes", "item-hover-highlights"],
+      behaviors: ["escape-closes", "item-hover-highlights", "overlay-matches"],
       ref: (
         <Select defaultValue={SELECTED}>
           <SelectTrigger data-target style={{ width: TRIGGER_WIDTH }}>

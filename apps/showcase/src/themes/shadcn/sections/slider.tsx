@@ -1,8 +1,8 @@
 import MuiSlider from "@mui/material/Slider"
 import { Slider } from "@/components/ui/slider"
-import type { Section } from "../../../gallery/types"
+import type { PairState, Section } from "../../../gallery/types"
 
-const withHoverFocus: Array<"default" | "hover" | "focus"> = ["default", "hover", "focus"]
+const withHoverFocus: PairState[] = ["default", "hover", "focus"]
 
 // `data-target` is the parity harness's hover/focus marker (see e2e/lib/states.ts), placed on
 // the Slider ROOT on BOTH sides. At defaultValue 50 on a 0-100 range the thumb sits at the exact

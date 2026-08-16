@@ -1,6 +1,41 @@
-import { expect, test, type Locator, type Page } from "@playwright/test"
-import { openContentLocator, resetState } from "./lib/states"
+import { expect, test, type Locator, type Page, type TestInfo } from "@playwright/test"
+import { discoverPairs, filterByParityPair, parityFilterActive, type DiscoveredPair } from "./lib/pairs"
+import { openContentLocator, resetState, SETTLE_MS } from "./lib/states"
 import { GALLERY_PAGE, targetOf, type ThemeName } from "./lib/themes"
+
+/**
+ * Settle for an overlay OPEN transition before its box or paint is read. SETTLE_MS plus margin:
+ * both libraries open with a scale/opacity transition, and a box measured while one is running is
+ * the INTERPOLATED box - a 144px panel reports 108px a frame in. The margin exists because these
+ * sweeps read geometry and computed style rather than pixels, so a last-frame straggler that the
+ * pixel harness would absorb shows up here as a hard numeric mismatch.
+ */
+const OVERLAY_SETTLE_MS = SETTLE_MS + 100
+
+/** Settle for a pointer-hover restyle - no box is measured, only a computed colour. */
+const HOVER_SETTLE_MS = 200
+
+/**
+ * Every sweep's duration budget derives from the number of pairs it walks, floored for tiny
+ * filtered runs - the same invariant parity.spec.ts derives, for the same reason: a flat budget
+ * quietly becomes a near-miss as the gallery grows, and this file's flat 120s editable-control
+ * budget was the last one left. CI multiplies the per-pair cost the same way parity's does.
+ */
+function sweepBudget(testInfo: TestInfo, count: number, perPairMs: number): void {
+  const factor = process.env.CI ? 2.5 : 1
+  testInfo.setTimeout(Math.max(90_000, Math.ceil(count * perPairMs * factor)))
+}
+
+/**
+ * CENTRE a row before opening anything from it, exactly as parity.spec.ts does and for the
+ * documented reason: `scrollIntoViewIfNeeded` can leave a row hard against the viewport's bottom
+ * edge, where both libraries' collision avoidance nudges a panel up - by DIFFERENT amounts - so a
+ * measurement changes with the scroll position of whatever ran before it. Sweeps that open no
+ * overlay keep the cheaper minimal scroll.
+ */
+async function centreRow(row: Locator): Promise<void> {
+  await row.evaluate((el) => el.scrollIntoView({ block: "center" }))
+}
 
 // Non-pixel behavior checks. The pixel harness (parity.spec.ts) only ever screenshots frozen
 // frames of default/hover/focus/open/active/anchored states, so it structurally cannot see
@@ -38,20 +73,16 @@ function skipIfNothingToCheck(count: number, what: string) {
   test.skip(count === 0, `the ${theme} gallery has no ${what} pairs yet`)
 }
 
-type BehaviorPair = { id: string; behaviors: string[] }
+/** Pairs that opted into at least one behavior, honouring the PARITY_PAIR iteration filter. */
+async function discover(page: Page): Promise<DiscoveredPair[]> {
+  const { pairs } = filterByParityPair(await discoverPairs(page))
+  return pairs.filter((p) => p.behaviors.length > 0)
+}
 
-async function discover(page: Page): Promise<BehaviorPair[]> {
-  return page.evaluate(() =>
-    Array.from(document.querySelectorAll("[data-pair-id]"))
-      .map((el) => ({
-        id: el.getAttribute("data-pair-id")!,
-        behaviors: (el.getAttribute("data-behaviors") ?? "")
-          .split(",")
-          .map((s) => s.trim())
-          .filter(Boolean),
-      }))
-      .filter((p) => p.behaviors.length > 0),
-  )
+/** Every pair id in the gallery, honouring the PARITY_PAIR iteration filter - for the full sweeps. */
+async function allPairIds(page: Page): Promise<string[]> {
+  const { pairs } = filterByParityPair(await discoverPairs(page))
+  return pairs.map((p) => p.id)
 }
 
 /**
@@ -87,10 +118,41 @@ async function sampleAnimationSignature(cell: Locator): Promise<{ first: string;
   })
 }
 
+test.describe("declared behaviors", () => {
+  // The authoring side (`PairBehavior` in gallery/types.ts) is a typed union, but this file matches
+  // its members as bare strings - so adding a member to the union and tagging pairs with it
+  // typechecks perfectly while exercising nothing, the exact "check that quietly proves nothing"
+  // failure skipIfNothingToCheck's banner describes. This is the bridge: every behavior string the
+  // gallery actually declares must be one this file implements. Keep the list in sync with the
+  // describe blocks below (the sweeps that discover per-pair, not the page-wide ripple/input/
+  // metrics/geometry sweeps, which no pair opts into).
+  const IMPLEMENTED = [
+    "animates",
+    "overlay-matches",
+    "anchored-to-trigger",
+    "item-hover-highlights",
+    "hover-opens",
+    "escape-closes",
+    "filters-on-type",
+  ] as const
+  test("every behavior the gallery declares has a sweep in this file", async ({ page }) => {
+    // Deliberately UNFILTERED: the guard is about the gallery/spec contract as a whole, not about
+    // whichever pairs a PARITY_PAIR iteration happens to select.
+    const declared = [...new Set((await discoverPairs(page)).flatMap((p) => p.behaviors))]
+    const unimplemented = declared.filter((b) => !(IMPLEMENTED as readonly string[]).includes(b))
+    expect(
+      unimplemented,
+      `these data-behaviors values have no sweep in behavior.spec.ts, so declaring them proves ` +
+        `nothing: ${unimplemented.join(", ")} - implement the sweep or remove the tag`,
+    ).toEqual([])
+  })
+})
+
 test.describe("animates", () => {
-  test("each tagged pair's animated element changes over time on both sides", async ({ page }) => {
+  test("each tagged pair's animated element changes over time on both sides", async ({ page }, testInfo) => {
     const pairs = (await discover(page)).filter((p) => p.behaviors.includes("animates"))
     skipIfNothingToCheck(pairs.length, "animates")
+    sweepBudget(testInfo, pairs.length, 2_500)
 
     for (const { id } of pairs) {
       const row = page.locator(`[data-pair-id="${id}"]`)
@@ -244,14 +306,15 @@ test.describe("overlay-matches", () => {
   // and is simply not in the picture. Sabotaging the drawer's shadow left the pair at 0.00% before
   // this, and kumo's tooltip is decorated entirely by an outline and a shadow-lg - neither of which
   // any capture of that pair contains.
-  test("each tagged pair's scrim and panel chrome match on both sides", async ({ page }) => {
+  test("each tagged pair's scrim and panel chrome match on both sides", async ({ page }, testInfo) => {
     const pairs = (await discover(page)).filter((p) => p.behaviors.includes("overlay-matches"))
     skipIfNothingToCheck(pairs.length, "overlay-matches")
-    const { theme } = targetOf(test.info().project.name)
+    sweepBudget(testInfo, pairs.length, 5_000)
+    const { theme } = targetOf(testInfo.project.name)
 
     for (const { id } of pairs) {
       const row = page.locator(`[data-pair-id="${id}"]`)
-      await row.scrollIntoViewIfNeeded()
+      await centreRow(row)
       const measured: Record<string, unknown> = {}
       for (const side of ["ref", "mui"] as const) {
         const cell = row.locator(`[data-side="${side}"]`)
@@ -264,7 +327,7 @@ test.describe("overlay-matches", () => {
         // folded into the scrim's colour, a measurement taken mid-fade reports whatever alpha the
         // animation happened to be at - shadcn's overlay read back at 2/255 on one side and 0 on
         // the other, purely from being sampled a frame apart.
-        await page.waitForTimeout(400)
+        await page.waitForTimeout(OVERLAY_SETTLE_MS)
         // The scrim is measured only if this overlay HAS one. A missing scrim is not asserted away
         // here, it is folded into the comparison as `null` - so a non-modal pair (tooltip, popover)
         // compares null against null and passes, while a modal pair that loses its scrim on one
@@ -292,8 +355,7 @@ test.describe("overlay-matches", () => {
               })
             : null,
           panel: await panel
-            .evaluate((el) => {
-              const c = getComputedStyle(el)
+            .evaluate((root) => {
               // An outline (or border) with no style, or zero width, paints NOTHING - and its
               // colour and width are then whatever each library happens to leave lying around.
               // Comparing those would fail two overlays that look identical: shadcn's dialog panel
@@ -302,6 +364,34 @@ test.describe("overlay-matches", () => {
               // the check only ever compares decoration that actually paints.
               const drawn = (style: string, width: string, value: string) =>
                 style === "none" || parseFloat(width) === 0 ? "none" : value
+              // The chrome is measured on the first element that PAINTS anything, not necessarily
+              // on the element the overlay is located by. The located element is the OUTERMOST
+              // portalled box, which the pixel captures need (it is what phase-matching moves, and
+              // for a tooltip it is what frames the arrow) - but it can be a bare positioning
+              // wrapper: MUI's Tooltip carries data-portal-target on its Popper, whose
+              // border-radius resolves to 0px while the bubble inside it rounds at 8px, and
+              // comparing wrapper against bubble failed two overlays that paint identically. The
+              // same "only what paints" principle as `drawn`, applied to picking the element.
+              const paints = (el: Element): boolean => {
+                const s = getComputedStyle(el)
+                const bg = s.backgroundColor === "transparent" || /^rgba\(\d+, \d+, \d+, 0\)$/.test(s.backgroundColor)
+                return (
+                  !bg ||
+                  s.backgroundImage !== "none" ||
+                  s.boxShadow !== "none" ||
+                  drawn(s.borderStyle, s.borderWidth, "b") !== "none" ||
+                  drawn(s.outlineStyle, s.outlineWidth, "o") !== "none"
+                )
+              }
+              const firstPainting = (el: Element): Element | null => {
+                if (paints(el)) return el
+                for (const child of Array.from(el.children)) {
+                  const found = firstPainting(child)
+                  if (found) return found
+                }
+                return null
+              }
+              const c = getComputedStyle(firstPainting(root) ?? root)
               return {
                 boxShadow: c.boxShadow,
                 border: drawn(c.borderStyle, c.borderWidth, c.border),
@@ -344,13 +434,16 @@ test.describe("anchored-to-trigger", () => {
   // Distances are relative to the trigger, because the two cells sit at unrelated absolute
   // positions. Sub-pixel differences survive: this catches the half-pixel divergence between
   // Popper's rounding and Floating UI's that the pixel diff needs a capture to see.
-  test("each tagged pair's overlay opens at the same offset from its trigger", async ({ page }) => {
+  test("each tagged pair's overlay opens at the same offset from its trigger", async ({ page }, testInfo) => {
     const pairs = (await discover(page)).filter((p) => p.behaviors.includes("anchored-to-trigger"))
     skipIfNothingToCheck(pairs.length, "anchored-to-trigger")
+    sweepBudget(testInfo, pairs.length, 5_000)
 
     for (const { id } of pairs) {
       const row = page.locator(`[data-pair-id="${id}"]`)
-      await row.scrollIntoViewIfNeeded()
+      // Centred, not minimally scrolled - this sweep asserts gapBelow/gapAbove to half a pixel, so
+      // it is MORE sensitive to collision-avoidance nudging than the pixel capture it mirrors.
+      await centreRow(row)
       const measured: Record<string, unknown> = {}
       for (const side of ["ref", "mui"] as const) {
         const cell = row.locator(`[data-side="${side}"]`)
@@ -360,10 +453,8 @@ test.describe("anchored-to-trigger", () => {
         await expect(overlay, `${id} (${side}): no overlay appeared after opening`).toBeVisible({
           timeout: 5000,
         })
-        // Both libraries open an overlay with a scale/opacity transition, and a box measured while
-        // one is still running is the INTERPOLATED box - a 144px panel reports 108px a frame in.
-        // Same 300ms settle the pixel harness's own applyState waits out.
-        await page.waitForTimeout(400)
+        // A box measured mid-transition is the interpolated box - see OVERLAY_SETTLE_MS's banner.
+        await page.waitForTimeout(OVERLAY_SETTLE_MS)
         const [triggerBox, overlayBox] = await Promise.all([trigger.boundingBox(), overlay.boundingBox()])
         if (!triggerBox || !overlayBox) throw new Error(`${id} (${side}): missing bounding box`)
         const round = (n: number) => Math.round(n * 1000) / 1000
@@ -409,13 +500,14 @@ test.describe("item-hover-highlights", () => {
   // rule, so hover had been neutralized, missing that Radix focuses the item under the pointer on
   // pointermove and `focus:bg-accent` is what paints. This compares the hovered item's own
   // background across the two sides, which is the thing that differed.
-  test("each tagged pair's overlay items highlight the same way on hover", async ({ page }) => {
+  test("each tagged pair's overlay items highlight the same way on hover", async ({ page }, testInfo) => {
     const pairs = (await discover(page)).filter((p) => p.behaviors.includes("item-hover-highlights"))
     skipIfNothingToCheck(pairs.length, "item-hover-highlights")
+    sweepBudget(testInfo, pairs.length, 5_000)
 
     for (const { id } of pairs) {
       const row = page.locator(`[data-pair-id="${id}"]`)
-      await row.scrollIntoViewIfNeeded()
+      await centreRow(row)
       const measured: Record<string, string> = {}
       for (const side of ["ref", "mui"] as const) {
         const cell = row.locator(`[data-side="${side}"]`)
@@ -425,7 +517,7 @@ test.describe("item-hover-highlights", () => {
         // The LAST item, so the result cannot be confused with whatever the overlay autofocuses.
         const item = overlay.locator("[role='menuitem'], [role='option']").last()
         await item.hover()
-        await page.waitForTimeout(200)
+        await page.waitForTimeout(HOVER_SETTLE_MS)
         measured[side] = await item.evaluate((el) => getComputedStyle(el).backgroundColor)
         await resetState(page)
       }
@@ -452,7 +544,6 @@ test.describe("accepts input", () => {
   // must take a keystroke on BOTH sides, which also catches one side being read-only while the
   // other is not.
   test("every editable control in the gallery takes a keystroke on both sides", async ({ page }, testInfo) => {
-    testInfo.setTimeout(120_000) // a sweep over every pair, two sides each
     // Excludes the inputs that are not user-facing text controls. The aria-hidden/tabindex=-1 pair
     // is what rules out MUI's `.MuiSelect-nativeInput`: a Select renders one to carry its value for
     // form submission, and it is not typeable by design - without this it reported as a control
@@ -460,9 +551,8 @@ test.describe("accepts input", () => {
     const EDITABLE =
       "input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=hidden])" +
       ':not([aria-hidden]):not([tabindex="-1"]), textarea'
-    const pairIds = await page.evaluate(() =>
-      Array.from(document.querySelectorAll("[data-pair-id]")).map((el) => el.getAttribute("data-pair-id")!),
-    )
+    const pairIds = await allPairIds(page)
+    sweepBudget(testInfo, pairIds.length, 1_500)
 
     const offenders: string[] = []
     let checked = 0
@@ -510,10 +600,13 @@ test.describe("no ripple", () => {
   // freshly loaded page has zero of them whether or not the ripple is disabled. Every button has
   // to be pressed first. Verified to catch a regression by removing the theme's
   // `disableTouchRipple`/`focusRipple` defaults: one press then mounted a visible ripple.
-  test("no MUI ButtonBase paints a ripple when pressed", async ({ page }) => {
+  test("no MUI ButtonBase paints a ripple when pressed", async ({ page }, testInfo) => {
     const bases = page.locator(".MuiButtonBase-root")
     const count = await bases.count()
     expect(count, "no MUI ButtonBase instances found in the gallery").toBeGreaterThan(0)
+    // Swept per INSTANCE rather than per pair - a gallery holds several ButtonBases per row - so
+    // the budget derives from the instance count.
+    sweepBudget(testInfo, count, 400)
 
     const offenders: string[] = []
     for (let i = 0; i < count; i++) {
@@ -540,13 +633,14 @@ test.describe("no ripple", () => {
 })
 
 test.describe("hover-opens", () => {
-  test("each tagged pair's overlay opens on hover alone, no click", async ({ page }) => {
+  test("each tagged pair's overlay opens on hover alone, no click", async ({ page }, testInfo) => {
     const pairs = (await discover(page)).filter((p) => p.behaviors.includes("hover-opens"))
     skipIfNothingToCheck(pairs.length, "hover-opens")
+    sweepBudget(testInfo, pairs.length, 4_000)
 
     for (const { id } of pairs) {
       const row = page.locator(`[data-pair-id="${id}"]`)
-      await row.scrollIntoViewIfNeeded()
+      await centreRow(row)
       for (const side of ["ref", "mui"] as const) {
         const cell = row.locator(`[data-side="${side}"]`)
         const target = cell.locator("[data-target]").first()
@@ -562,13 +656,14 @@ test.describe("hover-opens", () => {
 })
 
 test.describe("escape-closes", () => {
-  test("each tagged pair's open overlay detaches on Escape", async ({ page }) => {
+  test("each tagged pair's open overlay detaches on Escape", async ({ page }, testInfo) => {
     const pairs = (await discover(page)).filter((p) => p.behaviors.includes("escape-closes"))
     skipIfNothingToCheck(pairs.length, "escape-closes")
+    sweepBudget(testInfo, pairs.length, 5_000)
 
     for (const { id } of pairs) {
       const row = page.locator(`[data-pair-id="${id}"]`)
-      await row.scrollIntoViewIfNeeded()
+      await centreRow(row)
       for (const side of ["ref", "mui"] as const) {
         const cell = row.locator(`[data-side="${side}"]`)
         const target = cell.locator("[data-target]").first()
@@ -624,11 +719,10 @@ test.describe("text metrics", () => {
    * structure do not change them - while still being exactly what a line-height or font-size mistake
    * moves. Where a box size genuinely matters, the parity diff already covers it.
    */
-  test("each pair resolves the same font metrics on both sides", async ({ page }) => {
-    const pairs: string[] = await page.evaluate(() =>
-      Array.from(document.querySelectorAll("[data-pair-id]")).map((el) => el.getAttribute("data-pair-id")!),
-    )
-    expect(pairs.length).toBeGreaterThan(0)
+  test("each pair resolves the same font metrics on both sides", async ({ page }, testInfo) => {
+    const pairs = await allPairIds(page)
+    skipIfNothingToCheck(pairs.length, "matching") // only ever empty under a PARITY_PAIR filter
+    sweepBudget(testInfo, pairs.length, 1_000)
 
     const offenders: string[] = []
     for (const id of pairs) {
@@ -808,13 +902,23 @@ test.describe("painted geometry", () => {
     ]),
   }
 
-  test("each pair paints the same rectangles on both sides", async ({ page }) => {
-    const pairs: string[] = (
-      await page.evaluate(() =>
-        Array.from(document.querySelectorAll("[data-pair-id]")).map((el) => el.getAttribute("data-pair-id")!),
-      )
-    ).filter((id) => !BY_DESIGN[targetOf(test.info().project.name).theme].has(id))
-    expect(pairs.length).toBeGreaterThan(0)
+  test("each pair paints the same rectangles on both sides", async ({ page }, testInfo) => {
+    const ids = await allPairIds(page)
+    const byDesign = BY_DESIGN[targetOf(testInfo.project.name).theme]
+    // A BY_DESIGN entry is the same kind of claim as a thresholds.ts override - a proof about one
+    // specific pair - and it rots the same way: rename the pair and the exemption lingers, keeping
+    // this sweep blind to the construction it once excused long after that construction changed.
+    // Validated only on a full run; a filtered run legitimately sees a subset of ids.
+    if (!parityFilterActive()) {
+      const stale = [...byDesign].filter((id) => !ids.includes(id))
+      expect(
+        stale,
+        `BY_DESIGN exempts pairs that no longer exist: ${stale.join(", ")} - remove the entries or re-point them`,
+      ).toEqual([])
+    }
+    const pairs = ids.filter((id) => !byDesign.has(id))
+    skipIfNothingToCheck(pairs.length, "matching") // only ever empty under a PARITY_PAIR filter
+    sweepBudget(testInfo, pairs.length, 1_000)
 
     const offenders: string[] = []
     for (const id of pairs) {
@@ -924,13 +1028,14 @@ test.describe("filters-on-type", () => {
    * option's label, types that, and compares. It also asserts the result is a PROPER subset of the
    * full list, so a side that ignores the query entirely fails rather than trivially matching.
    */
-  test("each tagged pair narrows to the same options on both sides", async ({ page }) => {
+  test("each tagged pair narrows to the same options on both sides", async ({ page }, testInfo) => {
     const pairs = (await discover(page)).filter((p) => p.behaviors.includes("filters-on-type"))
     skipIfNothingToCheck(pairs.length, "filters-on-type")
+    sweepBudget(testInfo, pairs.length, 8_000)
 
     for (const { id } of pairs) {
       const row = page.locator(`[data-pair-id="${id}"]`)
-      await row.scrollIntoViewIfNeeded()
+      await centreRow(row)
 
       const seen: Record<string, { all: string[]; filtered: string[]; query: string }> = {}
       for (const side of ["ref", "mui"] as const) {
@@ -950,7 +1055,7 @@ test.describe("filters-on-type", () => {
         const query = source.slice(1, 4).toLowerCase()
 
         await input.fill(query)
-        await page.waitForTimeout(300)
+        await page.waitForTimeout(SETTLE_MS)
         const filtered = (await optionsOf()).map((s) => s.trim())
 
         seen[side] = { all, filtered, query }

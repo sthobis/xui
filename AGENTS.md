@@ -9,15 +9,17 @@ Three themes ship today:
 - **kumo** - Kumo, Cloudflare's design system (https://kumo-ui.com), Inter, light and dark. Complete, including the portalled tier (Tooltip, DropdownMenu, Select, Popover, Dialog, Toast).
 - **blink** - the Pulse Kit, the design system of Pulse / NeverBlink, Source Sans Pro. **Light only.** Complete across the same surface, portalled tier included. The kit ships a dark scheme and `blink.ts`'s palette is a factory over a token set precisely so adding it is a one-line change; until it is done there is deliberately no `blink-dark` project, so a future one cannot silently run in light and pass everything.
 
-All three cover the same MUI surface - every `Mui*` key one themes, the others theme too.
-Each reaches part of that surface through the derived tier described below, because every one of these systems ships fewer components than MUI does; that tier is marked in the theme file and is held to a different standard.
+All three cover the same MUI surface - at the level of what a user sees, not the letter of the key list.
+A theme may reach a surface through a different `Mui*` key (shadcn's snackbar twin is sonner, themed through `MuiSnackbarContent` where kumo themes a real `MuiSnackbar`), and twice the correct block is provably NO block (blink's `MuiBackdrop` and `MuiTableHead` - see the mistake section below).
+`e2e/lib/surface-parity.test.ts` holds the claim: the three key sets must match up to an allowlist whose every entry records its reason, in both directions, so closing a gap fails until its stale entry is deleted.
+Each theme also reaches part of the surface through the derived tier described below, because every one of these systems ships fewer components than MUI does; that tier is marked in the theme file and is held to a different standard.
 
 Everything below applies to all three. Where they differ, the theme name is called out.
 
 ## Layout
 
 - `packages/xui/src/themes/<name>.ts` is the deliverable, one self-contained file per theme exporting `<name>Theme`.
-  Each imports only from `@mui/material/*` plus that design system's icon package (`lucide-react` for shadcn, `@phosphor-icons/react` for kumo), so it can be copied into any app as a single file.
+  Each imports only from `@mui/material/*` plus that design system's icon package (`lucide-react` for shadcn and blink, `@phosphor-icons/react` for kumo), so it can be copied into any app as a single file.
   They are `.ts` files, so any icon element is built with `React.createElement`, never JSX.
 - `apps/showcase` is a Vite app used for development and verification.
   `src/gallery/` holds the theme-agnostic plumbing (`PairGrid`, `Sidebar`, `ThemePanel`, `types`).
@@ -43,6 +45,8 @@ Everything below applies to all three. Where they differ, the theme name is call
   - blink - `apps/showcase/src/themes/blink/reference/`, the Pulse Kit vendored from the app's own source. Read its README first; that source is private, so committed files describe it by role and the real paths live in a gitignored `PROVENANCE.private.md` beside it.
     It is the one ground truth in this repo that is a COPY rather than an installed package, which makes it the one you can edit - and the README bounds that: a "Local design changes pending upstream" table lists every file that no longer matches what was vendored, each one a deliberate change to the KIT that the theme carries identically, so parity stays at zero and the diff is what gets ported back.
     Changing a value there to make a pair pass is the same offence as raising a threshold. Changing one because the DESIGN should change is the only reason, and it goes in that table with the theme edit in the same commit.
+- `export.html` is the EXPORT page (`src/export/`): a shadcn-create-style customizer that downloads a theme as the same single file with a few PRESET knobs applied - primary colour, font and radius for shadcn; TypeScript/JavaScript and keep/strip-comments for every theme. kumo and blink take no design knobs on purpose: they replicate fixed, branded systems, so a recoloured copy would be neither the brand nor verified.
+  Two contracts hold it together, and both are enforced rather than remembered. Substitution is ANCHORED on exact shipped lines in the theme file (`src/export/customize.ts` - a missed anchor throws), and `customize.test.ts` runs every anchor against the real sources on each `pnpm test:unit`, so a theme edit that reshapes an anchored line fails the suite at the moment of the edit. Substituted lines trade their `// shadcn:` provenance for an `// export:` note naming the shipped value - a customized file must never claim an extraction it does not have. The preview EVALUATES the exact text the download contains (sucrase type-strip, two-line require shim in `src/export/evaluate.ts`), so the preview cannot drift from the artifact; the same test evaluates all three shipped themes, which is also what keeps the shim's icon list honest.
 - `e2e/` is the parity harness: Playwright screenshots each ref/MUI cell pair and pixelmatch diffs them.
 - Design specs and implementation plans live under `docs/superpowers/` and are gitignored.
   Never commit them.
@@ -61,7 +65,8 @@ That rule governs everything ABOVE the derived-tier banner in a theme file, whic
 There is exactly one sanctioned exception below it, and it is a different KIND of work rather than a relaxation of this one.
 
 **The derived tier - components MUI ships and the design system does not.**
-MUI's surface is wider than either system's: shadcn has no Slider or Rating, kumo has no Avatar, Skeleton or Stepper.
+MUI's surface is wider than any of these systems': shadcn has no Rating, Stepper or BottomNavigation, kumo has no Avatar, Skeleton or Stepper.
+(Not every gap is derived - shadcn DOES ship a Slider, vendored and pixel-paired like any other component; an earlier revision of this file claimed otherwise.)
 Left unthemed those render as stock Material - a blue, Roboto-metric control beside the themed ones - which for a drop-in theme is worse than an imperfect derivation.
 So they are built from the system's own TOKENS and from the geometry its real components use, below a banner in the theme file that says exactly where extraction stops, and every value still names the token it came from.
 
@@ -103,7 +108,7 @@ So: read the source to find out WHICH declarations exist, then read the rendered
    Alpha blends use `color-mix(in oklab, <color> N%, transparent)` where `N` matches the extracted `/NN` suffix exactly (watch for the occasional one-off `in oklch` mix and transcribe it as-is).
 4. Verify: run `pnpm verify:parity` and drive every new pair to 0 in both light and dark, with no regression on existing pairs.
    Diagnose failures with a computed-style diff in the browser before staring at diff images; when the styles all match, sample the captured PNGs' pixels to find WHERE they differ.
-   Run `pnpm exec playwright test e2e/behavior.spec.ts` too if the change touches box geometry; parity alone will not catch a transparent box or a differently-built seam.
+   Run `pnpm verify:behavior` too if the change touches box geometry; parity alone will not catch a transparent box or a differently-built seam.
 5. Sabotage-test the new pair - perturb one themed value, confirm the pair fails, revert.
    Make it a real perturbation: a font-weight of 401 against 400 renders identically in a variable font and proves nothing.
 6. Commit with a conventional message, no `Co-Authored-By` trailer.
@@ -134,7 +139,9 @@ Worked examples, each carrying its measurements in the file:
 - `button-primary` / `button-destructive` (kumo) - gradient dithering. Kumo paints its gradient on a child span and MUI's Button has no element to style, so the theme uses a `::before`; same picture, different paint op, and the delta histogram is literally `{1: 802}`.
 - `switch-checked` (kumo) - `corner-shape: squircle` rasterizes differently at different device x positions. Only the COUNT is relaxed; the delta cap stays at the default.
 
-`e2e/preflight.spec.ts` has its own, much tighter `maxDeltaOverrides` (default Δ2). An entry there has to show the two captures differ for a reason unrelated to Tailwind at all - not merely that the difference is small.
+`e2e/preflight.spec.ts` used to carry its own per-pair `maxDeltaOverrides` over a Δ2 default; both are gone. It now judges every pair against one flat `MAX_CHANNEL_DELTA` of 40, because what it exists to catch - a theme leaning on Tailwind - is structural and has always measured an order of magnitude above that, while the old floor needed re-tuning every time the gallery grew (the file's banner carries the measurements). On failure it writes a styled/pure/diff triptych beside parity's.
+
+The pipeline itself is proved by a canary: `harness-canary` (shadcn gallery) is an intentionally-different pair the parity suite judges INVERTED - measuring its difference is the pipeline working, zero is the pipeline broken. Threshold override keys and `BY_DESIGN` entries are validated against live pair ids on every full run, so an exemption cannot outlive the pair it was a proof about.
 
 Four things the pixel diff structurally **cannot** see, so do not rely on it for them:
 
@@ -144,7 +151,7 @@ Four things the pixel diff structurally **cannot** see, so do not rely on it for
 - **A transparent box.** MUI's vertical StepConnector stretches to the stepper's full width and paints only its left border: it looks like a 1px rule and measures 324px across. Parity was zero; `painted geometry` caught it.
 
 Both of the last two were found by something other than the pixel diff, which is the point of the behaviour sweeps.
-**Run `pnpm exec playwright test e2e/behavior.spec.ts` before pushing any change that alters box geometry** - it takes about a minute and it is the only check that sees these.
+**Run `pnpm verify:behavior` before pushing any change that alters box geometry** - it takes about a minute and it is the only check that sees these.
 
 ### Cross-platform
 
@@ -306,9 +313,12 @@ When a pair is mysteriously off, check what the MUI component *is* structurally 
   The per-test budget is derived from the pair count rather than fixed, so adding a pair cannot quietly eat the margin - it used to be a flat 240s, which was generous at ~90s and had become a near-miss that failed intermittently inside `resetState`, looking like a stuck overlay rather than a clock.
 - While iterating on ONE component, filter to it for a ~5s loop instead of the full suite: `PARITY_PAIR=slider pnpm exec playwright test e2e/parity.spec.ts --project=shadcn-light` (comma-separated id prefixes; swap in `kumo-light` or `blink-light` for those galleries, or pass several projects). Run the full `pnpm verify:parity` once at the end to confirm no regressions.
 - **Working in a git worktree? Set `PARITY_PORT`.** Playwright reuses whatever dev server is already on the port instead of starting one, so with a server running from another checkout the whole suite silently measures THAT checkout - a fresh worktree once "failed" on a pair that did not exist in it. Run `PARITY_PORT=5273 pnpm verify` (any free port), and start the dev server on the same port. The default 5173 is unchanged for the primary checkout.
-- `pnpm verify` runs parity plus the preflight suite (proves the theme does not depend on Tailwind's reset).
-- `pnpm typecheck` typechecks every package and the e2e harness.
-- `pnpm test:unit` runs the compare-utility unit tests.
+- `pnpm verify` runs all three suites: parity, preflight (proves the theme does not depend on Tailwind's reset) and the behaviour sweeps.
+- `pnpm verify:preflight` and `pnpm verify:behavior` run one suite alone; the behaviour sweeps honour `PARITY_PAIR` too, so iterating on one component covers its behaviours in seconds.
+- `PARITY_DUMP=1` makes a parity run write the ref/mui/diff triptych for EVERY pair it touches, not just failures - the tool for diagnosing a pair that passes while still differing. Diffs land in `e2e/results/diffs/<project>/`, one directory per project.
+- `pnpm typecheck` typechecks every package, the e2e harness, and the playwright/vitest configs.
+- `pnpm lint` runs oxlint over the showcase (CI runs it too).
+- `pnpm test:unit` runs the compare-utility tests and the cross-theme surface-parity ratchet.
 - Diagnosing a pair means a throwaway Playwright script that opens the page and reads computed styles out of the browser. Name it `.<something>.mjs` at the repo root: `.gitignore` covers that shape, and `git add -A` will otherwise commit it - two got in that way before the rule existed.
 
 ## Conventions

@@ -43,6 +43,7 @@ import { stepperSection } from "./stepper"
 import { tablePaginationSection } from "./table-pagination"
 import { imageListSection } from "./image-list"
 import { speedDialSection } from "./speed-dial"
+import { harnessCanarySection } from "./harness-canary"
 
 export const sections: Section[] = [
   buttonSection,
@@ -89,4 +90,7 @@ export const sections: Section[] = [
   tablePaginationSection,
   imageListSection,
   speedDialSection,
+  // Last, and deliberately so: an intentionally-failing-to-match pair is harness furniture, not a
+  // component, and it should be the last thing a reader of the gallery meets. See its own banner.
+  harnessCanarySection,
 ]

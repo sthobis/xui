@@ -1,5 +1,6 @@
 {
   "version": "0.0.1",
+  "comment": "Entries here must work from a fresh clone. Configurations that point at checkouts on one specific machine (absolute paths, private repositories) belong in .claude/launch.local.json, which is gitignored - the Pulse app and its design-system worktree used to be listed here and leaked their real paths, which is exactly what the *.private.md rule exists to prevent.",
   "configurations": [
     {
       "name": "showcase",
@@ -13,18 +14,6 @@
       "runtimeExecutable": "pnpm",
       "runtimeArgs": ["--filter", "showcase", "dev", "--port", "5273", "--strictPort"],
       "port": 5273
-    },
-    {
-      "name": "pulse-app",
-      "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["--dir", "/Users/sthobis/Documents/Projects/app", "dev"],
-      "port": 5000
-    },
-    {
-      "name": "pulse-design-system",
-      "runtimeExecutable": "env",
-      "runtimeArgs": ["PORT=5010", "pnpm", "--dir", "/Users/sthobis/Documents/Projects/app/.claude/worktrees/design-system-ui", "dev"],
-      "port": 5010
     }
   ]
 }

@@ -2,9 +2,9 @@ import MuiSwitch from "@mui/material/Switch"
 import MuiFormControlLabel from "@mui/material/FormControlLabel"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
-import type { Section } from "../../../gallery/types"
+import type { PairState, Section } from "../../../gallery/types"
 
-const withHoverFocus: Array<"default" | "hover" | "focus"> = ["default", "hover", "focus"]
+const withHoverFocus: PairState[] = ["default", "hover", "focus"]
 
 // switch.tsx's SwitchPrimitive.Root renders a real `<button role="switch">` as its own root
 // node (confirmed by reading @radix-ui/react-switch's compiled source: Switch.jsx renders a

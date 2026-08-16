@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { FieldError } from "@/components/ui/field"
-import type { Section } from "../../../gallery/types"
+import type { PairState, Section } from "../../../gallery/types"
 
 // Label-to-control and control-to-helper spacing: neither input.tsx, textarea.tsx, nor
 // label.tsx fixes a container gap (that's caller-owned in every real shadcn composition -
@@ -13,7 +13,7 @@ import type { Section } from "../../../gallery/types"
 // the identical box width.
 const stackStyle: CSSProperties = { display: "flex", flexDirection: "column", gap: 8, width: 240 }
 
-const withFocus: Array<"default" | "focus"> = ["default", "focus"]
+const withFocus: PairState[] = ["default", "focus"]
 
 export const textFieldSection: Section = {
   title: "TextField",

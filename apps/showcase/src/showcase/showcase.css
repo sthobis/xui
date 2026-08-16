@@ -1,5 +1,12 @@
-/* Both themes' fonts, and NOTHING else - no Tailwind, no design-system base layer.
-   That absence is the point: this page renders only MUI, so it needs neither system's stylesheet,
-   which is exactly what lets the two themes share a page (see the note in Showcase.tsx). */
+/* All three themes' fonts, and NOTHING else - no Tailwind, no design-system base layer.
+   That absence is the point: this page renders only MUI, so it needs no system's stylesheet,
+   which is exactly what lets the themes share a page (see the note in Showcase.tsx).
+   Every theme's face must be listed: the blink column shipped in ui-sans-serif for a while
+   because this file predated it and nothing measures this page - the parity harness only opens
+   the per-theme pages. */
 @import "@fontsource-variable/inter";
 @import "@fontsource-variable/geist";
+@import "@fontsource/source-sans-pro/300.css";
+@import "@fontsource/source-sans-pro/400.css";
+@import "@fontsource/source-sans-pro/600.css";
+@import "@fontsource/source-sans-pro/700.css";

@@ -1,10 +1,10 @@
 import { StrictMode } from "react"
 import { mountWhenFontsReady } from "../gallery/mountWhenFontsReady"
-import "./showcase.css"
-import { Showcase } from "./Showcase"
+import "./export.css"
+import { ExportPage } from "./ExportPage"
 
 mountWhenFontsReady(
   <StrictMode>
-    <Showcase />
+    <ExportPage />
   </StrictMode>,
 )

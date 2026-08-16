@@ -18,12 +18,12 @@ xui lets you write ordinary MUI code and get that look, with no wrapper componen
 
 ## Usage
 
-Install MUI, xui, and the Geist font in your app, then wrap your tree in the theme.
+Install MUI, `@sthobis/xui`, and the theme's font (Geist for shadcn) in your app, then wrap your tree in the theme.
 
 ```tsx
 import { ThemeProvider } from "@mui/material/styles"
 import CssBaseline from "@mui/material/CssBaseline"
-import { shadcnTheme } from "xui"
+import { shadcnTheme } from "@sthobis/xui/shadcn"
 
 export function App() {
   return (
@@ -36,7 +36,8 @@ export function App() {
 ```
 
 The theme is one self-contained file (`packages/xui/src/themes/shadcn.ts`).
-You can install the package, or copy that single file into your app the way you copy a shadcn component.
+You can install the package, or copy that single file into your app the way you copy a shadcn component - or generate a customized copy from the showcase's **export page** (`/export.html`), which offers a few preset knobs (primary colour, font, radius - shadcn only), TypeScript or JavaScript output, and comments kept or stripped. A customized file marks every changed line and is yours: the pixel-parity claims apply to the shipped values, not to a recolour.
+`kumoTheme` and `blinkTheme` work the same way from `@sthobis/xui/kumo` and `@sthobis/xui/blink` - each theme has its own subpath so its MUI prop-type extensions (kumo's `size="xsmall"`, blink's `variant="light"`, ...) only reach consumers who import that theme.
 
 Dark mode activates via the `.dark` class on `<html>`, the same mechanism shadcn uses, so a single toggle drives both systems in lockstep.
 
@@ -51,15 +52,16 @@ This is what keeps the "a regular eye cannot tell" promise honest and prevents d
 
 ```bash
 pnpm install
-pnpm dev              # run the showcase (side-by-side comparison at /, MUI-only at /pure.html)
-pnpm verify:parity    # pixel-compare every shadcn/MUI pair, light and dark
-pnpm verify           # parity plus the preflight independence check
+pnpm dev              # all four columns at /; parity galleries at /shadcn.html, /kumo.html, /blink.html
+pnpm verify:parity    # pixel-compare every theme's ref/MUI pairs (shadcn and kumo light+dark, blink light)
+pnpm verify           # parity, plus the preflight Tailwind-independence check, plus the behaviour sweeps
 pnpm typecheck
-pnpm test:unit          # the compare-utility tests
-pnpm --filter xui build # emit dist/ for publishing (consumers get the built output; this repo uses src)
+pnpm lint               # oxlint over the showcase
+pnpm test:unit          # the compare-utility tests and the cross-theme surface ratchet
+pnpm --filter @sthobis/xui build # emit dist/ for publishing (consumers get the built output; this repo uses src)
 ```
 
-`xui`'s `exports` deliberately point at TypeScript source so a theme edit shows up in the showcase and the parity harness without a build step; `publishConfig` swaps in `dist/` for consumers.
+`@sthobis/xui`'s `exports` deliberately point at TypeScript source so a theme edit shows up in the showcase and the parity harness without a build step; `publishConfig` swaps in `dist/` for consumers.
 The published package ships both, because copying `src/themes/shadcn.ts` into your own app is a supported way to use it.
 
 Contributor and agent guidance lives in [AGENTS.md](AGENTS.md).
@@ -195,6 +197,14 @@ The first table is the only one worth picking work from.
 Anything unchecked in either section still renders.
 It just renders in MUI's default look rather than the shadcn look, which is a cosmetic gap and never a broken component.
 The showcase is the source of truth for exactly what is covered today.
+
+### kumo's own open surfaces
+
+The two tables at the top are shadcn's. kumo's extracted tier covers every component listed in the intro - Button, Text, Label, Link, Input, InputArea, Field, Checkbox, Radio, Switch, Badge, Banner, Meter, LayerCard, Tabs, Collapsible, Table, Breadcrumbs, Toolbar, InputGroup, and the whole portalled tier - each held at zero by its own pairs.
+
+Everything else MUI ships is kumo's DERIVED tier (the banner in `kumo.ts` marks where extraction stops): Divider, TableContainer, Avatar, Skeleton, AppBar/Toolbar, the List family, Drawer, Autocomplete, Fab, SpeedDial, CircularProgress, Slider, Rating, Badge, Pagination, TablePagination, the Stepper family, BottomNavigation and ImageList are styled from Kumo's own tokens with no reference to diff against - a considered look, not a pixel claim. If Kumo ships one of them, it gets re-extracted and moved above the line.
+
+Two kumo-specific harness notes, both explained where they are declared: the Select popup pair is judged by the behaviour sweeps alone (the pixel harness structurally cannot frame it - see its section), and the two gradient buttons carry the delta-only threshold entries whose proofs live in `e2e/thresholds.ts`.
 
 ### blink's own open surfaces
 

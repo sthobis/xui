@@ -1,6 +1,10 @@
 import { expect, test, type Locator, type Page } from "@playwright/test"
+import { readdirSync, rmSync, writeFileSync } from "node:fs"
+import path from "node:path"
+import { PNG } from "pngjs"
+import { captureRounded, projectDiffsDir } from "./lib/capture"
 import { diffPngs } from "./lib/compare"
-import { snapToPixelGrid } from "./lib/states"
+import { discoverPairs } from "./lib/pairs"
 import { GALLERY_PAGE, PURE_PAGE, targetOf } from "./lib/themes"
 
 /**
@@ -28,60 +32,54 @@ const MAX_CHANNEL_DELTA = 40
 // behind them live in e2e/thresholds.ts, which still judges the same artifacts on the parity side.
 
 /**
- * Captures a cell via a page-level clip with ROUNDED integer bounds, for the same reason
- * parity.spec.ts does: an element screenshot clips at the element's own fractional device-pixel
- * span, so one cell of a fixed CSS width captures to DIFFERENT PNG sizes depending on the
- * sub-pixel phase it happens to sit at. That bites especially hard here, because the two pages
- * being compared lay the cell out at different x-offsets by design (index.html has a shadcn
- * column beside it; pure.html does not), so a fractional-width cell lands at a different phase on
- * each page and diffPngs then counts real pixels against zero-padding. Rounding makes the capture
- * deterministic on both pages; a genuine rendering difference still shows.
+ * Captures the MUI cell for one pair. The rounded-clip mechanics live in captureRounded; the
+ * scroll here is preflight's own concern (parity centres whole rows for overlay room, which this
+ * suite never needs - no preflight capture opens an overlay).
+ *
+ * The snap-then-round routine bites especially hard on THIS suite, which is why it must share
+ * parity's exact capture: the two pages being compared lay the cell out at different x-offsets by
+ * design (the gallery page has a reference column beside it; the pure page does not), so a
+ * fractional-width cell lands at a different sub-pixel phase on each page and the text is REDRAWN
+ * rather than merely moved. Measured on the three pairs it bites: pagination-basic 464 pixels at
+ * Δ245, breadcrumb-basic 283 at Δ113, checkbox-with-label 150 at Δ224 - all of it phase, none of it
+ * a Tailwind dependency.
  */
 async function captureCell(page: Page, cell: Locator, id: string): Promise<Buffer> {
   await cell.scrollIntoViewIfNeeded()
-  // Snap the cell onto whole pixels first, exactly as parity.spec.ts does, and for a sharper version
-  // of the same reason: index.html lays this cell out beside a shadcn column and pure.html does not,
-  // so its x-offset differs between the two pages BY DESIGN. Any pair whose content is not a whole
-  // number of pixels wide therefore rasterizes at a different sub-pixel phase on each page, and the
-  // text is redrawn rather than merely moved. Measured on the three pairs it bites: pagination-basic
-  // 464 pixels at Δ245, breadcrumb-basic 283 at Δ113, checkbox-with-label 150 at Δ224 - all of it
-  // phase, none of it a Tailwind dependency. Rounding the clip below cannot fix it; that moves the
-  // crop, not the content inside it.
-  await snapToPixelGrid(cell)
-  const box = await cell.boundingBox()
-  if (!box) throw new Error(`mui cell for ${id} has no bounding box`)
-  return page.screenshot({
-    animations: "disabled",
-    clip: {
-      x: Math.round(box.x),
-      y: Math.round(box.y),
-      width: Math.round(box.width),
-      height: Math.round(box.height),
-    },
-  })
+  return captureRounded(page, cell, `mui cell for ${id}`)
 }
 
 test("mui renders identically with and without tailwind", async ({ page }, testInfo) => {
-  // Duration budget, NOT a correctness threshold - the same distinction parity.spec.ts records.
-  // This test screenshots EVERY pair on two pages, so its runtime grows with the gallery, and it
-  // had been riding Playwright's 30s default: measured at 30.2s for shadcn (101 pairs, failed) and
-  // 27.1s for kumo (77, passed). A timeout there reports as `locator.scrollIntoViewIfNeeded` on
-  // whichever pair the clock happened to run out on, which reads exactly like a missing element -
-  // it cost a real diagnostic detour chasing a `type-h2` cell that was present on both pages the
-  // whole time. Raised with headroom so a slow machine reports real numbers instead.
-  testInfo.setTimeout(300_000)
-  const { theme, mode } = targetOf(test.info().project.name)
+  const { theme, mode } = targetOf(testInfo.project.name)
   test.skip(mode === "dark", "mode covered by parity suite; preflight is mode-independent")
   await page.goto(GALLERY_PAGE[theme])
   await page.waitForLoadState("networkidle")
-  const ids: string[] = await page.evaluate(() =>
-    Array.from(document.querySelectorAll("[data-pair-id]")).map((el) => el.getAttribute("data-pair-id")!),
-  )
+  const ids = (await discoverPairs(page)).map((p) => p.id)
+  expect(ids.length).toBeGreaterThan(0)
+
+  // Duration budget, NOT a correctness threshold - the same distinction parity.spec.ts records,
+  // and now the same DERIVATION: this test screenshots every pair on two pages, so a flat budget
+  // quietly becomes a near-miss as the gallery grows. The flat 30s default this file first rode
+  // failed at 101 pairs and passed at 77, reporting as `locator.scrollIntoViewIfNeeded` on
+  // whichever pair the clock ran out on - which reads exactly like a missing element, and cost a
+  // real diagnostic detour chasing a `type-h2` cell that was present on both pages the whole time.
+  // Measured cost is ~0.3s per pair locally (two captures); the multipliers leave ample headroom.
+  const perPair = process.env.CI ? 3_000 : 1_500
+  testInfo.setTimeout(Math.max(120_000, ids.length * perPair))
 
   const withTailwind = new Map<string, Buffer>()
   for (const id of ids) {
     const cell = page.locator(`[data-pair-id="${id}"] [data-side="mui"]`)
     withTailwind.set(id, await captureCell(page, cell, id))
+  }
+
+  // This suite's failure artifacts live beside parity's, prefixed `preflight-`. Clear only that
+  // prefix before writing: parity owns the wipe of the project directory as a whole, and a
+  // preflight-only run (`pnpm verify:preflight`) must not leave stale triptychs from a previous
+  // failure lying next to fresh ones.
+  const diffsDir = projectDiffsDir(testInfo)
+  for (const stale of readdirSync(diffsDir)) {
+    if (stale.startsWith("preflight-")) rmSync(path.join(diffsDir, stale), { force: true })
   }
 
   await page.goto(PURE_PAGE[theme])
@@ -103,6 +101,12 @@ test("mui renders identically with and without tailwind", async ({ page }, testI
         `${id}: worst channel Δ${r.maxChannelDelta} > ${MAX_CHANNEL_DELTA} ` +
           `(${r.mismatchedPixels}px, ${r.mismatchPct.toFixed(2)}%) - the theme is leaning on Tailwind for something`,
       )
+      // A preflight failure used to produce a Δ number and nothing else - no image ever reached
+      // the CI artifact, so diagnosing one meant re-running locally with hand-written dumps. The
+      // triptych matches parity's shape: the styled-page capture, the pure-page capture, the diff.
+      writeFileSync(path.join(diffsDir, `preflight-${id}-styled.png`), withTailwind.get(id)!)
+      writeFileSync(path.join(diffsDir, `preflight-${id}-pure.png`), pure)
+      writeFileSync(path.join(diffsDir, `preflight-${id}-diff.png`), PNG.sync.write(r.diff))
     }
   }
   expect(failures, failures.join("\n")).toEqual([])

@@ -2,6 +2,11 @@ import type { ReactNode } from "react"
 import MuiButton from "@mui/material/Button"
 import MuiChip from "@mui/material/Chip"
 
+/** The showcase's column identifiers. Showcase.tsx's COLUMNS derives from this, and the override
+ * map below is keyed by it, so a typo'd or renamed column fails to compile on either side instead
+ * of silently producing a column with no overrides. */
+export type ColumnKey = "default" | "shadcn" | "kumo" | "blink"
+
 /**
  * Per-column replacements for a showcase cell whose props only mean something under kumo.
  *
@@ -19,7 +24,9 @@ import MuiChip from "@mui/material/Chip"
  *
  * The fix is deliberately a lookup rather than a rewrite of the kumo pair: kumo's own column has to
  * keep rendering exactly what its parity page proves. A column names its own node for the pair id
- * it cannot express, and everything else keeps reusing kumo's.
+ * it cannot express, and everything else keeps reusing kumo's. Every id used here must name a live
+ * kumo pair - Showcase.tsx asserts that in dev, so a renamed pair fails the page instead of
+ * silently un-overriding the cell.
  *
  * There is a second, subtler case, and the Button row is where it shows up: the props are perfectly
  * portable and still mean a DIFFERENT DESIGN in the other system. `<Button variant="contained"
@@ -32,31 +39,13 @@ import MuiChip from "@mui/material/Chip"
  * KEEP THIS SMALL. An entry here is a claim that the shared cell asks a question this theme answers
  * differently, not a place to hand a theme a prettier demo. If a component's props are portable AND
  * mean the same thing, reuse them.
+ *
+ * shadcn is deliberately absent from this map. Its Badge has no colour axis to map ONTO -
+ * badge.tsx defines default/secondary/destructive/outline and no green, orange or blue exists
+ * anywhere in it - so any entry would be inventing a shadcn look rather than showing one. Its
+ * column stays as the shared cell renders it.
  */
-export const COLUMN_OVERRIDES: Record<string, Record<string, ReactNode>> = {
-  /**
-   * Badge. The Pulse Kit's Badge is six colours times two emphases, so every one of kumo's colour
-   * cells has a real answer here - it just has to be spelled in the kit's own vocabulary.
-   *
-   * `variant="solid"` (the kit's saturated fill) rather than the kit's default `soft` emphasis: the
-   * row is a COLOUR comparison and the columns either side of it paint solid pills, so a 10% tint
-   * would answer the question with something that still reads as grey at a glance. Both emphases,
-   * all six colours and all three sizes are on /blink.html, where they are pixel-diffed against the
-   * real Badge; this row is the showcase's one-per-row sample of them.
-   *
-   * `blue` maps to `primary` because the kit HAS no blue - its one accent is the indigo the whole
-   * system is built on, and that is what a Pulse badge in the "blue" role paints.
-   *
-   * The `outline` cell is the one that has no equivalent: the kit ships no bordered pill at all
-   * (the theme's MuiChip leaves MUI's `outlined` unstyled on purpose, for exactly that reason), so
-   * the honest answer is the kit's quiet badge - `soft` + `default` - rather than a border invented
-   * for this page.
-   *
-   * shadcn is deliberately absent from this map. Its Badge has no colour axis to map ONTO -
-   * badge.tsx defines default/secondary/destructive/outline and no green, orange or blue exists
-   * anywhere in it - so any entry would be inventing a shadcn look rather than showing one. Its
-   * column stays as the shared cell renders it.
-   */
+export const COLUMN_OVERRIDES: Partial<Record<ColumnKey, Record<string, ReactNode>>> = {
   blink: {
     /**
      * Button. Two of kumo's cells do not survive the trip, for the two different reasons above.
@@ -89,6 +78,24 @@ export const COLUMN_OVERRIDES: Record<string, Record<string, ReactNode>> = {
       </MuiButton>
     ),
 
+    /**
+     * Badge. The Pulse Kit's Badge is six colours times two emphases, so every one of kumo's colour
+     * cells has a real answer here - it just has to be spelled in the kit's own vocabulary.
+     *
+     * `variant="solid"` (the kit's saturated fill) rather than the kit's default `soft` emphasis: the
+     * row is a COLOUR comparison and the columns either side of it paint solid pills, so a 10% tint
+     * would answer the question with something that still reads as grey at a glance. Both emphases,
+     * all six colours and all three sizes are on /blink.html, where they are pixel-diffed against the
+     * real Badge; this row is the showcase's one-per-row sample of them.
+     *
+     * `blue` maps to `primary` because the kit HAS no blue - its one accent is the indigo the whole
+     * system is built on, and that is what a Pulse badge in the "blue" role paints.
+     *
+     * The `outline` cell is the one that has no equivalent: the kit ships no bordered pill at all
+     * (the theme's MuiChip leaves MUI's `outlined` unstyled on purpose, for exactly that reason), so
+     * the honest answer is the kit's quiet badge - `soft` + `default` - rather than a border invented
+     * for this page.
+     */
     "badge-blue": <MuiChip variant="solid" color="primary" label="Blue" />,
     "badge-green": <MuiChip variant="solid" color="success" label="Green" />,
     "badge-orange": <MuiChip variant="solid" color="warning" label="Orange" />,

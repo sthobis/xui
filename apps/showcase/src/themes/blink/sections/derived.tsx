@@ -1,3 +1,5 @@
+// No RefProviders: nothing in this file renders a reference cell at all - every pair here is
+// ref-less by definition of the derived tier (see Pair.ref).
 import MuiAppBar from "@mui/material/AppBar"
 import MuiToolbar from "@mui/material/Toolbar"
 import MuiTypography from "@mui/material/Typography"

@@ -58,4 +58,34 @@ import { derivedSection } from "./derived"
 // derived from `bg-kumo-fill` rather than extracted, and should be re-done properly if a release
 // ever ships the real component.
 //
-export const sections: Section[] = [buttonSection, textSection, labelSection, linkSection, inputSection, checkboxSection, switchSection, radioSection, badgeSection, bannerSection, meterSection, layerCardSection, tabsSection, collapsibleSection, tableSection, breadcrumbsSection, toolbarSection, toggleSection, inputGroupSection, tooltipSection, dropdownSection, selectSection, popoverSection, dialogSection, toastSection, derivedSection]
+// One entry per line, matching the shadcn and blink registries: this array is edited every time a
+// section lands or moves, and a single-line form makes every such diff say nothing and every
+// concurrent edit conflict on the whole list.
+export const sections: Section[] = [
+  buttonSection,
+  textSection,
+  labelSection,
+  linkSection,
+  inputSection,
+  checkboxSection,
+  switchSection,
+  radioSection,
+  badgeSection,
+  bannerSection,
+  meterSection,
+  layerCardSection,
+  tabsSection,
+  collapsibleSection,
+  tableSection,
+  breadcrumbsSection,
+  toolbarSection,
+  toggleSection,
+  inputGroupSection,
+  tooltipSection,
+  dropdownSection,
+  selectSection,
+  popoverSection,
+  dialogSection,
+  toastSection,
+  derivedSection,
+]

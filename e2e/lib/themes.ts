@@ -1,4 +1,5 @@
 import { expect, type Page } from "@playwright/test"
+import { SETTLE_MS } from "./states"
 
 /**
  * The themes the harness knows about.
@@ -62,5 +63,5 @@ export async function activateDark(page: Page, theme: ThemeName): Promise<void> 
   } else {
     await expect(page.locator("html")).toHaveAttribute("data-mode", "dark")
   }
-  await page.waitForTimeout(300)
+  await page.waitForTimeout(SETTLE_MS)
 }

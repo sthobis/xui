@@ -113,8 +113,12 @@ export function ThemePanel({ source: rawSource, fileName }: ThemeSource) {
 
   return (
     <aside style={panelStyle} aria-label="Theme source">
+      {/* Say that the comments are gone. The provenance comments are the published file's
+          evidence - the README calls shipping them in `src` a feature - so a download labelled
+          with the real filename must not silently hand over a version with all of it removed. */}
       <p style={headerStyle}>
-        {fileName} ({source.split("\n").length} lines)
+        {fileName} ({source.split("\n").length} lines, comments stripped - the published src keeps
+        them)
       </p>
       <pre style={codeStyle}>{source}</pre>
       <div style={footerStyle}>

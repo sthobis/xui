@@ -20,6 +20,13 @@ export default defineConfig({
   testDir: "./e2e",
   testMatch: ["**/*.spec.ts"],
   fullyParallel: false,
+  // ONE worker, explicitly. `fullyParallel: false` only serializes tests within a file; the
+  // default worker pool still runs different file×project combinations concurrently, which is
+  // exactly the "loaded machine" condition AGENTS.md warns about: several browsers rasterizing at
+  // once on one box turns per-pair duration budgets into the thing that fails, and every capture
+  // is taken on a machine busier than the one the thresholds were calibrated on. Serial execution
+  // also guarantees the per-project diff directories are never written concurrently.
+  workers: 1,
   retries: 0,
   reporter: [["list"]],
   use: {
@@ -63,5 +70,12 @@ export default defineConfig({
     command: `pnpm --filter showcase dev --port ${PORT} --strictPort`,
     url: ORIGIN,
     reuseExistingServer: !process.env.CI,
+    // A CI cold start pre-bundles a large dependency graph (MUI, radix, kumo, recharts, three font
+    // packages) with no Vite cache, and the default 60s gave up mid-bundle with nothing but "timed
+    // out waiting from config.webServer" - the actual Vite output was discarded. Piping the
+    // server's streams means a startup failure names its real cause.
+    timeout: 180_000,
+    stdout: "pipe",
+    stderr: "pipe",
   },
 })

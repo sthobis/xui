@@ -82,8 +82,12 @@ export const popoverSection: Section = {
   pairs: [
     {
       id: "popover-open",
+      // Plain "anchored" is SAFE here for the same measured reason as menu-open: both sides
+      // paint the trigger's open-state fill (oklch(0.97 0 0)) identically while the panel is up,
+      // so framing the trigger adds nothing that can differ. kumo's dropdown is the counter-case
+      // AGENTS.md documents.
       states: ["open", "anchored"],
-      behaviors: ["escape-closes"],
+      behaviors: ["escape-closes", "overlay-matches"],
       ref: (
         // GOTCHA - `modal` matters, and it is a choice of comparable configuration rather than a
         // tweak to make the pair pass. Radix's Popover is NON-modal by default: it leaves the page

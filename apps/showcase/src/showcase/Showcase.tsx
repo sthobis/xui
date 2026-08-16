@@ -3,10 +3,10 @@ import { ThemeProvider } from "@mui/material/styles"
 import CssBaseline from "@mui/material/CssBaseline"
 import ScopedCssBaseline from "@mui/material/ScopedCssBaseline"
 import { createTheme } from "@mui/material/styles"
-import { shadcnTheme, kumoTheme, blinkTheme } from "xui"
+import { shadcnTheme, kumoTheme, blinkTheme } from "@sthobis/xui"
 import { sections } from "../themes/kumo/sections"
 import { GallerySidebar, SIDEBAR_WIDTH, sectionId } from "../gallery/Sidebar"
-import { COLUMN_OVERRIDES } from "./columnOverrides"
+import { COLUMN_OVERRIDES, type ColumnKey } from "./columnOverrides"
 
 /**
  * The showcase: one MUI component per row, rendered four times - stock MUI, then each theme.
@@ -37,12 +37,30 @@ type ShowcaseTheme =
   | typeof blinkTheme
 type ThemeWithVars = { generateStyleSheets?: () => Array<Record<string, unknown>> }
 
-const COLUMNS: Array<{ key: string; label: string; theme: ShowcaseTheme }> = [
+const COLUMNS: Array<{ key: ColumnKey; label: string; theme: ShowcaseTheme }> = [
   { key: "default", label: "MUI (default)", theme: defaultTheme },
   { key: "shadcn", label: "shadcn theme", theme: shadcnTheme },
   { key: "kumo", label: "kumo theme", theme: kumoTheme },
   { key: "blink", label: "blink theme", theme: blinkTheme },
 ]
+
+// Every override id must name a LIVE kumo pair. A renamed pair would otherwise silently
+// un-override the cell, and the column falls back to kumo's node - the same-looking-but-wrong
+// state the override map exists to prevent, with nothing on the page to say it happened. Dev-only
+// and loud: a broken page is diagnosable, a subtly wrong cell shipped for weeks is not.
+if (import.meta.env.DEV) {
+  const live = new Set(sections.flatMap((s) => s.pairs.map((p) => p.id)))
+  for (const [column, overrides] of Object.entries(COLUMN_OVERRIDES)) {
+    for (const id of Object.keys(overrides ?? {})) {
+      if (!live.has(id)) {
+        throw new Error(
+          `columnOverrides: the "${column}" column overrides pair "${id}", which no longer exists ` +
+            `in the kumo gallery - rename the entry to the pair's current id or remove it`,
+        )
+      }
+    }
+  }
+}
 
 const cellStyle: CSSProperties = {
   display: "flex",
@@ -141,6 +159,12 @@ const portalHostStyle: CSSProperties = { position: "fixed", top: 0, left: 0 }
  *                (`ownerDocument(anchorEl).body`) and passes that to Modal explicitly, which
  *                overrides anything set on MuiModal. Setting it here is what actually moves them.
  *   MuiPopper    Tooltip and Autocomplete's popup.
+ *
+ * The spread-and-reassert below is a deliberate SHALLOW merge of three components' defaultProps,
+ * not a rebuild of the theme: everything else on the object - vars, palette, the generated
+ * stylesheets cssVarStyle reads - rides along by reference, which is exactly what this page needs.
+ * MUI's own composition helpers are for merging theme OPTIONS before createTheme; this is a
+ * finished theme being handed one extra default per portal component.
  */
 function withPortalHost(theme: ShowcaseTheme, host: HTMLElement | null): ShowcaseTheme {
   if (!host) return theme
@@ -215,7 +239,8 @@ export function Showcase() {
             The same MUI components under each theme. Stock MUI on the left, then shadcn/ui, Kumo,
             and the Pulse Kit. For pixel comparison against the real design-system components, see{" "}
             <ParityLink page="shadcn" />, <ParityLink page="kumo" /> and <ParityLink page="blink" />
-            .
+            . To download a theme - optionally customized with preset knobs - use{" "}
+            <ParityLink page="export" />.
           </p>
         </header>
         {sections.map((section) => (

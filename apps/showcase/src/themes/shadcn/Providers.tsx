@@ -1,6 +1,6 @@
 import { ThemeProvider } from "@mui/material/styles"
 import CssBaseline from "@mui/material/CssBaseline"
-import { shadcnTheme } from "xui"
+import { shadcnTheme } from "@sthobis/xui/shadcn"
 import type { ReactNode } from "react"
 
 export function Providers({ children }: { children: ReactNode }) {

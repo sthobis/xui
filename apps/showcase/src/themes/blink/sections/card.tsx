@@ -7,6 +7,8 @@ import MuiAvatar from "@mui/material/Avatar"
 import Card from "../reference/primitives/Card"
 import Divider from "../reference/primitives/Divider"
 import Avatar from "../reference/primitives/Avatar"
+
+// No RefProviders: Card, Divider and Avatar are all plain React with no MUI underneath.
 import type { ReactNode } from "react"
 import type { Section } from "../../../gallery/types"
 

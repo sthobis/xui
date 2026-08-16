@@ -108,8 +108,13 @@ export const menuSection: Section = {
   pairs: [
     {
       id: "menu-open",
+      // Plain "anchored" is SAFE here, unlike kumo's dropdown (see AGENTS.md on
+      // anchored-to-trigger): the capture frames the trigger, but both sides paint it
+      // IDENTICALLY while open. Measured: trigger background reads oklch(0.97 0 0) - the same
+      // open-state fill - on the Radix side and the MUI side alike, so there is no hover
+      // asymmetry for the capture to report.
       states: ["open", "anchored"],
-      behaviors: ["escape-closes", "item-hover-highlights"],
+      behaviors: ["escape-closes", "item-hover-highlights", "overlay-matches"],
       ref: (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

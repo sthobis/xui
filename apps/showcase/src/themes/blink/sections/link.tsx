@@ -9,7 +9,7 @@ import type { Section } from "../../../gallery/types"
 //
 // So the reference side here is a bare `<a>`, which is exactly what the design system gives a link
 // in the real app. Note the rule hardcodes the brand hex rather than using var(--color-primary);
-// transcribed as found.
+// transcribed as found. (No RefProviders for the same reason: a bare anchor has no MUI underneath.)
 //
 // There is no hover or focus TREATMENT in the kit at all - `cursor: pointer` is the whole of it.
 // Both states are still exercised, because MUI's Link adds an underline on hover and a focus ring

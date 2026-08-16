@@ -3,9 +3,9 @@ import MuiRadioGroup from "@mui/material/RadioGroup"
 import MuiFormControlLabel from "@mui/material/FormControlLabel"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
-import type { Section } from "../../../gallery/types"
+import type { PairState, Section } from "../../../gallery/types"
 
-const withHoverFocus: Array<"default" | "hover" | "focus"> = ["default", "hover", "focus"]
+const withHoverFocus: PairState[] = ["default", "hover", "focus"]
 
 // MUI v9's Radio slotProps.input type rejects arbitrary data-* attributes by design (an
 // opt-in augmentation point) - unlike TextField's slotProps.htmlInput, which stays on a

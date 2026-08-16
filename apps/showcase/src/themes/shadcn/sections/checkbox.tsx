@@ -2,9 +2,9 @@ import MuiCheckbox from "@mui/material/Checkbox"
 import MuiFormControlLabel from "@mui/material/FormControlLabel"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
-import type { Section } from "../../../gallery/types"
+import type { PairState, Section } from "../../../gallery/types"
 
-const withHoverFocus: Array<"default" | "hover" | "focus"> = ["default", "hover", "focus"]
+const withHoverFocus: PairState[] = ["default", "hover", "focus"]
 
 // MUI v9's Checkbox slotProps.input type rejects arbitrary data-* attributes by design (an
 // opt-in augmentation point, see @mui/utils/types/DataAttributes.d.ts) - unlike TextField's

@@ -2,6 +2,8 @@ import MuiAlert from "@mui/material/Alert"
 import MuiAlertTitle from "@mui/material/AlertTitle"
 import { AlertCircleIcon, AlertTriangleIcon, CheckCircleIcon, InfoIcon } from "lucide-react"
 import Alert from "../reference/primitives/Alert"
+
+// No RefProviders: the kit's Alert is plain React with no MUI underneath.
 import type { Section, Pair } from "../../../gallery/types"
 
 // The kit's Alert is a tinted box with a 3px accent bar drawn as an INSET SHADOW rather than a

@@ -1,6 +1,8 @@
 import MuiChip from "@mui/material/Chip"
 import type { ChipProps } from "@mui/material/Chip"
 import Badge from "../reference/primitives/Badge"
+
+// No RefProviders: the kit's Badge is plain React with no MUI underneath.
 import type { Section, Pair } from "../../../gallery/types"
 
 // The kit's Badge is a pill on two independent axes - six colour variants times two emphases

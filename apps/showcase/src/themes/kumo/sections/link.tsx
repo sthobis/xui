@@ -1,8 +1,8 @@
 import MuiLink from "@mui/material/Link"
 import { Link } from "@cloudflare/kumo/components/link"
-import type { Section } from "../../../gallery/types"
+import type { PairState, Section } from "../../../gallery/types"
 
-const s: Array<"default" | "hover" | "focus"> = ["default", "hover", "focus"]
+const s: PairState[] = ["default", "hover", "focus"]
 
 export const linkSection: Section = {
   title: "Link",
