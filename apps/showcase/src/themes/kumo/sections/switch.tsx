@@ -3,7 +3,7 @@ import MuiSwitch from "@mui/material/Switch"
 import MuiFormControlLabel from "@mui/material/FormControlLabel"
 import MuiTypography from "@mui/material/Typography"
 import { Switch } from "@cloudflare/kumo/components/switch"
-import type { Section } from "../../../gallery/types"
+import type { PairState, Section } from "../../../gallery/types"
 
 // Kumo's Switch is a 36x18 track with an 18px square-ish thumb that slides the full thumb width.
 // Both track and thumb use a "squircle" radius - `rounded-[5px]` with a
@@ -13,7 +13,7 @@ import type { Section } from "../../../gallery/types"
 // Notably the track and thumb colours are RAW Tailwind palette entries (blue-500, neutral-200...),
 // not kumo-* semantic tokens - the one component in Tier 1 that reaches past the token layer.
 
-const s: Array<"default" | "hover" | "focus"> = ["default", "hover", "focus"]
+const s: PairState[] = ["default", "hover", "focus"]
 
 // Starts on, and can be switched off. Kumo's Switch is controlled-only, the same way its Checkbox
 // is - see checkbox.tsx for why holding the state here does not move any capture.

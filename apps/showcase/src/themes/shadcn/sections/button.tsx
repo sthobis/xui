@@ -1,9 +1,9 @@
 import MuiButton from "@mui/material/Button"
 import { Button } from "@/components/ui/button"
 import { Mail } from "lucide-react"
-import type { Section } from "../../../gallery/types"
+import type { PairState, Section } from "../../../gallery/types"
 
-const s: Array<"default" | "hover" | "focus" | "active"> = ["default", "hover", "focus", "active"]
+const s: PairState[] = ["default", "hover", "focus", "active"]
 
 export const buttonSection: Section = {
   title: "Button",

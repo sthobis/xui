@@ -233,7 +233,7 @@ export const selectSection: Section = {
     {
       id: "select-open",
       states: ["open", "anchored"],
-      behaviors: ["escape-closes", "item-hover-highlights"],
+      behaviors: ["escape-closes", "item-hover-highlights", "overlay-matches"],
       ref: (
         <Select defaultValue={SELECTED}>
           <SelectTrigger data-target style={{ width: TRIGGER_WIDTH }}>

@@ -355,8 +355,7 @@ test.describe("overlay-matches", () => {
               })
             : null,
           panel: await panel
-            .evaluate((el) => {
-              const c = getComputedStyle(el)
+            .evaluate((root) => {
               // An outline (or border) with no style, or zero width, paints NOTHING - and its
               // colour and width are then whatever each library happens to leave lying around.
               // Comparing those would fail two overlays that look identical: shadcn's dialog panel
@@ -365,6 +364,34 @@ test.describe("overlay-matches", () => {
               // the check only ever compares decoration that actually paints.
               const drawn = (style: string, width: string, value: string) =>
                 style === "none" || parseFloat(width) === 0 ? "none" : value
+              // The chrome is measured on the first element that PAINTS anything, not necessarily
+              // on the element the overlay is located by. The located element is the OUTERMOST
+              // portalled box, which the pixel captures need (it is what phase-matching moves, and
+              // for a tooltip it is what frames the arrow) - but it can be a bare positioning
+              // wrapper: MUI's Tooltip carries data-portal-target on its Popper, whose
+              // border-radius resolves to 0px while the bubble inside it rounds at 8px, and
+              // comparing wrapper against bubble failed two overlays that paint identically. The
+              // same "only what paints" principle as `drawn`, applied to picking the element.
+              const paints = (el: Element): boolean => {
+                const s = getComputedStyle(el)
+                const bg = s.backgroundColor === "transparent" || /^rgba\(\d+, \d+, \d+, 0\)$/.test(s.backgroundColor)
+                return (
+                  !bg ||
+                  s.backgroundImage !== "none" ||
+                  s.boxShadow !== "none" ||
+                  drawn(s.borderStyle, s.borderWidth, "b") !== "none" ||
+                  drawn(s.outlineStyle, s.outlineWidth, "o") !== "none"
+                )
+              }
+              const firstPainting = (el: Element): Element | null => {
+                if (paints(el)) return el
+                for (const child of Array.from(el.children)) {
+                  const found = firstPainting(child)
+                  if (found) return found
+                }
+                return null
+              }
+              const c = getComputedStyle(firstPainting(root) ?? root)
               return {
                 boxShadow: c.boxShadow,
                 border: drawn(c.borderStyle, c.borderWidth, c.border),

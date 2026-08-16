@@ -2,13 +2,13 @@ import MuiButton from "@mui/material/Button"
 import MuiIconButton from "@mui/material/IconButton"
 import { Button } from "@cloudflare/kumo/components/button"
 import { PlusIcon } from "@phosphor-icons/react"
-import type { Section } from "../../../gallery/types"
+import type { PairState, Section } from "../../../gallery/types"
 
 // The MUI side uses Kumo's OWN Phosphor icon, not a lucide equivalent: an icon is content, not
 // styling, and no theme override can turn one vector into another. Same call the shadcn gallery
 // makes for its rating and table-pagination glyphs.
 
-const s: Array<"default" | "hover" | "focus" | "active"> = ["default", "hover", "focus", "active"]
+const s: PairState[] = ["default", "hover", "focus", "active"]
 
 export const buttonSection: Section = {
   title: "Button",

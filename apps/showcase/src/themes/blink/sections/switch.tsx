@@ -1,5 +1,7 @@
 import MuiSwitch from "@mui/material/Switch"
 import Switch from "../reference/primitives/Switch"
+
+// No RefProviders: the kit's Switch is plain React with no MUI underneath.
 import type { Section } from "../../../gallery/types"
 
 // Like the kit's Checkbox and Radio, its Switch is one native input: 36x20, `appearance: none`,

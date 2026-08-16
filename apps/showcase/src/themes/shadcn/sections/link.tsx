@@ -1,7 +1,7 @@
 import MuiLink from "@mui/material/Link"
-import type { Section } from "../../../gallery/types"
+import type { PairState, Section } from "../../../gallery/types"
 
-const withHover: Array<"default" | "hover"> = ["default", "hover"]
+const withHover: PairState[] = ["default", "hover"]
 
 // shadcn/ui ships no dedicated Link component. The twin is a plain anchor styled with the
 // exact treatment button.tsx's own `variant="link"` already defines and this theme already

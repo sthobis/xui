@@ -2,9 +2,9 @@ import MuiToggleButton from "@mui/material/ToggleButton"
 import MuiToggleButtonGroup from "@mui/material/ToggleButtonGroup"
 import { Toggle } from "@/components/ui/toggle"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
-import type { Section } from "../../../gallery/types"
+import type { PairState, Section } from "../../../gallery/types"
 
-const withHoverFocus: Array<"default" | "hover" | "focus"> = ["default", "hover", "focus"]
+const withHoverFocus: PairState[] = ["default", "hover", "focus"]
 
 export const toggleSection: Section = {
   title: "Toggle",

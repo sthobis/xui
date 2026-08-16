@@ -2,13 +2,13 @@ import { useState } from "react"
 import MuiCheckbox from "@mui/material/Checkbox"
 import MuiFormControlLabel from "@mui/material/FormControlLabel"
 import { Checkbox } from "@cloudflare/kumo/components/checkbox"
-import type { Section } from "../../../gallery/types"
+import type { PairState, Section } from "../../../gallery/types"
 
 // Kumo's Checkbox is a 16px rounded box that FILLS with the contrast colour when checked, with a
 // bold 12px Phosphor check drawn in the inverse colour on top. Passing `label` wraps it in a
 // FieldLabel row; without one it renders the bare control.
 
-const s: Array<"default" | "hover" | "focus"> = ["default", "hover", "focus"]
+const s: PairState[] = ["default", "hover", "focus"]
 
 // A checkbox that STARTS checked and can then be unchecked, on both sides.
 //

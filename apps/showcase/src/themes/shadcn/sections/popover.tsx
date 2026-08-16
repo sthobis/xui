@@ -83,7 +83,7 @@ export const popoverSection: Section = {
     {
       id: "popover-open",
       states: ["open", "anchored"],
-      behaviors: ["escape-closes"],
+      behaviors: ["escape-closes", "overlay-matches"],
       ref: (
         // GOTCHA - `modal` matters, and it is a choice of comparable configuration rather than a
         // tweak to make the pair pass. Radix's Popover is NON-modal by default: it leaves the page

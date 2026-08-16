@@ -4,7 +4,7 @@ import MuiFormLabel from "@mui/material/FormLabel"
 import MuiOutlinedInput from "@mui/material/OutlinedInput"
 import MuiFormHelperText from "@mui/material/FormHelperText"
 import { Input, InputArea } from "@cloudflare/kumo/components/input"
-import type { Section } from "../../../gallery/types"
+import type { PairState, Section } from "../../../gallery/types"
 
 // Kumo's Input IS the <input> element - the box, the ring and the padding all sit on it. MUI splits
 // the same thing across an OutlinedInput root <div> and the <input> inside it, so the theme puts the
@@ -14,7 +14,7 @@ import type { Section } from "../../../gallery/types"
 // itself in a Field once a `label`, `description` or `error` MESSAGE is supplied. Field is a Tier 2
 // composition, so these pairs stay on the control itself.
 
-const s: Array<"default" | "hover" | "focus"> = ["default", "hover", "focus"]
+const s: PairState[] = ["default", "hover", "focus"]
 
 export const inputSection: Section = {
   title: "Input",
