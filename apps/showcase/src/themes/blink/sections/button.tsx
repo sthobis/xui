@@ -15,7 +15,7 @@ import { RefProviders } from "../Providers"
 //   ghost       | variant="text"               | transparent until hover
 //   destructive | variant="light" color="error"| tinted fill WITH a border       (custom variant)
 //
-// The `light` variant is `mui-themed`'s own addition and is kept rather than re-litigated: it reads
+// The `light` variant is the app's own MUI theme's addition and is kept rather than re-litigated: it reads
 // as "tinted fill", and the colour prop picks the tint, which is exactly how tonal and destructive
 // differ from each other in the kit. They are not the same shape otherwise - tonal's border is
 // `1px solid transparent` and destructive's is a visible 20%-alpha error - so a single variant with

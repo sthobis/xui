@@ -14,7 +14,7 @@ import type { Section } from "../../../gallery/types"
 //   - the indeterminate bar is an 8x2 rounded rect
 //   - the radio's dot is not an element at all: `border-width: 5px` in the brand colour leaves a
 //     6px surface-coloured hole in the middle
-// `mui-themed` reached the same values but kept them in replacement `icon`/`checkedIcon` elements;
+// The app's own MUI theme reached the same values but kept them in replacement `icon`/`checkedIcon` elements;
 // drawing them on a pseudo-element instead keeps the whole treatment inside the theme file, which
 // is what lets this file stay copy-pasteable with no JSX in it.
 //

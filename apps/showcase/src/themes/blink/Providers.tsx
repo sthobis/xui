@@ -8,7 +8,7 @@ import baselineTheme from "./reference/baselineTheme"
  * Wraps the whole page: everything MUI renders here is styled by the theme under test.
  *
  * `injectFirst` is not decoration - it is load-bearing, and it is what the real app does
- * (design-system-ui src/App.tsx wraps its entire tree in it). Seven of the kit's primitives are
+ * (the kit's own app wraps its entire tree in it). Seven of the kit's primitives are
  * built on MUI components, and they do their styling in a plain CSS module. A CSS module class and
  * an Emotion class have the SAME specificity, so whichever stylesheet comes later in <head> wins -
  * and Emotion injects at runtime, i.e. last. Without `injectFirst` the kit's Button renders with

@@ -9,12 +9,16 @@ import PopTransition from "../Menu/PopTransition";
 
 import C from "./Popover.module.css";
 
+// Opens over 150ms, closes on the spot. See PopTransition for why the two
+// directions are not the same number.
+const POP_TIMEOUT = { enter: 150, exit: 0 };
+
 export type PopoverProps = MuiPopoverProps;
 
 const Popover = forwardRef<HTMLDivElement, PopoverProps>(function Popover(
     {
         classes,
-        transitionDuration = 150,
+        transitionDuration = POP_TIMEOUT,
         slots,
         slotProps,
         anchorOrigin = { vertical: "bottom", horizontal: "left" },

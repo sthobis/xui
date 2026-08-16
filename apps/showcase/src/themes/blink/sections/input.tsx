@@ -4,7 +4,7 @@ import type { Section, Pair } from "../../../gallery/types"
 
 // The kit's Input is a bordered box: `1px solid var(--color-border-strong)` on a surface fill at
 // `--radius-2`, with a borderless <input> inside it. That is MUI's OUTLINED input, not the `filled`
-// one - `mui-themed` styles both, but its filled block is compatibility with the app's older
+// one - the app's own MUI theme styles both, but its filled block is compatibility with the app's older
 // `common/TextField` wrapper and has no kit twin, so it is not ported here.
 //
 // The two are built differently and that is the interesting part: the kit paints its border on the

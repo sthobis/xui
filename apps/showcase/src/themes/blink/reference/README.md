@@ -7,53 +7,42 @@ component under `blinkTheme`.
 Nothing here is authored. Treat every file as read-only ground truth.
 If a value looks wrong, it is wrong *upstream* - fix it there and re-vendor, never here.
 
+**One exception now exists, and it is bounded: see "Local design changes pending upstream" at the
+bottom of this file.** That table is the complete list of places this copy no longer matches what
+was vendored, and every one of them is a design decision taken here that has to be ported back
+upstream. Nothing else in this directory may be edited, and nothing may be added to that table to
+make a pair pass - each entry is a change to the KIT, made deliberately, and the theme carries the
+identical change so parity stays at zero.
+
 ## Where it came from
 
-Source: `~/Documents/Projects/app/.claude/worktrees/design-system-ui`
+Upstream is a **private repository**, so this file describes it by role rather than by name: xui is
+public and a reader here cannot reach that source, and a path, branch or commit hash that resolves
+for nobody is worse than no citation at all. The real repository, worktree, branch and commit are
+recorded in `PROVENANCE.private.md` beside this file, which `.gitignore` keeps out of the
+repository. If you have the source checked out, read that first; if you do not, nothing below
+depends on it.
 
-| | |
-| --- | --- |
-| Branch | `design-system-ui` |
-| Base commit | `0f701c7ca7903faa716ac0b101eb0cdc10b06d28` ("Fix ch queries fingerprint table resetting on sort change") |
-| Copied on | 2026-08-12 |
-
-**The kit itself was uncommitted at copy time**, so the base commit does not identify it.
-`git status --short` in that worktree reported, for the paths we copied:
-
-```
-UU src/styles/global.css
-?? src/styles/tokens.css
-?? src/ui/components/
-?? src/ui/primitives/
-```
-
-`??` means untracked (the entire kit - tokens and all 26 primitives - existed only in the
-working tree). `UU` on `global.css` is a recorded-but-unresolved merge state; the file has
-no conflict markers and was read as-is.
-
-Companion source, used for the MUI side rather than copied here:
-`~/Documents/Projects/app/.claude/worktrees/mui-themed` at `e0a2c60b1eead08d38de08e8eccd88946442c807`.
-
-**Re-vendor when the kit changes upstream.** Once it is committed, replace the table above
-with the real SHA and diff this directory against it.
+Copied on 2026-08-12. **The kit was uncommitted upstream at copy time** - tokens and all 26
+primitives existed only in a working tree - so no commit identifies this copy, and re-vendoring
+means diffing this directory against the working tree by hand rather than against a tag.
 
 ## What is here
 
 | Path | Upstream |
 | --- | --- |
-| `tokens.css` | `src/styles/tokens.css`, verbatim |
-| `baselineTheme.ts` | `src/themes/index.ts`, verbatim - the minimal MUI theme the app runs, which the seven MUI-wrapping primitives render under |
-| `base.css` | `src/styles/reset.css` + `src/styles/global.css` lines 2-85, verbatim (see below) |
-| `primitives/<Name>/` | `src/ui/primitives/<Name>/`, verbatim - all 26 |
+| `tokens.css` | the kit's token sheet, verbatim |
+| `baselineTheme.ts` | the app's own MUI theme entry, verbatim - the minimal theme the app runs, which the seven MUI-wrapping primitives render under |
+| `base.css` | the app's CSS reset plus the generic head of its global stylesheet, verbatim (see below) |
+| `primitives/<Name>/` | the kit's primitive of that name, verbatim - all 26 |
 
-The app loads its base CSS as `reset.css` → `tokens.css` → `global.css`; `blink.html`
-preserves that order.
+The app loads its base CSS as reset → tokens → globals; `blink.html` preserves that order.
 
 ### The MUI version gap - read this first
 
 **The kit is written against MUI v5.17.1; this showcase runs MUI v9.2.0.**
-(`design-system-ui` still has `"@mui/material": "^5.14.20"`; the v5→v9 upgrade lives on the
-separate `mui-themed` branch, which does not carry the kit.)
+(The kit's own source still pins `"@mui/material": "^5.14.20"`; the app's v5→v9 upgrade lives on a
+separate branch that does not carry the kit.)
 
 Nineteen of the 26 primitives are plain React and do not care. The seven that wrap MUI
 internals - Accordion, Button, Dialog, Menu, Popover, Tabs, Tooltip - do, and they were
@@ -73,14 +62,14 @@ the kit's CSS modules and `tokens.css`, which are version-independent.
 
 **In `base.css`** (both subtractive):
 
-1. **`global.css` line 1 dropped** - it imports Inter from Google Fonts. Inter is loaded in
-   the app but never painted: `tokens.css` sets `--font-family-sans: "Source Sans Pro"`, and
-   the live kit page measures `font-family: "Source Sans Pro"` on `<body>`. `DESIGN.md`
-   confirms Inter is only the documented fallback substitute. The showcase page loads
-   Source Sans Pro with the same `<link>` the app's renderer uses.
-2. **`global.css` from `.echarts-tooltip` (line 86) onward dropped** - chart tooltips,
-   toastify, react-date-range, simplebar and bootstrap leftovers. App furniture, no
-   primitive depends on it.
+1. **The Inter import dropped** - the app's global stylesheet opens by pulling Inter from Google
+   Fonts. Inter is loaded in the app but never painted: `tokens.css` sets
+   `--font-family-sans: "Source Sans Pro"`, and the live kit page measures
+   `font-family: "Source Sans Pro"` on `<body>`. The kit's design spec confirms Inter is only the
+   documented fallback substitute. The showcase page loads Source Sans Pro with the same `<link>`
+   the app's renderer uses.
+2. **Everything from `.echarts-tooltip` onward dropped** - chart tooltips, toastify,
+   react-date-range, simplebar and bootstrap leftovers. App furniture, no primitive depends on it.
 
 **In `primitives/`** - no styling was touched; every edit is an API port or a tsconfig
 accommodation:
@@ -100,9 +89,9 @@ Nothing else needed stripping: the kit imports only `react`, `classnames`, `luci
 
 - **`<body>` is 16px, `body1` is 15px.** Nothing sets a font-size on `body`, so the reference
   side inherits the browser's 16px, while `tokens.css --text-md` (15px) is what *components*
-  use and what `mui-themed` maps to MUI's `body1`. Both are correct; just never pair a bare
+  use and what the app's own MUI theme maps to MUI's `body1`. Both are correct; just never pair a bare
   kit `<span>` against `<Typography variant="body1">` and expect a match.
-- **`reset.css` supplies `input, button, textarea, select { font: inherit }`.** MUI controls
+- **`base.css`'s reset half supplies `input, button, textarea, select { font: inherit }`.** MUI controls
   do not inherit `font-family` on their own, so a themed control that looks right on
   `blink.html` can measure differently on the reset-free `blink-pure.html`. That is exactly
   what the preflight suite is for (the shadcn and kumo themes both hit it on
@@ -110,3 +99,24 @@ Nothing else needed stripping: the kit imports only `react`, `classnames`, `luci
 - **Seven primitives wrap MUI internals** - Accordion, Button, Dialog, Menu, Popover, Tabs,
   Tooltip. Their cells must be wrapped in `baselineTheme`, or they render under `blinkTheme`
   and the pair compares the theme against itself.
+
+## Local design changes pending upstream
+
+These are the only files here that differ from what was vendored, and every difference is a
+deliberate change to the Pulse Kit rather than a transcription error. Each is mirrored exactly in
+`packages/xui/src/themes/blink.ts`, which is why `blink-light` still reports zero differing pixels -
+the pair is comparing the new kit against the new theme, and it would go red the moment one side
+were changed without the other.
+
+**Port these upstream and re-vendor.** Until that happens, this directory is one commit ahead of the
+kit rather than a copy of it, and a naive re-vendor would silently revert all six.
+(`PROVENANCE.private.md` names the paths they go back to.)
+
+| File | Was | Is | Why |
+| --- | --- | --- | --- |
+| `tokens.css` | `--focus-ring` / `--focus-ring-destructive` spread `4px` | `3px` | At 4px the ring reads as a halo around a 32px control rather than an outline on it, and rings on neighbouring controls in a dense row very nearly touch. |
+| `primitives/Alert/Alert.module.css` | `box-shadow: inset 3px 0 0 0 var(--alert-bar)` | `box-shadow: inset 0 0 0 1px var(--alert-border)`, the accent at 25% | An inset shadow follows the corner radius, so a one-sided bar tapered off at both ends into a curved sliver that belongs to no other primitive. A full hairline ring puts the callout in the same surface-plus-border language as Card, Menu and Popover. Still a shadow rather than a border, for the reason the bar was: it costs no box model. |
+| `primitives/Menu/Menu.module.css` | `.paper { padding: var(--space-2) }` | `var(--space-1)` | The gutter only has to be visible for the item highlight to read as an inset pill. At two steps a three-item menu was mostly gutter. |
+| `primitives/Menu/PopTransition.tsx` | one duration for both directions, defaulting to `150` | duration per direction, defaulting to `{ enter: 150, exit: 0 }` | Opening is new information arriving and is worth animating; closing is the user having already decided, and a fade held over their next click reads as lag. The CSS duration has to follow the direction too, or a 150ms fade-out just gets unmounted mid-way. |
+| `primitives/Menu/index.tsx`, `primitives/Popover/index.tsx` | `transitionDuration = 150` | `transitionDuration = { enter: 150, exit: 0 }` | The same change, at the two call sites that set the default. `Dialog` deliberately keeps a symmetric 150ms - a modal vanishing out from under a click is not the same reassurance as a menu doing it. |
+| `base.css` (the global `a` rule) | `text-decoration: none` | `underline`, `0.0625em` thick, `0.15em` offset, tinted to 35% of `currentColor`, full strength on `:hover` | A link that is only a colour is a link that is invisible to anyone who cannot see the colour. The browser's own underline sits on the baseline at full strength and clips descenders at 15px, so all three measurements are stated rather than inherited. |

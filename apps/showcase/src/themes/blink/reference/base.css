@@ -1,12 +1,12 @@
 /* Vendored base layer for the blink reference side.
- * = design-system-ui src/styles/reset.css, then the generic head of
- * src/styles/global.css (lines 2-85: everything before .echarts-tooltip).
- * Omitted on purpose: global.css line 1 imports Inter, which is loaded but
- * never painted (tokens.css --font-family-sans is Source Sans Pro, and the
- * live kit page measures Source Sans Pro); and everything from
+ * = the app's CSS reset, then the generic head of its global stylesheet
+ * (everything before .echarts-tooltip).
+ * Omitted on purpose: the global sheet's first line imports Inter, which is
+ * loaded but never painted (tokens.css --font-family-sans is Source Sans Pro,
+ * and the live kit page measures Source Sans Pro); and everything from
  * .echarts-tooltip onward is app furniture (charts, toastify, date-range,
  * bootstrap leftovers).
- * The app loads these as reset.css -> tokens.css -> global.css; keep that order.
+ * The app loads these as reset -> tokens -> globals; keep that order.
  */
 
 /* https://www.joshwcomeau.com/css/custom-css-reset/ */
@@ -114,8 +114,23 @@ ul {
 }
 
 a {
-    text-decoration: none;
     color: #5a63b0;
+    /* A link is underlined, but not with the browser's underline: the default
+       sits on the baseline and is drawn at full strength, which under 15px
+       Source Sans clips every descender and competes with the word it belongs
+       to. Both measurements are relative so the treatment holds at whatever
+       size the link is used at, and the line is a 35% tint of the link's own
+       colour rather than a second colour. */
+    text-decoration: underline;
+    text-decoration-thickness: 0.0625em;
+    text-underline-offset: 0.15em;
+    text-decoration-color: color-mix(in srgb, currentColor 35%, transparent);
+}
+
+/* Hover brings the same line up to full strength - the affordance is the
+   line getting firmer, not a colour change. */
+a:hover {
+    text-decoration-color: currentColor;
 }
 
 button {

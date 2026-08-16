@@ -19,7 +19,7 @@ import type { Section, Pair } from "../../../gallery/types"
 //
 // SCOPE: only the `md` density is covered. The kit also has `sm` (13px text, tighter padding,
 // 6px radius, 15px icon), but MUI's Alert has no size prop at all and inventing one would mean
-// augmenting AlertProps and forwarding an unknown attribute to the DOM. `mui-themed` made the same
+// augmenting AlertProps and forwarding an unknown attribute to the DOM. The app's own MUI theme made the same
 // call.
 
 const VARIANTS = [

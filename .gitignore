@@ -6,6 +6,12 @@ dist/
 # working artifacts, never committed
 docs/superpowers/
 
+# Provenance that names a private source. xui is public; the Pulse Kit's repository, worktrees,
+# branches and commits are not, and a reader here cannot reach any of them. Committed files
+# therefore describe those sources by ROLE ("the app's own MUI theme"), and the file that maps a
+# role back to a real path is `<name>.private.md`, kept beside what it documents and never pushed.
+*.private.md
+
 # Ad-hoc diagnostic scripts. Diagnosing a pair means opening the page and reading computed styles
 # out of the browser (see AGENTS.md's loop), which in practice means a throwaway Playwright script
 # at the repo root - and `git add -A` will happily commit one. Two got in this way before this

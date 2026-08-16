@@ -12,6 +12,14 @@ import { Transition, type TransitionStatus } from "react-transition-group";
 const DEFAULT_DURATION = 150;
 const EASING = "var(--ease-out)";
 
+// Opening is animated; closing is not. An overlay opening is new information
+// arriving and is worth 150ms of it; an overlay closing is the user having
+// already decided, and a fade held over their next click reads as lag. Callers
+// express that as `{ enter: 150, exit: 0 }`, which only works if the CSS
+// duration follows the direction too — a 150ms fade-out unmounted after 0ms
+// would just be a cut with extra steps.
+const DEFAULT_TIMEOUT = { enter: DEFAULT_DURATION, exit: 0 };
+
 const OPEN: CSSProperties = {
     opacity: 1,
     transform: "scale(1)",
@@ -59,7 +67,7 @@ const PopTransition = forwardRef<HTMLElement, PopTransitionProps>(
         {
             in: inProp,
             appear = true,
-            timeout = DEFAULT_DURATION,
+            timeout = DEFAULT_TIMEOUT,
             children,
             onEnter,
             onEntered,
@@ -93,11 +101,14 @@ const PopTransition = forwardRef<HTMLElement, PopTransitionProps>(
             [ref, children]
         );
 
-        const duration =
-            typeof timeout === "number"
-                ? timeout
-                : timeout.enter ?? DEFAULT_DURATION;
-        const transition = `opacity ${duration}ms ${EASING}, transform ${duration}ms ${EASING}`;
+        // Per direction, so an `exit: 0` really is a cut rather than a fade
+        // that outlives its own element.
+        const durationFor = (state: TransitionStatus) => {
+            if (typeof timeout === "number") return timeout;
+            const leaving = state === "exiting" || state === "exited";
+            const value = leaving ? timeout.exit : timeout.enter;
+            return value ?? DEFAULT_DURATION;
+        };
 
         return (
             <Transition
@@ -140,7 +151,7 @@ const PopTransition = forwardRef<HTMLElement, PopTransitionProps>(
                         ref: handleRef,
                         style: {
                             transformOrigin: "top center",
-                            transition,
+                            transition: `opacity ${durationFor(state)}ms ${EASING}, transform ${durationFor(state)}ms ${EASING}`,
                             willChange: "opacity, transform",
                             ...children.props.style,
                             ...STATE_STYLES[state],

@@ -13,17 +13,19 @@
  * runs MUI v5 while this theme targets v9.
  *
  * Where sources disagree - and they do - the order is:
- *   the primitive's CSS module (what actually paints)  >  tokens.css  >  DESIGN.md prose
- * DESIGN.md says button labels are weight 500; Button.module.css says 600 and the live page
+ *   the primitive's CSS module (what actually paints)  >  tokens.css  >  the kit's design spec
+ * The spec says button labels are weight 500; Button.module.css says 600 and the live page
  * measures 600. The CSS module wins.
  *
- * Prior art, ported rather than reinvented: the app repo's `mui-themed` worktree
- * (commit e0a2c60b) holds the same design expressed as ~45 modular MUI override files. Values
- * here are ported from it and then re-verified against the primitive that paints them.
+ * Prior art, ported rather than reinvented: the app carries its own MUI theme holding the same
+ * design as ~45 modular override files. Values here are ported from it and then re-verified
+ * against the primitive that paints them. (That source is private, like the kit itself - the
+ * reference README explains how both are cited here, and a gitignored PROVENANCE.private.md
+ * beside it holds the real paths.)
  *
- * Light scheme only. The kit ships a dark scheme (`[data-theme="dark"]`, dark-tokens.css) and
- * `mui-themed` a matching `colorDark`, but blink covers light for now; the `palette()` factory
- * below is kept in the shape that makes adding `colorSchemes.dark` a one-line change.
+ * Light scheme only. The kit ships a dark scheme (`[data-theme="dark"]`, a dark token sheet) and
+ * the app's MUI theme a matching `colorDark`, but blink covers light for now; the `palette()`
+ * factory below is kept in the shape that makes adding `colorSchemes.dark` a one-line change.
  *
  * Every value below carries a `// blink:` provenance comment naming the token or class it came
  * from.
@@ -164,7 +166,7 @@ const color = {
 
 /**
  * Kept as a factory over a token set rather than an inline object literal, even though it is called
- * once. The kit ships a dark scheme (dark-tokens.css) and `mui-themed` a matching `colorDark`;
+ * once. The kit ships a dark scheme (a dark token sheet) and the app's MUI theme a `colorDark`;
  * blink covers light only for now, and this shape is what keeps adding it a one-line change
  * (`dark: { palette: palette(colorDark) }`) instead of a re-write.
  */
@@ -207,7 +209,8 @@ export const blinkTheme = createTheme({
   typography: {
     // The kit's own `--font-family-sans` is the bare string "Source Sans Pro" with no fallbacks.
     // This is the longer stack because it is what the APP's MUI theme uses (reference/
-    // baselineTheme.ts, and `mui-themed` after it), and MUI is what this theme configures. Where
+    // baselineTheme.ts, and the app's own MUI theme after it), and MUI is what this theme
+    // configures. Where
     // Source Sans Pro is present - the only case parity is measured in - the two resolve to the
     // same face and render identically.
     fontFamily: [
@@ -227,7 +230,7 @@ export const blinkTheme = createTheme({
       "Segoe UI Symbol",
       "Noto Color Emoji",
     ].join(","),
-    // blink: baselineTheme.ts + mui-themed index.ts. The kit's Button.module.css never uppercases,
+    // blink: baselineTheme.ts + the app's own MUI theme. The kit's Button.module.css never uppercases,
     // so MUI's default `uppercase` would be wrong on every button.
     button: { textTransform: "none" },
 
@@ -236,38 +239,68 @@ export const blinkTheme = createTheme({
     // scale below is therefore the one surface in this file with no component to diff against.
     //
     // Sources, in the order the file's precedence rule applies them:
-    //   - WHICH MUI slot maps to which kit step is `mui-themed`'s decision, kept as-is. It is the
+    //   - WHICH MUI slot maps to which kit step is the app's own MUI theme's decision, kept as-is. It is the
     //     app author's own record and nothing in the kit overrules it. That is why body2 is the
     //     13px step: MUI's "smaller body" is the role the app gave text-xs.
-    //   - The VALUES come from DESIGN.md's typography frontmatter, which the file calls normative.
+    //   - The VALUES come from the kit's design spec, whose typography frontmatter it calls normative.
     //     Where the port drifted from it, the frontmatter wins and the drift is noted per line.
-    // h4/h5/h6 exist in neither the frontmatter nor tokens.css: the kit's scale has three heading
-    // steps, not six. They are `mui-themed`'s extension (a 600 weight over the three body sizes),
-    // kept because leaving them at MUI's Roboto-era defaults would look broken next to the rest.
-    h1: { fontSize: 30, fontWeight: 600, lineHeight: 1.2 }, // blink: DESIGN.md text-2xl
-    h2: { fontSize: 24, fontWeight: 600, lineHeight: 1.2 }, // blink: DESIGN.md text-xl (mui-themed had 1.25)
-    h3: { fontSize: 18, fontWeight: 600, lineHeight: 1.2 }, // blink: DESIGN.md text-lg (mui-themed had 1.3)
-    h4: { fontSize: 15, fontWeight: 600, lineHeight: 1.4 }, // blink: mui-themed index.ts (extends the kit scale)
-    h5: { fontSize: 14, fontWeight: 600, lineHeight: 1.4 }, // blink: mui-themed index.ts (extends the kit scale)
-    h6: { fontSize: 13, fontWeight: 600, lineHeight: 1.4 }, // blink: mui-themed index.ts (extends the kit scale)
-    // 1.5, not DESIGN.md text-md's 1.4, and this one is deliberate: reset.css sets
+    //
+    // The heading ladder is six slots over a kit that has three heading steps (text-lg 18,
+    // text-xl 24, text-2xl 30), so the bottom half has to be filled in somehow, and HOW is the one
+    // real decision here.
+    //
+    // It used to run 30/24/18/15/14/13: the kit's three steps, then its three BODY steps at weight
+    // 600. Each token used exactly once, which is tidy and was wrong in the way that matters -
+    // h4/h5/h6 are the slots a MUI app actually reaches for (MUI's own docs title a page with h4;
+    // AppBar titles are h6), and all three of them landed at or below body1's 15px. A "Page Title"
+    // came out the same size as the paragraph under it, and h4/h5/h6 were a 2px spread that read as
+    // one size rendered three times.
+    //
+    // So the ladder is filled DOWNWARD from the kit's steps instead of restarting at the body
+    // scale: 30 and 24 are text-2xl and text-xl, 18 is text-lg, and 20 and 16 are the two steps
+    // between them that the kit has no token for. h6 sits at body1's 15px, which is deliberate
+    // rather than a leftover - the smallest heading being body-sized in the kit's semibold is the
+    // same convention shadcn uses, and it is the floor the old ladder went through.
+    //
+    // What this costs: `variant="h3"` is no longer the kit's `heading3`. That step is still on the
+    // page, one slot down at h4, and this is the trade the ladder was worth - a monotonic scale
+    // where every heading outranks body text beats an exact slot-for-slot mapping of three of the
+    // six. The app's own MUI theme's h4/h5/h6 are superseded, not ported.
+    h1: { fontSize: 30, fontWeight: 600, lineHeight: 1.2 }, // blink: spec text-2xl
+    h2: { fontSize: 24, fontWeight: 600, lineHeight: 1.2 }, // blink: spec text-xl (the app's theme had 1.25)
+    h3: { fontSize: 20, fontWeight: 600, lineHeight: 1.2 }, // blink: interpolated between text-xl and text-lg
+    h4: { fontSize: 18, fontWeight: 600, lineHeight: 1.3 }, // blink: spec text-lg, at Dialog .title's 1.3
+    h5: { fontSize: 16, fontWeight: 600, lineHeight: 1.3 }, // blink: interpolated between text-lg and text-md
+    h6: { fontSize: 15, fontWeight: 600, lineHeight: 1.3 }, // blink: text-md, the floor of the ladder
+    // 1.5, not the spec's text-md 1.4, and this one is deliberate: the app's reset sets
     // `body { line-height: 1.5 }`, so 1.5 is what a paragraph of body text actually PAINTS in the
-    // app. The file's precedence rule puts what paints above the written token, and `mui-themed`
-    // reached the same 1.5.
-    body1: { fontSize: 15, fontWeight: 400, lineHeight: 1.5 }, // blink: reset.css body + DESIGN.md text-md size
-    body2: { fontSize: 13, fontWeight: 400, lineHeight: 1.4 }, // blink: DESIGN.md text-xs, mapped by mui-themed
+    // app. The file's precedence rule puts what paints above the written token, and the app's own
+    // MUI theme reached the same 1.5.
+    body1: { fontSize: 15, fontWeight: 400, lineHeight: 1.5 }, // blink: the app's reset body + spec text-md size
+    body2: { fontSize: 13, fontWeight: 400, lineHeight: 1.4 }, // blink: spec text-xs, mapped by the app's theme
+    // The last three variants, and they were left at MUI's own defaults - which is the same gap
+    // h4/h5/h6 had, one shelf down. `caption` in particular resolved to 12px, a size the kit's scale
+    // does not contain at all, so a themed page had one text size in it from Material's era.
+    //
+    // Each takes the kit token that plays its role, at the weight the kit uses for that role: 600 is
+    // the kit's ONE emphasis weight (Button, Badge, Alert title, Card title and Dialog title all
+    // use it, and nothing in the 26 primitives uses 500), so an emphasised body line is 600 here
+    // where MUI would say 500.
+    subtitle1: { fontSize: 18, fontWeight: 400, lineHeight: 1.4 }, // blink: text-lg - the step above body1
+    subtitle2: { fontSize: 15, fontWeight: 600, lineHeight: 1.5 }, // blink: text-md at the kit's emphasis weight
+    caption: { fontSize: 13, fontWeight: 400, lineHeight: 1.4 }, // blink: text-xs, the floor of the scale
   },
   // SCOPE: `shape.borderRadius` is deliberately left at MUI's own default. The kit has three radii
   // (4/6/8) chosen per component - a Button at 24px tall takes 6 and at 36px takes 8 - so a single
   // global value would be wrong somewhere no matter which of the three it picked, and it would
   // reach every untreated component besides. Each override below sets its own radius from the
-  // primitive that proves it. `mui-themed` made the same call.
+  // primitive that proves it. The app's own MUI theme made the same call.
 
   components: {
     // ---- Button ----
     //
     // Ground truth: reference/primitives/Button/Button.module.css, quoted per line below.
-    // Ported from mui-themed/components/button.ts, with four corrections the primitive forced:
+    // Ported from the app's own MUI theme, with four corrections the primitive forced:
     //
     //   1. `ghost` and `tonal` carry `border: 1px solid transparent`, not `border: none`. With
     //      border-box sizing the outer height is the same either way, so this is invisible until
@@ -348,7 +381,13 @@ export const blinkTheme = createTheme({
             // blink: tokens.css --focus-ring, spelled as the kit spells it. `--focus-ring-opacity`
             // is 50% in the light scheme and is inlined; it only varies in dark, which this theme
             // does not cover yet.
-            boxShadow: `color-mix(in srgb, ${theme.vars.palette.primary.main} 50%, transparent) 0px 0px 0px 4px`,
+            //
+            // The 3px spread is the token's, and it is the ONE number in this file repeated by
+            // hand in eleven places - the kit reaches it through `var(--focus-ring)`, and a palette
+            // entry cannot carry it because tokens.css builds the ring with `color-mix`, which
+            // MUI's colorManipulator cannot parse (see the `color` block at the top). Change it in
+            // tokens.css and here together, or the focus pairs go red on both counts at once.
+            boxShadow: `color-mix(in srgb, ${theme.vars.palette.primary.main} 50%, transparent) 0px 0px 0px 3px`,
           },
         }),
       },
@@ -528,7 +567,7 @@ export const blinkTheme = createTheme({
               "&.Mui-focusVisible": {
                 // blink: .destructive:focus-visible `box-shadow: var(--focus-ring-destructive)`,
                 // which tokens.css fixes at 35% (it has no themed opacity var, unlike --focus-ring).
-                boxShadow: `color-mix(in srgb, ${theme.vars.palette.error.main} 35%, transparent) 0px 0px 0px 4px`,
+                boxShadow: `color-mix(in srgb, ${theme.vars.palette.error.main} 35%, transparent) 0px 0px 0px 3px`,
               },
               "&.Mui-disabled": skin,
             }
@@ -583,14 +622,14 @@ export const blinkTheme = createTheme({
     //
     // Ground truth: reference/primitives/Alert/Alert.module.css.
     //
-    // The accent bar is an INSET BOX-SHADOW, not a border, and the kit's own comment says why: a
+    // The hairline ring is an INSET BOX-SHADOW, not a border, and the kit's own comment says why: a
     // border would shift the box model, so the padding would stop being symmetric and the icon's
     // left gutter would no longer match the icon-to-text gap. Transcribed as the shadow it is.
     //
-    // Each variant sets three things - a 10% background tint, `--alert-bar` (the saturated accent,
-    // used only for that shadow) and `--alert-accent` (the AA text cut, used for the icon, title
-    // and body). `info` is the exception: it has no separate text cut, so its accent IS the plain
-    // colour. That is the kit's table, not a simplification.
+    // Each variant sets three things - a 10% background tint, a 25% cut of the accent for that ring
+    // and `--alert-accent` (the AA text cut, used for the icon, title and body). `info` is the
+    // exception: it has no separate text cut, so its accent IS the plain colour. That is the kit's
+    // table, not a simplification.
     //
     // The stacked/inline distinction is the kit's `hasTitle` flag; `:has(.MuiAlertTitle-root)` asks
     // MUI the same question without needing a prop.
@@ -601,7 +640,7 @@ export const blinkTheme = createTheme({
       defaultProps: {
         // The kit always takes its icon from the caller and ships no default mapping. MUI does ship
         // one, in Material icons, which would be the wrong icon SET entirely - so each severity is
-        // mapped to the lucide icon the kit's own showcase (AlertShowcase.tsx) pairs with it.
+        // mapped to the lucide icon the kit's own showcase pairs with it.
         iconMapping: {
           error: createElement(CircleAlertIcon),
           warning: createElement(TriangleAlertIcon),
@@ -665,8 +704,11 @@ export const blinkTheme = createTheme({
           style: ({ theme }) => ({
             // blink: .error `background: var(--color-error-bg)` - a 10% tint in the light scheme
             backgroundColor: `color-mix(in srgb, ${theme.vars.palette.error.main} 10%, transparent)`,
-            // blink: .root `box-shadow: inset 3px 0 0 0 var(--alert-bar)`, bar = --color-error
-            boxShadow: `inset 3px 0 0 0 ${theme.vars.palette.error.main}`,
+            // blink: .root `box-shadow: inset 0 0 0 1px var(--alert-border)`, border = the accent
+            // at 25%. A full ring rather than the 3px left bar this used to be: an inset shadow
+            // follows the 8px radius, so a one-sided one tapered off at both ends into a curved
+            // sliver that no other primitive in the kit has.
+            boxShadow: `inset 0 0 0 1px color-mix(in srgb, ${theme.vars.palette.error.main} 25%, transparent)`,
             color: theme.vars.palette.errorText, // blink: --alert-accent = --color-error-text
             "& .MuiAlert-icon": { color: theme.vars.palette.errorText }, // blink: .icon
           }),
@@ -675,7 +717,7 @@ export const blinkTheme = createTheme({
           props: { severity: "warning" },
           style: ({ theme }) => ({
             backgroundColor: `color-mix(in srgb, ${theme.vars.palette.warning.main} 10%, transparent)`,
-            boxShadow: `inset 3px 0 0 0 ${theme.vars.palette.warning.main}`,
+            boxShadow: `inset 0 0 0 1px color-mix(in srgb, ${theme.vars.palette.warning.main} 25%, transparent)`,
             color: theme.vars.palette.warningText,
             "& .MuiAlert-icon": { color: theme.vars.palette.warningText },
           }),
@@ -684,7 +726,7 @@ export const blinkTheme = createTheme({
           props: { severity: "success" },
           style: ({ theme }) => ({
             backgroundColor: `color-mix(in srgb, ${theme.vars.palette.success.main} 10%, transparent)`,
-            boxShadow: `inset 3px 0 0 0 ${theme.vars.palette.success.main}`,
+            boxShadow: `inset 0 0 0 1px color-mix(in srgb, ${theme.vars.palette.success.main} 25%, transparent)`,
             color: theme.vars.palette.successText,
             "& .MuiAlert-icon": { color: theme.vars.palette.successText },
           }),
@@ -693,7 +735,7 @@ export const blinkTheme = createTheme({
           props: { severity: "info" },
           style: ({ theme }) => ({
             backgroundColor: `color-mix(in srgb, ${theme.vars.palette.info.main} 10%, transparent)`,
-            boxShadow: `inset 3px 0 0 0 ${theme.vars.palette.info.main}`,
+            boxShadow: `inset 0 0 0 1px color-mix(in srgb, ${theme.vars.palette.info.main} 25%, transparent)`,
             // blink: .info sets `--alert-accent: var(--color-info)` - the ONE variant whose accent
             // is the plain colour rather than a separate AA text cut, because tokens.css defines no
             // `--color-info-text`. Not an oversight in the transcription; it is the kit's table.
@@ -1107,7 +1149,7 @@ export const blinkTheme = createTheme({
           "&.Mui-focusVisible": {
             // blink: .root:focus-visible - `outline: none` plus the ring as a box-shadow
             outline: "none",
-            boxShadow: `color-mix(in srgb, ${theme.vars.palette.primary.main} 50%, transparent) 0px 0px 0px 4px`,
+            boxShadow: `color-mix(in srgb, ${theme.vars.palette.primary.main} 50%, transparent) 0px 0px 0px 3px`,
           },
           // blink: .root:checked, .root:indeterminate
           "&.Mui-checked, &.MuiCheckbox-indeterminate": {
@@ -1181,7 +1223,7 @@ export const blinkTheme = createTheme({
             // MUI paints its own action-focus tint on the root; the kit changes nothing but the
             // ring, so the surface fill is restated to keep the interior white.
             background: theme.vars.palette.surface,
-            boxShadow: `color-mix(in srgb, ${theme.vars.palette.primary.main} 50%, transparent) 0px 0px 0px 4px`, // blink: .root:focus-visible
+            boxShadow: `color-mix(in srgb, ${theme.vars.palette.primary.main} 50%, transparent) 0px 0px 0px 3px`, // blink: .root:focus-visible
           },
           // blink: .root:checked - there is NO dot element. The border simply thickens to 5px in the
           // brand colour, leaving a 6px hole of the surface fill in the middle. Reproducing it as a
@@ -1255,7 +1297,7 @@ export const blinkTheme = createTheme({
           // because that is the 36x20 rounded box the kit draws the ring around; switchBase is only
           // the 20x20 knob carrier.
           "&.Mui-focusVisible + .MuiSwitch-track": {
-            boxShadow: `color-mix(in srgb, ${theme.vars.palette.primary.main} 50%, transparent) 0px 0px 0px 4px`,
+            boxShadow: `color-mix(in srgb, ${theme.vars.palette.primary.main} 50%, transparent) 0px 0px 0px 3px`,
           },
           "&.Mui-disabled": {
             // blink: .root:disabled `opacity: 0.5`, applied to the whole control. MUI would
@@ -1299,7 +1341,7 @@ export const blinkTheme = createTheme({
     // Ground truth: reference/primitives/Input/Input.module.css.
     //
     // The kit's Input is a bordered box - `1px solid var(--color-border-strong)` on a surface fill
-    // at `--radius-2` - wrapping a borderless <input>. That is MUI's OUTLINED input. `mui-themed`
+    // at `--radius-2` - wrapping a borderless <input>. That is MUI's OUTLINED input. The app's theme
     // also ships a `filled` block; it is compatibility with the app's older `common/TextField`
     // wrapper, has no twin in the kit, and is deliberately not ported.
     //
@@ -1384,7 +1426,7 @@ export const blinkTheme = createTheme({
           },
           "&.Mui-focused:not(.Mui-error)": {
             // blink: tokens.css --focus-ring
-            boxShadow: `color-mix(in srgb, ${theme.vars.palette.primary.main} 50%, transparent) 0px 0px 0px 4px`,
+            boxShadow: `color-mix(in srgb, ${theme.vars.palette.primary.main} 50%, transparent) 0px 0px 0px 3px`,
           },
           "&.Mui-error .MuiOutlinedInput-notchedOutline": {
             borderColor: theme.vars.palette.error.main, // blink: .root.error `border-color: var(--color-error)`
@@ -1392,7 +1434,7 @@ export const blinkTheme = createTheme({
           },
           "&.Mui-error.Mui-focused": {
             // blink: .root.error:has(.input:focus) `box-shadow: var(--focus-ring-destructive)`
-            boxShadow: `color-mix(in srgb, ${theme.vars.palette.error.main} 35%, transparent) 0px 0px 0px 4px`,
+            boxShadow: `color-mix(in srgb, ${theme.vars.palette.error.main} 35%, transparent) 0px 0px 0px 3px`,
           },
           "&.Mui-disabled": {
             background: theme.vars.palette.surfaceMuted, // blink: .root.disabled `background: var(--color-surface-muted)`
@@ -1617,7 +1659,7 @@ export const blinkTheme = createTheme({
           "&:focus-visible": {
             outline: "none", // blink: .tab:focus-visible `outline: none`
             // blink: tokens.css --focus-ring
-            boxShadow: `color-mix(in srgb, ${theme.vars.palette.primary.main} 50%, transparent) 0px 0px 0px 4px`,
+            boxShadow: `color-mix(in srgb, ${theme.vars.palette.primary.main} 50%, transparent) 0px 0px 0px 3px`,
             borderRadius: 6, // blink: .tab:focus-visible `border-radius: var(--radius-2)`
           },
           "&.Mui-disabled": {
@@ -1940,7 +1982,7 @@ export const blinkTheme = createTheme({
           "&.Mui-focusVisible": {
             outline: "2px solid transparent", // blink: .option:focus-visible
             outlineOffset: 2, // blink: .option:focus-visible `outline-offset: 2px`
-            boxShadow: `color-mix(in srgb, ${theme.vars.palette.primary.main} 50%, transparent) 0px 0px 0px 4px`, // blink: --focus-ring
+            boxShadow: `color-mix(in srgb, ${theme.vars.palette.primary.main} 50%, transparent) 0px 0px 0px 3px`, // blink: --focus-ring
             zIndex: 1, // blink: .option:focus-visible `z-index: 1`
           },
         }),
@@ -2071,13 +2113,25 @@ export const blinkTheme = createTheme({
     // the same shape as Accordion and Tabs.
     //
     // ONE THING THE THEME DELIBERATELY DOES NOT CARRY. Each primitive passes
-    // `slots={{ transition: PopTransition }}` with a 150ms duration - a custom entrance that fades
-    // and scales from 0.95, replacing MUI's Grow. That is a COMPONENT, not a style: reproducing it
-    // means shipping a react-transition-group wrapper, and this file's contract is that it imports
-    // only @mui/material, lucide-react and React. The SETTLED overlay - the only thing a consumer
-    // sees once it has opened, and the only thing the harness captures - is identical either way, so
-    // what is lost is the entrance animation. An app that wants it passes the same `slots` prop the
+    // `slots={{ transition: PopTransition }}` - a custom entrance that fades and scales from 0.95,
+    // replacing MUI's Grow. That is a COMPONENT, not a style: reproducing it means shipping a
+    // react-transition-group wrapper, and this file's contract is that it imports only
+    // @mui/material, lucide-react and React. The SETTLED overlay - the only thing a consumer sees
+    // once it has opened, and the only thing the harness captures - is identical either way, so what
+    // is lost is the SHAPE of the entrance. An app that wants it passes the same `slots` prop the
     // kit does.
+    //
+    // Its TIMING is carried, because timing is a prop. `transitionDuration` below is the kit's
+    // `{ enter: 150, exit: 0 }`: an overlay opening is new information arriving and is worth 150ms
+    // of it, and an overlay closing is the user having already decided - a fade held over their next
+    // click reads as lag. MUI's own default here is `"auto"`, which computes a duration from the
+    // overlay's height and animates the close as slowly as the open.
+    //
+    // Set on MuiPopover and MuiMenu rather than once: a Popover does NOT inherit Menu's defaults,
+    // and Select renders a Menu, so the two entries between them cover Popover, Menu, Select and
+    // Autocomplete's popup. Dialog is deliberately not among them - it keeps a symmetric 150ms,
+    // as the kit's own Dialog does, because a modal vanishing out from under a click is not the
+    // same reassurance as a menu doing it.
     MuiTooltip: {
       defaultProps: {
         // blink: Tooltip/index.tsx pins all four on every instance.
@@ -2114,6 +2168,8 @@ export const blinkTheme = createTheme({
         // which opens the panel OVER its trigger rather than under it.
         anchorOrigin: { vertical: "bottom", horizontal: "left" },
         transformOrigin: { vertical: "top", horizontal: "left" },
+        // blink: Popover/index.tsx `transitionDuration = { enter: 150, exit: 0 }`
+        transitionDuration: { enter: 150, exit: 0 },
       },
       styleOverrides: {
         paper: ({ theme }) => ({
@@ -2131,12 +2187,17 @@ export const blinkTheme = createTheme({
       },
     },
     MuiMenu: {
+      defaultProps: {
+        // blink: Menu/index.tsx `transitionDuration = { enter: 150, exit: 0 }`
+        transitionDuration: { enter: 150, exit: 0 },
+      },
       styleOverrides: {
         paper: ({ theme }) => ({
-          // blink: .paper `padding: var(--space-2)`. The kit's comment is worth keeping: an even
+          // blink: .paper `padding: var(--space-1)`. The kit's comment is worth keeping: an even
           // gutter on all sides is what lets a rounded item highlight sit INSET from the paper
-          // edge, so a menu reads as a card of pills rather than a bordered list.
-          padding: 8,
+          // edge, so a menu reads as a card of pills rather than a bordered list. One step is
+          // enough for that; two made a short menu mostly gutter.
+          padding: 4,
           background: theme.vars.palette.surface, // blink: .paper `background: var(--color-surface)`
           border: `1px solid ${theme.vars.palette.border}`, // blink: .paper `border`
           borderRadius: 8, // blink: .paper `border-radius: var(--radius-3)`
@@ -2489,7 +2550,7 @@ export const blinkTheme = createTheme({
           "&.Mui-focusVisible": {
             outline: "2px solid transparent", // blink: .root:focus-visible
             outlineOffset: 2,
-            boxShadow: `color-mix(in srgb, ${theme.vars.palette.primary.main} 50%, transparent) 0px 0px 0px 4px`, // blink: --focus-ring
+            boxShadow: `color-mix(in srgb, ${theme.vars.palette.primary.main} 50%, transparent) 0px 0px 0px 3px`, // blink: --focus-ring
           },
         }),
       },
@@ -2775,7 +2836,7 @@ export const blinkTheme = createTheme({
           border: `1px solid ${theme.vars.palette.borderStrong}`,
           boxShadow: "0 1px 2px rgba(0, 0, 0, 0.04)", // --shadow-card
           "&:hover, &.Mui-focusVisible": {
-            boxShadow: `color-mix(in srgb, ${theme.vars.palette.primary.main} 50%, transparent) 0px 0px 0px 4px`,
+            boxShadow: `color-mix(in srgb, ${theme.vars.palette.primary.main} 50%, transparent) 0px 0px 0px 3px`,
           },
         }),
       },
@@ -3121,7 +3182,14 @@ export const blinkTheme = createTheme({
     //
     // Ground truth: the kit's global.css, which base.css vendors verbatim:
     //
-    //     a { text-decoration: none; color: #5a63b0; }
+    //     a {
+    //         color: #5a63b0;
+    //         text-decoration: underline;
+    //         text-decoration-thickness: 0.0625em;
+    //         text-underline-offset: 0.15em;
+    //         text-decoration-color: color-mix(in srgb, currentColor 35%, transparent);
+    //     }
+    //     a:hover { text-decoration-color: currentColor; }
     //     a:hover, button, [role="button"] { cursor: pointer; }
     //
     // The MuiLink block below covers a `<Link>`, but the kit's rule covers EVERY anchor - including
@@ -3129,35 +3197,65 @@ export const blinkTheme = createTheme({
     // in CssBaseline is what makes the theme a drop-in for that rule rather than only for the
     // component: preflight caught the gap on Breadcrumbs, whose links are plain `<a>` elements and
     // came out underlined and browser-blue the moment the kit's stylesheet was not on the page
-    // (234 pixels at Δ147).
+    // (234 pixels at Δ147). That rule now underlines deliberately rather than not at all, which
+    // makes carrying it here matter MORE, not less - the browser's own underline is exactly what
+    // the three measurements below exist to replace.
     //
     // The hex is transcribed as the kit writes it - global.css hardcodes it rather than using
     // var(--color-primary), and it is the same brand colour either way.
     MuiCssBaseline: {
       styleOverrides: {
-        a: { textDecoration: "none", color: "#5a63b0" },
+        a: {
+          color: "#5a63b0",
+          textDecoration: "underline",
+          textDecorationThickness: "0.0625em",
+          textUnderlineOffset: "0.15em",
+          textDecorationColor: "color-mix(in srgb, currentColor 35%, transparent)",
+        },
+        "a:hover": { textDecorationColor: "currentColor" },
         "a:hover, button, [role=\"button\"]": { cursor: "pointer" },
       },
     },
 
     // ---- Link ----
     //
-    // The kit has no Link primitive. Links are styled globally, by one rule in global.css:
-    //
-    //     a { text-decoration: none; color: #5a63b0; }
-    //
-    // That is the whole treatment - no hover style, no focus style, and no underlined variant
-    // anywhere in the design system. `cursor: pointer` is the only thing `a:hover` adds.
+    // The kit has no Link primitive. Links are styled globally, by one rule in global.css - quoted
+    // in full in the CssBaseline block above.
     //
     // The colour needs no override: MUI's Link already defaults to `primary.main`, which the
-    // palette above sets to the same brand hex the rule hardcodes. Only the underline has to go.
+    // palette above sets to the same brand hex the rule hardcodes. The underline does, and all
+    // three of its measurements do, because MUI's own `underline="always"` draws the browser's
+    // default line at `alpha(primary.main, 0.4)` - a flat 40% of the colour, on the baseline, at
+    // whatever thickness the face suggests. The kit replaces all three:
+    //
+    //   thickness  0.0625em, so the line stays hairline as the text scales
+    //   offset     0.15em, which is what lifts it clear of the descenders
+    //   colour     a 35% tint of the link's OWN colour, via currentColor
+    //
+    // `currentColor` rather than a palette entry so an inherit-coloured link (a link inside a
+    // heading, say) tints its underline from the ink it actually paints in, which is what MUI's own
+    // `--Link-underlineColor` cannot do - it resolves per palette colour and falls back to a flat
+    // 40% of currentColor only for `color="inherit"`.
+    //
+    // The `&:hover` entry is not decoration: MUI's `underline="always"` variant ships
+    // `&:hover { text-decoration-color: inherit }`, and `inherit` on an anchor takes the PARENT's
+    // decoration colour - the surrounding body ink, not the link's. Left alone, hovering a blink
+    // link turns its underline dark grey. This states the kit's hover instead, and it has to be
+    // here rather than in defaultProps because it is overriding a rule, not a prop.
     MuiLink: {
       defaultProps: {
-        // A default rather than a hard style, deliberately. It makes a plain <Link> match the app
-        // while leaving `underline="always"` available to a consumer who explicitly wants one -
-        // whereas forcing `text-decoration: none` in styleOverrides would break that prop for
-        // everyone. MUI's own default is "always", which is what put the underline there.
-        underline: "none", // blink: global.css `a { text-decoration: none }`
+        // A default rather than a hard style, so `underline="none"` still works for a consumer who
+        // wants a bare link. This matches MUI's own default; it is stated anyway because it is the
+        // kit's choice now, not a coincidence.
+        underline: "always", // blink: global.css `a { text-decoration: underline }`
+      },
+      styleOverrides: {
+        root: {
+          textDecorationThickness: "0.0625em", // blink: global.css `a`
+          textUnderlineOffset: "0.15em", // blink: global.css `a`
+          textDecorationColor: "color-mix(in srgb, currentColor 35%, transparent)", // blink: global.css `a`
+          "&:hover": { textDecorationColor: "currentColor" }, // blink: global.css `a:hover`
+        },
       },
     },
   },

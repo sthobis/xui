@@ -10,10 +10,14 @@ import classnames from "classnames";
 import C from "./Menu.module.css";
 import PopTransition from "./PopTransition";
 
+// Opens over 150ms, closes on the spot. See PopTransition for why the two
+// directions are not the same number.
+const POP_TIMEOUT = { enter: 150, exit: 0 };
+
 export type MenuProps = MuiMenuProps;
 
 export const Menu = forwardRef<HTMLDivElement, MenuProps>(function Menu(
-    { classes, transitionDuration = 150, slots, slotProps, ...rest },
+    { classes, transitionDuration = POP_TIMEOUT, slots, slotProps, ...rest },
     ref
 ) {
     return (

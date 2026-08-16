@@ -1,10 +1,19 @@
 .root {
     display: flex;
     color: var(--color-text-default);
-    /* accent bar drawn as an inset shadow (not a border) so it never shifts
-       the box model — padding stays symmetric, the icon's left gutter matches
-       the icon→text gap, and it follows the corner radius cleanly. */
-    box-shadow: inset 3px 0 0 0 var(--alert-bar);
+    /* A tinted surface ringed by a hairline in its own accent — the same
+       surface-plus-border language Card, Menu and Popover use, so a callout
+       reads as part of the kit rather than as a decorated box.
+
+       This used to be a 3px bar down the left edge only. A partial inset
+       shadow still follows the corner radius, so the bar tapered away at both
+       ends into a curved sliver — a shape that belonged to no other primitive
+       and drew the eye before the message did. A ring closes it.
+
+       Still an inset shadow rather than a border, for the reason the bar was:
+       it costs no box model, so padding stays symmetric and the icon's left
+       gutter keeps matching the icon→text gap. */
+    box-shadow: inset 0 0 0 1px var(--alert-border);
 }
 
 /* density */
@@ -34,30 +43,32 @@
     align-items: center;
 }
 
-/* variant: bg tint + a 3px left accent bar (--alert-bar, saturated
-   --color-{variant}). --alert-accent (the AA-compliant --color-{variant}-text)
-   colors the icon, the title, and the body — the full Callout look. */
+/* variant: bg tint + a hairline ring (--alert-border, the saturated
+   --color-{variant} at 25% — strong enough to read against the 10% tint it
+   surrounds, quiet enough not to compete with the text inside it).
+   --alert-accent (the AA-compliant --color-{variant}-text) colors the icon,
+   the title, and the body — the full Callout look. */
 .error {
     background: var(--color-error-bg);
-    --alert-bar: var(--color-error);
+    --alert-border: color-mix(in srgb, var(--color-error) 25%, transparent);
     --alert-accent: var(--color-error-text);
 }
 
 .warning {
     background: var(--color-warning-bg);
-    --alert-bar: var(--color-warning);
+    --alert-border: color-mix(in srgb, var(--color-warning) 25%, transparent);
     --alert-accent: var(--color-warning-text);
 }
 
 .success {
     background: var(--color-success-bg);
-    --alert-bar: var(--color-success);
+    --alert-border: color-mix(in srgb, var(--color-success) 25%, transparent);
     --alert-accent: var(--color-success-text);
 }
 
 .info {
     background: var(--color-info-bg);
-    --alert-bar: var(--color-info);
+    --alert-border: color-mix(in srgb, var(--color-info) 25%, transparent);
     --alert-accent: var(--color-info);
 }
 

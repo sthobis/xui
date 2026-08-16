@@ -6,6 +6,7 @@ import { createTheme } from "@mui/material/styles"
 import { shadcnTheme, kumoTheme, blinkTheme } from "xui"
 import { sections } from "../themes/kumo/sections"
 import { GallerySidebar, SIDEBAR_WIDTH, sectionId } from "../gallery/Sidebar"
+import { COLUMN_OVERRIDES } from "./columnOverrides"
 
 /**
  * The showcase: one MUI component per row, rendered four times - stock MUI, then each theme.
@@ -19,6 +20,11 @@ import { GallerySidebar, SIDEBAR_WIDTH, sectionId } from "../gallery/Sidebar"
  * The component list is the kumo gallery's, reused rather than rewritten: that theme now covers
  * every component the shadcn theme does, so its `mui` nodes already enumerate the full surface.
  * Only the `mui` side of each pair is read; the reference nodes are never rendered here.
+ *
+ * One consequence of that reuse needs an escape hatch, and `columnOverrides` is it: a kumo pair may
+ * ask for a prop VALUE only kumo's theme declares (`<Chip color="blue">`), which another theme
+ * cannot answer at all, leaving its column showing stock MUI rather than itself. Such a column names
+ * its own node for that pair id there. Everything else keeps reusing kumo's.
  */
 
 /** Stock MUI, for the leftmost column - no overrides at all, so the difference is the theme's. */
@@ -234,7 +240,7 @@ export function Showcase() {
               >
                 {COLUMNS.map((c) => (
                   <ThemedCell key={c.key} theme={c.theme}>
-                    {pair.mui}
+                    {COLUMN_OVERRIDES[c.key]?.[pair.id] ?? pair.mui}
                   </ThemedCell>
                 ))}
               </div>

@@ -86,10 +86,14 @@
 
     /* Focus ring opacity — themed (toned down in dark to avoid over-glow) */
     --focus-ring-opacity: 50%;
+    /* 3px, not 4: at 4 the ring reads as a halo around a 32px control rather
+       than an outline on it, and in dense rows (toolbar, table, toggle group)
+       neighbouring rings very nearly touch. Both rings are one width so a
+       destructive focus never looks heavier than a normal one. */
     --focus-ring: color-mix(in srgb, var(--color-primary) var(--focus-ring-opacity), transparent)
-        0px 0px 0px 4px;
+        0px 0px 0px 3px;
     --focus-ring-destructive: color-mix(in srgb, var(--color-error) 35%, transparent)
-        0px 0px 0px 4px;
+        0px 0px 0px 3px;
 
     /* Motion — add new easings only when a primitive actually needs one */
     --ease-out: cubic-bezier(0.165, 0.84, 0.44, 1);

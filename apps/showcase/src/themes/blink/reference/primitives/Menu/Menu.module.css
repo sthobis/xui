@@ -1,7 +1,10 @@
 .paper {
     /* Even gutter on all sides so the (rounded) item hover highlight sits
-       inset from the paper edge — matches FilterBar's option picker. */
-    padding: var(--space-2);
+       inset from the paper edge — matches FilterBar's option picker.
+       One step, not two: --space-2 held the highlight so far off the edge
+       that a three-item menu was mostly gutter, and the inset only has to
+       be visible for the pill to read as a pill. */
+    padding: var(--space-1);
     background: var(--color-surface);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-3);
