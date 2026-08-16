@@ -15,7 +15,7 @@ import {
   type PairState,
 } from "./lib/states"
 import { activateDark, GALLERY_PAGE, targetOf } from "./lib/themes"
-import { ruleFor } from "./thresholds"
+import { overrideKeys, ruleFor } from "./thresholds"
 
 /**
  * Captures the screenshot to diff for a given state, per pair/side. Three shapes:
@@ -174,6 +174,28 @@ test("all pairs match within threshold", async ({ page }, testInfo) => {
         const muiShot = mui.shot
 
         const result = diffPngs(refShot, muiShot)
+        // The harness canary is judged INVERTED. Its two swatches render 1/255 apart on every
+        // channel (see the section's banner for why the suite carries a pair built to differ), so
+        // a measured difference is the pipeline working and a ZERO is the pipeline broken - the
+        // grey-wash regression this suite once shipped would have been caught here. No triptych is
+        // written for it: its "failure" images would be two indistinguishable grey squares.
+        if (id === "harness-canary") {
+          rows.push({
+            pair: id,
+            state,
+            pct: result.mismatchPct,
+            px: result.mismatchedPixels,
+            delta: result.maxChannelDelta,
+            rule: "canary: must differ",
+          })
+          if (result.mismatchedPixels === 0) {
+            failures.push(
+              `harness-canary: the intentionally-different pair measured ZERO differing pixels - ` +
+                `the capture/diff pipeline is no longer detecting differences, and every other green row is suspect`,
+            )
+          }
+          continue
+        }
         // A pair with a maxDelta override is judged on the size of its worst per-channel error
         // instead of on how many pixels differ - see thresholds.ts maxDeltaOverrides. Both numbers
         // are always reported so a delta-judged pair's pixel count stays visible.
@@ -238,6 +260,29 @@ test("all pairs match within threshold", async ({ page }, testInfo) => {
       }
     } finally {
       writeReport()
+    }
+  }
+
+  // Exemption keys must name live pairs. maxPixelOverrides/maxDeltaOverrides entries are proofs
+  // about one specific pair of implementations, and nothing else ever re-reads them against the
+  // gallery: rename or remove a pair and its exemption lingers, proving nothing - or waiting to
+  // hand its allowance to a future pair that reuses the id. Validated only on a full run, since a
+  // filtered run legitimately sees a subset of ids.
+  if (!filtered) {
+    const byId = new Map(allPairs.map((p) => [p.id, p]))
+    for (const key of overrideKeys(theme)) {
+      const [pairId, state] = key.split(":")
+      const pair = byId.get(pairId)
+      if (!pair) {
+        failures.push(
+          `thresholds.ts: override "${key}" names no pair in the ${theme} gallery - the pair was ` +
+            `renamed or removed, so the exemption now exempts nothing. Remove it, or re-point it at the live id.`,
+        )
+      } else if (state && !pair.states.includes(state as PairState)) {
+        failures.push(
+          `thresholds.ts: override "${key}" names state "${state}", which pair "${pairId}" does not declare.`,
+        )
+      }
     }
   }
 

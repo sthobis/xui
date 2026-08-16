@@ -1,5 +1,5 @@
 import { expect, test, type Locator, type Page, type TestInfo } from "@playwright/test"
-import { discoverPairs, filterByParityPair, type DiscoveredPair } from "./lib/pairs"
+import { discoverPairs, filterByParityPair, parityFilterActive, type DiscoveredPair } from "./lib/pairs"
 import { openContentLocator, resetState, SETTLE_MS } from "./lib/states"
 import { GALLERY_PAGE, targetOf, type ThemeName } from "./lib/themes"
 
@@ -117,6 +117,36 @@ async function sampleAnimationSignature(cell: Locator): Promise<{ first: string;
     })
   })
 }
+
+test.describe("declared behaviors", () => {
+  // The authoring side (`PairBehavior` in gallery/types.ts) is a typed union, but this file matches
+  // its members as bare strings - so adding a member to the union and tagging pairs with it
+  // typechecks perfectly while exercising nothing, the exact "check that quietly proves nothing"
+  // failure skipIfNothingToCheck's banner describes. This is the bridge: every behavior string the
+  // gallery actually declares must be one this file implements. Keep the list in sync with the
+  // describe blocks below (the sweeps that discover per-pair, not the page-wide ripple/input/
+  // metrics/geometry sweeps, which no pair opts into).
+  const IMPLEMENTED = [
+    "animates",
+    "overlay-matches",
+    "anchored-to-trigger",
+    "item-hover-highlights",
+    "hover-opens",
+    "escape-closes",
+    "filters-on-type",
+  ] as const
+  test("every behavior the gallery declares has a sweep in this file", async ({ page }) => {
+    // Deliberately UNFILTERED: the guard is about the gallery/spec contract as a whole, not about
+    // whichever pairs a PARITY_PAIR iteration happens to select.
+    const declared = [...new Set((await discoverPairs(page)).flatMap((p) => p.behaviors))]
+    const unimplemented = declared.filter((b) => !(IMPLEMENTED as readonly string[]).includes(b))
+    expect(
+      unimplemented,
+      `these data-behaviors values have no sweep in behavior.spec.ts, so declaring them proves ` +
+        `nothing: ${unimplemented.join(", ")} - implement the sweep or remove the tag`,
+    ).toEqual([])
+  })
+})
 
 test.describe("animates", () => {
   test("each tagged pair's animated element changes over time on both sides", async ({ page }, testInfo) => {
@@ -846,9 +876,20 @@ test.describe("painted geometry", () => {
   }
 
   test("each pair paints the same rectangles on both sides", async ({ page }, testInfo) => {
-    const pairs = (await allPairIds(page)).filter(
-      (id) => !BY_DESIGN[targetOf(testInfo.project.name).theme].has(id),
-    )
+    const ids = await allPairIds(page)
+    const byDesign = BY_DESIGN[targetOf(testInfo.project.name).theme]
+    // A BY_DESIGN entry is the same kind of claim as a thresholds.ts override - a proof about one
+    // specific pair - and it rots the same way: rename the pair and the exemption lingers, keeping
+    // this sweep blind to the construction it once excused long after that construction changed.
+    // Validated only on a full run; a filtered run legitimately sees a subset of ids.
+    if (!parityFilterActive()) {
+      const stale = [...byDesign].filter((id) => !ids.includes(id))
+      expect(
+        stale,
+        `BY_DESIGN exempts pairs that no longer exist: ${stale.join(", ")} - remove the entries or re-point them`,
+      ).toEqual([])
+    }
+    const pairs = ids.filter((id) => !byDesign.has(id))
     skipIfNothingToCheck(pairs.length, "matching") // only ever empty under a PARITY_PAIR filter
     sweepBudget(testInfo, pairs.length, 1_000)
 

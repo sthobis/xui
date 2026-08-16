@@ -248,6 +248,22 @@ function scoped<T>(map: Record<string, T>, pairId: string, state?: string): T | 
   return map[pairId]
 }
 
+/**
+ * Every key that carries an exemption in either map, for one theme. The parity suite asserts on a
+ * full (unfiltered) run that each one still names a live pair - and, for a `pairId:state` key,
+ * a state that pair still declares. An override is a proof about one specific pair of
+ * implementations; when the pair is renamed or removed, the proof must not linger to exempt
+ * nothing - or worse, to quietly hand its allowance to a future pair that happens to reuse the id.
+ */
+export function overrideKeys(theme: ThemeName): string[] {
+  return [
+    ...new Set([
+      ...Object.keys(maxPixelOverrides[theme]),
+      ...Object.keys(maxDeltaOverrides[theme]),
+    ]),
+  ]
+}
+
 export function ruleFor(theme: ThemeName, pairId: string, state?: string): ParityRule {
   const maxPixels = scoped(maxPixelOverrides[theme], pairId, state) ?? DEFAULT_MAX_PIXELS
   const maxDelta = scoped(maxDeltaOverrides[theme], pairId, state) ?? DEFAULT_MAX_DELTA

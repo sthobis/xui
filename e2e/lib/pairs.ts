@@ -42,6 +42,11 @@ export async function discoverPairs(page: Page): Promise<DiscoveredPair[]> {
  * exemption-key validation only runs on a full run (a filtered run legitimately sees a subset of
  * ids, so every exemption for the rest would read as stale).
  */
+/** Whether a PARITY_PAIR iteration filter is in force, independent of any pair list. */
+export function parityFilterActive(): boolean {
+  return (process.env.PARITY_PAIR ?? "").trim().length > 0
+}
+
 export function filterByParityPair<T extends { id: string }>(
   pairs: T[],
 ): { pairs: T[]; filtered: boolean } {
