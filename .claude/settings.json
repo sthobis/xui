@@ -1,0 +1,13 @@
+{
+  "attribution": {
+    "commit": "",
+    "pr": "",
+    "sessionUrl": false
+  },
+  "env": {
+    "GIT_AUTHOR_NAME": "Stefanus Thobi Sinaga",
+    "GIT_AUTHOR_EMAIL": "s.thobi.sinaga@gmail.com",
+    "GIT_COMMITTER_NAME": "Stefanus Thobi Sinaga",
+    "GIT_COMMITTER_EMAIL": "s.thobi.sinaga@gmail.com"
+  }
+}
