@@ -1,10 +1,10 @@
 import { StrictMode } from "react"
-import { createRoot } from "react-dom/client"
+import { mountWhenFontsReady } from "../../gallery/mountWhenFontsReady"
 import "./index.css"
 import App from "./App"
 import { Providers } from "./Providers"
 
-createRoot(document.getElementById("root")!).render(
+mountWhenFontsReady(
   <StrictMode>
     <Providers>
       <App />

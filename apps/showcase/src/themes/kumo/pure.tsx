@@ -1,5 +1,5 @@
 import { StrictMode } from "react"
-import { createRoot } from "react-dom/client"
+import { mountWhenFontsReady } from "../../gallery/mountWhenFontsReady"
 import "./pure.css"
 import { Providers } from "./Providers"
 import { ModeToggle } from "../../ModeToggle"
@@ -7,7 +7,7 @@ import { sections } from "./sections"
 import { renderSections } from "../../gallery/PairGrid"
 import themeSource from "../../../../../packages/xui/src/themes/kumo.ts?raw"
 
-createRoot(document.getElementById("root")!).render(
+mountWhenFontsReady(
   <StrictMode>
     <Providers>
       <ModeToggle />

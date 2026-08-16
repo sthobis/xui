@@ -1,9 +1,9 @@
 import { StrictMode } from "react"
-import { createRoot } from "react-dom/client"
+import { mountWhenFontsReady } from "../gallery/mountWhenFontsReady"
 import "./showcase.css"
 import { Showcase } from "./Showcase"
 
-createRoot(document.getElementById("root")!).render(
+mountWhenFontsReady(
   <StrictMode>
     <Showcase />
   </StrictMode>,
