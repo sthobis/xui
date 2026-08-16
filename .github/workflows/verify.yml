@@ -18,6 +18,10 @@ jobs:
   # public repositories.
   verify:
     runs-on: macos-latest
+    # A hard ceiling far above any healthy run (~10 minutes all in). Without it, a wedged dev
+    # server or a hung overlay burns GitHub's 6-hour default on the macOS runner before anything
+    # kills it.
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
 
@@ -33,13 +37,36 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
+      - name: Lint
+        run: pnpm lint
+
       - name: Unit tests
         run: pnpm test:unit
 
+      # Both build paths, cheap (~3s each) and otherwise unexercised until it hurts: the package
+      # build only ever ran at prepublishOnly, so a broken tsconfig.build surfaced at publish time,
+      # and the showcase build only ran in the deploy workflow, so a Vite/base-path breakage landed
+      # on main and was discovered by the deploy - the bare-href bug shipped exactly that way once.
+      - name: Build package
+        run: pnpm --filter @sthobis/xui build
+
+      - name: Build showcase
+        run: pnpm --filter showcase build
+
+      # The browser cache saves the ~100MB Chromium download on every run. Keyed on the lockfile:
+      # a Playwright bump changes the pinned browser revision, and a stale browser under a new
+      # Playwright is exactly the mismatch the install step exists to prevent.
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Caches/ms-playwright
+          key: pw-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+
       # Only chromium: both Playwright projects run on it, and the parity numbers are meaningful
-      # only within one engine anyway. `--with-deps` pulls the system libraries the runner lacks.
+      # only within one engine anyway. Cheap no-op on a cache hit - it verifies rather than
+      # re-downloads.
       - name: Install Playwright chromium
-        run: pnpm exec playwright install --with-deps chromium
+        run: pnpm exec playwright install chromium
 
       # parity + preflight + behavior. GitHub sets CI=true, which is what makes playwright.config
       # start its own dev server instead of reusing one - see reuseExistingServer there.
@@ -51,9 +78,9 @@ jobs:
       - name: Parity, preflight and behavior suites
         run: pnpm verify
 
-      # The diff triptych (shadcn / mui / diff per failing pair) plus the run's report. Without this
-      # a red run tells you a pair moved but not how, and pixel failures are not diagnosable from a
-      # log line.
+      # The diff triptych (ref / mui / diff per failing pair, per project directory) plus the run's
+      # reports. Without this a red run tells you a pair moved but not how, and pixel failures are
+      # not diagnosable from a log line.
       - name: Upload diffs
         if: failure()
         uses: actions/upload-artifact@v4
@@ -83,9 +110,16 @@ jobs:
   # platform-independent: an override bought for Linux would loosen this pair on macOS, where it
   # measures exactly zero. A non-blocking job carrying one invisible seam artifact is the cheaper
   # trade.
+  #
+  # Runs ONLY the pixel suite: its whole reason to exist is rasterizer differences, and preflight,
+  # behavior, typecheck and the unit tests are platform-independent checks the macOS gate already
+  # ran. Re-running them here doubled the job's cost for no added signal - and the behavior sweeps'
+  # timing on a shared Linux runner was the flakiest thing in the whole pipeline while being
+  # continue-on-error anyway.
   linux-advisory:
     runs-on: ubuntu-latest
     continue-on-error: true
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -94,8 +128,15 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: pw-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+      # --with-deps here and not on macOS: it installs the LINUX system libraries the hosted
+      # runner lacks; on macOS it is a no-op wrapper around the plain install.
       - run: pnpm exec playwright install --with-deps chromium
-      - run: pnpm verify
+      - run: pnpm verify:parity
       - name: Upload diffs
         if: always()
         uses: actions/upload-artifact@v4

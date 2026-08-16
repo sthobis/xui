@@ -1,7 +1,13 @@
 name: Deploy showcase to GitHub Pages
 
+# Gated on Verify rather than raced against it. Both used to trigger on the same push, so a commit
+# that failed parity still deployed - the site's whole pitch is "verified pixel parity", and it
+# could publish an unverified build. workflow_run fires when Verify finishes on main; the job-level
+# `if` below deploys only when it succeeded. workflow_dispatch stays as the manual escape hatch.
 on:
-  push:
+  workflow_run:
+    workflows: [Verify]
+    types: [completed]
     branches: [main, master]
   workflow_dispatch:
 
@@ -18,8 +24,15 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    timeout-minutes: 15
     steps:
+      # Deploy the COMMIT VERIFY VERIFIED, not whatever main points at by the time this runs - two
+      # quick pushes would otherwise deploy the second under the first's green. Manual dispatch has
+      # no workflow_run payload and falls through to the current ref.
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.ref }}
 
       - uses: pnpm/action-setup@v4
 
