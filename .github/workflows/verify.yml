@@ -122,7 +122,13 @@ jobs:
   linux-advisory:
     runs-on: ubuntu-latest
     continue-on-error: true
-    timeout-minutes: 20
+    # Measured: the parity-only suite under one worker runs ~20+ minutes on the hosted Linux
+    # runner, and the first cut of this ceiling (20) cancelled the step at the wire. Worse than the
+    # lost signal: a job cancelled by its own timeout marks the whole RUN "cancelled" even when the
+    # macOS gate succeeded - which reads as a mystery stop AND fails the deploy's
+    # conclusion == success check, so a verified main never published. continue-on-error only
+    # forgives failures, not cancellations; the ceiling has to clear a healthy run by a margin.
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
