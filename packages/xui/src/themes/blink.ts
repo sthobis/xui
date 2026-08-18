@@ -121,6 +121,15 @@ declare module "@mui/material/InputBase" {
   }
 }
 
+// A TextField hands its `size` to the LABEL as well as the control, and the label's resting
+// position is derived from the control's height (see the MuiInputLabel block), so the third step has
+// to exist on both or `size="large"` type-errors at the one place that positions it.
+declare module "@mui/material/InputLabel" {
+  interface InputLabelPropsSizeOverrides {
+    large: true
+  }
+}
+
 /**
  * The kit's light token set, transcribed from reference/tokens.css exactly as written there -
  * `#5a63b0` stays hex, `rgb(229, 49, 10)` stays rgb(). Both parse; neither is converted, because a
@@ -317,6 +326,25 @@ export const blinkTheme = createTheme({
     //      had right, but as a channel-alpha; same treatment as 3.
     //
     // `disableElevation` is NOT set, on purpose - see the boxShadow note on the root below.
+    //
+    // ONE deliberate departure from the module, and it applies to MuiIconButton and MuiToggleButton
+    // below as well: the kit writes `display: flex` and this takes it as `inline-flex`.
+    //
+    // The two differ only in the box's OUTER type - both establish the same flex formatting context
+    // inside, which is all `.root` uses it for (centring an icon beside a label). And a flex item is
+    // blockified by CSS, so wherever the kit actually puts a button - inside its own flex rows - the
+    // two values are indistinguishable, which is why every pair here measures the same under either.
+    //
+    // What the outer type DOES decide is what happens in the places the kit has no opinion about,
+    // because MUI reuses these components where the design system has no twin: Autocomplete's clear
+    // and popup indicators sit in an absolutely positioned block, TablePagination's arrows in a
+    // plain div, and Alert, Dialog and Snackbar all mount a close button the same way. Block-level
+    // there means each button claims a whole line, so two of them STACK - measured in a consuming
+    // app as a clear/open pair overflowing its field and prev/next arrows one above the other.
+    // `inline-flex` is MUI's own value for exactly this reason.
+    //
+    // This is the "ask what else renders this component" rule in AGENTS.md: the module is ground
+    // truth for the component the kit ships, and it says nothing about the ones it does not.
     MuiButton: {
       defaultProps: {
         // The kit's Button signature is `variant = "secondary"`, which is this. MUI's own default
@@ -330,7 +358,7 @@ export const blinkTheme = createTheme({
       },
       styleOverrides: {
         root: ({ theme }) => ({
-          display: "flex", // blink: .root `display: flex`
+          display: "inline-flex", // blink: .root `display: flex` - as inline-flex, see above
           alignItems: "center", // blink: .root `align-items: center`
           justifyContent: "center", // blink: .root `justify-content: center`
           gap: 8, // blink: .root `gap: var(--space-2)`
@@ -1933,7 +1961,8 @@ export const blinkTheme = createTheme({
       styleOverrides: {
         root: ({ theme }) => ({
           position: "relative", // blink: .option `position: relative`
-          display: "flex", // blink: .option `display: flex`
+          display: "inline-flex", // blink: .option `display: flex` - as inline-flex, see MuiButton
+
           alignItems: "center", // blink: .option `align-items: center`
           justifyContent: "center", // blink: .option `justify-content: center`
           gap: 8, // blink: .option `gap: var(--space-2)`
@@ -2524,7 +2553,8 @@ export const blinkTheme = createTheme({
       defaultProps: { disableRipple: true }, // blink: Button/index.tsx `disableRipple`
       styleOverrides: {
         root: ({ theme }) => ({
-          display: "flex", // blink: .root `display: flex`
+          // blink: .root `display: flex`, taken as INLINE-flex - see the note above MuiButton.
+          display: "inline-flex",
           alignItems: "center",
           justifyContent: "center",
           borderRadius: 8, // blink: .root `border-radius: var(--radius-3)`
@@ -3157,13 +3187,51 @@ export const blinkTheme = createTheme({
         }),
       },
     },
+    // SCOPE: the kit ships no floating label, so its SHAPE - that it floats at all, the 0.75 scale,
+    // the notch it shrinks into - is MUI's and stays MUI's. What is NOT a free choice is where the
+    // un-shrunk label sits, and leaving that to MUI was a bug rather than a scope boundary.
+    //
+    // MUI centres the resting label in its OWN control: `translate(14px, 16px)` is (56 - 23) / 2 for
+    // a 56px box and a 23px label line, and its `small` step is `translate(14px, 9px)` for 40px. The
+    // kit's controls are 32/36/40 and its label line is 15px x 1.4 = 21px, so every one of MUI's
+    // offsets is measured against a box the kit does not have - a default field came out with its
+    // label 16px down a 36px box, resting a third of the way below centre and clipping on the lower
+    // border. Same arithmetic, the kit's numbers: (H - 21) / 2, and 13px across to match the input's
+    // own padding rather than MUI's 14.
+    //
+    // Keyed through `variants` rather than a `&.MuiInputLabel-sizeSmall` selector on purpose: MUI
+    // emits a size class for `small` ONLY, so the kit's `large` step has no class to select and a
+    // CSS-only rule would silently leave it at the default offset. `variants` matches the resolved
+    // prop, which every size has.
     MuiInputLabel: {
       styleOverrides: {
-        // SCOPE: only the type and ink, which come from MuiFormLabel anyway. MUI's InputLabel
-        // FLOATS - it shrinks into the outline's notch - and the kit ships no floating label to
-        // extract a position, a scale or a notch width from, so all of that stays MUI's.
-        root: ({ theme }) => ({ color: theme.vars.palette.textMuted }),
+        root: ({ theme }) => ({
+          color: theme.vars.palette.textMuted,
+          // The resting position for the kit's default 36px control.
+          transform: "translate(13px, 7.5px) scale(1)",
+          // Shrunk, the label straddles the top border, so it is centred on the border rather than
+          // in the box: half its SCALED line (21 x 0.75 = 15.75) above the edge. MUI's -9px is the
+          // same rule at its own 23px line, and using it unchanged would sit the kit's shorter
+          // label a pixel high.
+          "&.MuiInputLabel-shrink": { transform: "translate(13px, -7.9px) scale(0.75)" },
+        }),
       },
+      variants: [
+        {
+          props: { size: "small" },
+          style: {
+            transform: "translate(13px, 5.5px) scale(1)", // (32 - 21) / 2
+            "&.MuiInputLabel-shrink": { transform: "translate(13px, -7.9px) scale(0.75)" },
+          },
+        },
+        {
+          props: { size: "large" },
+          style: {
+            transform: "translate(13px, 9.5px) scale(1)", // (40 - 21) / 2
+            "&.MuiInputLabel-shrink": { transform: "translate(13px, -7.9px) scale(0.75)" },
+          },
+        },
+      ],
     },
 
     // ---- Ripples ----
