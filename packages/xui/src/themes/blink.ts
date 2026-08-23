@@ -122,10 +122,19 @@ declare module "@mui/material/InputBase" {
 }
 
 // A TextField hands its `size` to the LABEL as well as the control, and the label's resting
-// position is derived from the control's height (see the MuiInputLabel block), so the third step has
-// to exist on both or `size="large"` type-errors at the one place that positions it.
+// A TextField hands its `size` to the LABEL as well as the control, so the third step has to exist
+// on both or the label rejects a value its own field accepts.
 declare module "@mui/material/InputLabel" {
   interface InputLabelPropsSizeOverrides {
+    large: true
+  }
+}
+
+// And TextField, which is how most consumers meet both at once: it owns its own size union and
+// hands the value down to the control AND the label, so augmenting only those two leaves the
+// composed component - the one an app actually writes - rejecting the kit's third step.
+declare module "@mui/material/TextField" {
+  interface TextFieldPropsSizeOverrides {
     large: true
   }
 }
@@ -1507,6 +1516,17 @@ export const blinkTheme = createTheme({
             cursor: "not-allowed",
           },
         }),
+        // With the label no longer floating (see MuiInputLabel), the notch it used to cut has to
+        // close, or every field keeps a gap in its top border with nothing sitting in it.
+        //
+        // Pinned to the width MUI itself uses for the un-notched state rather than removed: a
+        // <fieldset> draws its top border through the MIDDLE of its legend, so a legend with no
+        // height moves the whole border up 5px (MUI insets this outline `top: -5px` and gives the
+        // legend an 11px line box precisely so the line lands back on the control's edge). Keep the
+        // height, take the width.
+        notchedOutline: {
+          "& legend": { maxWidth: "0.01px" },
+        },
       },
       variants: [
         // Only the two NON-default sizes. `medium` is the root's own height above, because MUI
@@ -2459,7 +2479,8 @@ export const blinkTheme = createTheme({
     // SCOPE: MUI's InputLabel is a FLOATING label that shrinks into the outline's notch, and the kit
     // ships no floating label anywhere - its label is a plain block above the control, which is
     // MUI's static FormLabel. InputLabel renders a FormLabel, so it inherits the type and colour
-    // below; its POSITIONING is left as MUI's, because there is nothing to extract for it.
+    // below. Where it SITS is decided at the MuiInputLabel block below rather than left to MUI,
+    // whose offsets are measured against a 56px control this design system does not have.
     MuiFormControl: {
       styleOverrides: {
         root: {
@@ -3187,53 +3208,49 @@ export const blinkTheme = createTheme({
         }),
       },
     },
-    // SCOPE: the kit ships no floating label, so its SHAPE - that it floats at all, the 0.75 scale,
-    // the notch it shrinks into - is MUI's and stays MUI's. What is NOT a free choice is where the
-    // un-shrunk label sits, and leaving that to MUI was a bug rather than a scope boundary.
+    // ---- InputLabel: the kit has no floating label, so this one does not float ----
     //
-    // MUI centres the resting label in its OWN control: `translate(14px, 16px)` is (56 - 23) / 2 for
-    // a 56px box and a 23px label line, and its `small` step is `translate(14px, 9px)` for 40px. The
-    // kit's controls are 32/36/40 and its label line is 15px x 1.4 = 21px, so every one of MUI's
-    // offsets is measured against a box the kit does not have - a default field came out with its
-    // label 16px down a 36px box, resting a third of the way below centre and clipping on the lower
-    // border. Same arithmetic, the kit's numbers: (H - 21) / 2, and 13px across to match the input's
-    // own padding rather than MUI's 14.
+    // MUI's InputLabel is absolutely positioned over the control and animates into a notch in the
+    // outline. The kit has no such thing anywhere: its FormField renders a plain <label> ABOVE the
+    // control, which is what MuiFormLabel above is styled for.
     //
-    // Keyed through `variants` rather than a `&.MuiInputLabel-sizeSmall` selector on purpose: MUI
-    // emits a size class for `small` ONLY, so the kit's `large` step has no class to select and a
-    // CSS-only rule would silently leave it at the default offset. `variants` matches the resolved
-    // prop, which every size has.
+    // That difference is not cosmetic, and the reason this block exists is that a floating label is
+    // actively BROKEN under this design system rather than merely foreign to it:
+    //
+    //   - The kit's focus ring is `box-shadow: 0 0 0 3px` of 50%-alpha primary, painted OUTSIDE the
+    //     border box - so it occupies exactly the band a shrunk label sits in. A focused field drew
+    //     its label inside its own halo, at low contrast and hard to read. Nothing about the label's
+    //     position fixes that; the ring is where the label is, by construction.
+    //   - A native `<input type="date">` always paints `dd/mm/yyyy`, so a resting label has nothing
+    //     to rest on and the two overlap.
+    //   - The resting offsets are MUI's, measured against MUI's 56px control; the kit's are 32/36/40.
+    //
+    // So the label is made STATIC. `MuiFormControl` above is already `display: flex; flex-direction:
+    // column; gap: 8px` - the kit's FormField layout, transcribed from its own module - which means a
+    // static label simply becomes that column's first child and the control its second, at the kit's
+    // own 8px gap. No geometry is invented here; it is the layout the kit already describes.
+    //
+    // The consequence worth stating: a `<TextField label="X">` is TALLER than under stock MUI, by
+    // the label plus the gap, because the label no longer overlaps the control. That is the kit's
+    // field, and an app that wants MUI's overlay instead should not be using this theme.
     MuiInputLabel: {
       styleOverrides: {
         root: ({ theme }) => ({
           color: theme.vars.palette.textMuted,
-          // The resting position for the kit's default 36px control.
-          transform: "translate(13px, 7.5px) scale(1)",
-          // Shrunk, the label straddles the top border, so it is centred on the border rather than
-          // in the box: half its SCALED line (21 x 0.75 = 15.75) above the edge. MUI's -9px is the
-          // same rule at its own 23px line, and using it unchanged would sit the kit's shorter
-          // label a pixel high.
-          "&.MuiInputLabel-shrink": { transform: "translate(13px, -7.9px) scale(0.75)" },
+          // Out of the overlay and into the FormControl's flex column. `position` and `transform`
+          // are what MUI uses to float it; both have to go, and `maxWidth` with them - MUI caps a
+          // floating label at `calc(133% - 32px)` to keep it inside the notch it is shrinking into,
+          // which is meaningless once it is a block above the field and would truncate long labels.
+          position: "static",
+          transform: "none",
+          maxWidth: "100%",
+          // MUI makes a resting label click-through so the click reaches the input underneath. A
+          // static label is not over the input, and a <label> that takes its own clicks focuses the
+          // control - which is the behaviour a plain label should have.
+          pointerEvents: "auto",
         }),
       },
-      variants: [
-        {
-          props: { size: "small" },
-          style: {
-            transform: "translate(13px, 5.5px) scale(1)", // (32 - 21) / 2
-            "&.MuiInputLabel-shrink": { transform: "translate(13px, -7.9px) scale(0.75)" },
-          },
-        },
-        {
-          props: { size: "large" },
-          style: {
-            transform: "translate(13px, 9.5px) scale(1)", // (40 - 21) / 2
-            "&.MuiInputLabel-shrink": { transform: "translate(13px, -7.9px) scale(0.75)" },
-          },
-        },
-      ],
     },
-
     // ---- Ripples ----
     //
     // The kit has no ripple anywhere: every one of its interactive primitives passes
