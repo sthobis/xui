@@ -531,7 +531,20 @@ function emphasis(token: string) {
 function buttonBase(size: KumoButtonSize) {
   const s = BUTTON_SIZES[size]
   return {
-    display: "flex", // kumo: flex (MUI's own default is inline-flex)
+    // kumo writes `flex`; this takes it as INLINE-flex, and the parenthetical that used to sit here
+    // noting MUI's own value is why. The two differ only in the box's OUTER type - both establish
+    // the same flex formatting context inside, which is all kumo uses it for - and a flex item is
+    // blockified by CSS, so wherever kumo puts its own buttons the two are indistinguishable. That
+    // is why every pair here measures the same under either.
+    //
+    // What the outer type decides is the places kumo has no opinion about, because MUI reuses
+    // Button, IconButton and ToggleButton where the design system has no twin: Autocomplete's clear
+    // and popup indicators sit in an absolutely positioned block, TablePagination's arrows in a
+    // plain div, and Alert, Dialog and Snackbar each mount a close button the same way. Block-level
+    // there means each button claims a whole line, so an adjacent pair STACKS. Found by the
+    // `inline-level buttons` sweep on kumo's own Autocomplete indicator, after the identical
+    // transcription was fixed on blink.
+    display: "inline-flex", // kumo: flex - as inline-flex, see above
     width: "max-content", // kumo: w-max
     minWidth: 0, // MUI defaults to a 64px minWidth; Kumo has none, so a short label would be padded out
     flexShrink: 0, // kumo: shrink-0
