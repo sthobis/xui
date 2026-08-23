@@ -632,6 +632,155 @@ test.describe("no ripple", () => {
   })
 })
 
+test.describe("inline-level buttons", () => {
+  /**
+   * Every MUI button root that CAN show an outer display type keeps an inline one.
+   *
+   * What this catches: a theme transcribing a design system's `display: flex` onto Button,
+   * IconButton or ToggleButton as written. It only matters where MUI REUSES those components and
+   * the design system has no twin - Autocomplete's clear and popup indicators sit in an absolutely
+   * positioned block, TablePagination's arrows in a plain div, and Alert, Dialog and Snackbar each
+   * mount a close button the same way. Block-level there means one line per button, so an adjacent
+   * pair STACKS - measured on the blink theme in a consuming app as pagination arrows at x=94,y=149
+   * and x=94,y=185 instead of x=94 and x=130 on one row.
+   *
+   * Not a per-pair opt-in, and deliberately not part of `painted geometry`: that sweep compares the
+   * two sides of a pair and returns early when there is no reference cell. Every construction above
+   * is one the design system has no twin for, so every one of them is ref-less and the pixel suite
+   * skips it outright. A gallery-wide sweep needs no reference and grows with the gallery on its
+   * own.
+   *
+   * THE TRAP, and the reason for the filter below: `getComputedStyle().display` reports the
+   * BLOCKIFIED value, not the declared one. CSS blockifies a flex or grid item, an absolutely
+   * positioned box and a float, so a button in any of those reads back `flex` whatever the theme
+   * wrote - which is most of a gallery, since a design system puts its own buttons in flex rows.
+   * Reading it there proves nothing and fails a correct theme; the first draft of this check did
+   * exactly that on all 40-odd buttons in the blink gallery. Only a button whose parent establishes
+   * a normal flow context still shows its own outer type, and that is precisely the case the defect
+   * lives in - so restricting to it costs no coverage at all.
+   *
+   * Judged on `display` rather than on "two siblings share a row" so the single-button cases (an
+   * Alert or Dialog close button) are covered too, having no sibling to be misaligned with.
+   * `inline-flex` is MUI's own value for all three components, so this asserts the contract a theme
+   * departs from rather than a number someone picked.
+   */
+  test("no MUI button root outside a flex context is block-level", async ({ page }) => {
+    const { subjects, offenders } = await page.evaluate(() => {
+      const offenders: string[] = []
+      let subjects = 0
+      const roots = document.querySelectorAll<HTMLElement>(
+        ".MuiButton-root, .MuiIconButton-root, .MuiToggleButton-root",
+      )
+      for (const el of Array.from(roots)) {
+        const cs = getComputedStyle(el)
+        if (cs.display === "none") continue
+        const parent = el.parentElement
+        if (!parent) continue
+        // Blockified, so `display` says nothing about what the theme declared - see the trap above.
+        if (/flex|grid/.test(getComputedStyle(parent).display)) continue
+        if (cs.position === "absolute" || cs.position === "fixed" || cs.float !== "none") continue
+
+        subjects++
+        if (cs.display.startsWith("inline")) continue
+        const id = el.closest("[data-pair-id]")?.getAttribute("data-pair-id") ?? "(outside a pair)"
+        offenders.push(`${id}: ${el.className} in <${parent.tagName.toLowerCase()}> -> display: ${cs.display}`)
+      }
+      return { subjects, offenders }
+    })
+
+    // A gallery with no such construction has nothing to prove. On blink the subjects are the
+    // Autocomplete indicators and the TablePagination arrows, which is why those pairs exist.
+    skipIfNothingToCheck(subjects, "normal-flow MUI button")
+    expect(
+      offenders,
+      "these MUI button roots are block-level, so two adjacent ones stack instead of sharing a " +
+        `row (MUI's own value is inline-flex):\n${offenders.join("\n")}`,
+    ).toEqual([])
+  })
+})
+
+test.describe("label placement", () => {
+  /**
+   * Where a TextField's label sits relative to the control it labels.
+   *
+   * MUI's InputLabel FLOATS: it is absolutely positioned over the control and its resting offset
+   * centres a 23px label line in MUI's own 56px box (`translate(14px, 16px)` is (56 - 23) / 2).
+   * None of the design systems in this repo has a floating label - each stacks a plain label above
+   * the control - so all three themes take the float off and let the FormControl's column do the
+   * layout. A theme that resizes the control but leaves MUI's offset alone therefore positions the
+   * label against a box that does not exist: on blink, whose controls are 32/36/40, a default field
+   * carried its label 16px down a 36px box, below centre and touching the lower border.
+   *
+   * Nothing else in the harness can see this. No design system ships a floating label, so a pair
+   * that renders one has no reference: the pixel suite and `painted geometry` both skip it, and
+   * preflight only asks whether the cell changes without Tailwind, which it does not.
+   *
+   * The invariant needs no reference, which is what lets a ref-less pair be held to a real standard
+   * - it is a relation between the label and the control beside it:
+   *
+   *   1. the label is in normal FLOW, not floated over the control;
+   *   2. it sits entirely ABOVE the control, overlapping it nowhere;
+   *   3. the space between them is exactly what the column declares.
+   *
+   * (3) is read from the theme's own CSS rather than hardcoded, because the three themes reach the
+   * same 8px differently and a fixed number would encode one of them: blink puts `row-gap: 8px` on
+   * the FormControl and no margin on the label, shadcn leaves the gap `normal` and gives the label
+   * `margin-bottom: 8px`. Both satisfy the same rule. kumo renders no label inside a FormControl at
+   * all and skips on its own.
+   */
+  // Sub-pixel slack. Every value here is a whole-pixel box-model sum; the defect this exists to
+  // catch put the label 16px into a 36px control.
+  const TOLERANCE = 0.5
+
+  test("each field's label sits above its control at the column's own spacing", async ({ page }) => {
+    const { found, offenders } = await page.evaluate((tol) => {
+      const offenders: string[] = []
+      let found = 0
+      const px = (v: string) => (v.endsWith("px") ? parseFloat(v) : 0) // row-gap is "normal" when unset
+
+      for (const label of Array.from(document.querySelectorAll<HTMLElement>(".MuiInputLabel-root"))) {
+        const form = label.closest<HTMLElement>(".MuiFormControl-root")
+        const control = form?.querySelector<HTMLElement>(".MuiInputBase-root")
+        if (!form || !control) continue
+        found++
+
+        const id = label.closest("[data-pair-id]")?.getAttribute("data-pair-id") ?? "(outside a pair)"
+        const ls = getComputedStyle(label)
+        const l = label.getBoundingClientRect()
+        const c = control.getBoundingClientRect()
+        const where = `${id} [${label.textContent?.trim()}, control ${c.height.toFixed(1)}px]`
+
+        if (ls.position === "absolute" || ls.position === "fixed") {
+          offenders.push(`${where}: label is ${ls.position}, i.e. still floating over the control`)
+          continue
+        }
+
+        const space = c.y - (l.y + l.height)
+        if (space < -tol) {
+          offenders.push(`${where}: label overlaps the control by ${(-space).toFixed(2)}px`)
+          continue
+        }
+        const declared = px(getComputedStyle(form).rowGap) + px(ls.marginBottom) + px(getComputedStyle(control).marginTop)
+        if (Math.abs(space - declared) > tol) {
+          offenders.push(
+            `${where}: label sits ${space.toFixed(2)}px above the control, but the column declares ` +
+              `${declared.toFixed(2)}px (row-gap + label margin-bottom + control margin-top)`,
+          )
+        }
+      }
+      return { found, offenders }
+    }, TOLERANCE)
+
+    // kumo's gallery renders no InputLabel inside a FormControl, which is legitimately nothing to
+    // measure rather than a failure.
+    skipIfNothingToCheck(found, "labelled-field")
+    expect(
+      offenders,
+      `these labels are not placed by their field's own column layout:\n${offenders.join("\n")}`,
+    ).toEqual([])
+  })
+})
+
 test.describe("hover-opens", () => {
   test("each tagged pair's overlay opens on hover alone, no click", async ({ page }, testInfo) => {
     const pairs = (await discover(page)).filter((p) => p.behaviors.includes("hover-opens"))

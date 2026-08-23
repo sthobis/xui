@@ -28,6 +28,7 @@ import MuiFormGroup from "@mui/material/FormGroup"
 import MuiCheckbox from "@mui/material/Checkbox"
 import MuiSnackbarContent from "@mui/material/SnackbarContent"
 import MuiAutocomplete from "@mui/material/Autocomplete"
+import MuiTablePagination from "@mui/material/TablePagination"
 import MuiTextField from "@mui/material/TextField"
 import { HouseIcon, PlusIcon, SearchIcon, SettingsIcon } from "lucide-react"
 import type { ReactNode } from "react"
@@ -214,15 +215,82 @@ export const derivedSection: Section = {
       mui: <MuiSnackbarContent message="Rollup scheduled." />,
     },
     {
+      // Carries a VALUE on purpose, so both of Autocomplete's indicators render at once. That is
+      // the construction the theme's `inline-flex` note points at: MUI puts the clear and popup
+      // buttons in an `endAdornment` div that is absolutely positioned and NOT a flex container, so
+      // a block-level IconButton claims a line each and the two stack, hanging out of the field.
+      // The `icon buttons stay inline-level` sweep is what judges that; this pair is what gives it
+      // something to judge, and what puts the break on screen in the showcase.
       id: "derived-autocomplete",
       mui: (
         <Box>
           <MuiAutocomplete
             options={["Washington", "Chicago", "San Francisco"]}
+            // CONTROLLED, with an onChange that keeps the value - not `defaultValue`. A gallery
+            // cell has to render the same thing all run, and this is the only one whose button
+            // DESTROYS part of itself: clearing removes the clear indicator from the DOM, so an
+            // uncontrolled cell loses a button partway through and every later check sees a
+            // different page. It hung the `no ripple` sweep outright, which walks ButtonBases by
+            // index against a live list - the press deleted element 135 and the walk then waited
+            // out its whole budget on an index that no longer existed.
+            value="Chicago"
+            onChange={() => {}}
             renderInput={(params) => <MuiTextField {...params} label="Region" />}
           />
         </Box>
       ),
     },
+    {
+      // The other half of that construction: TablePagination puts its prev/next arrows in a plain
+      // div. Page 1 of 3 so both arrows are live - a disabled arrow still lays out, but an enabled
+      // pair is what a reader recognises as "one row" or "stacked".
+      id: "derived-table-pagination",
+      mui: (
+        <Box w={320}>
+          <MuiTablePagination
+            component="div"
+            count={13}
+            page={1}
+            rowsPerPage={5}
+            rowsPerPageOptions={[]}
+            onPageChange={() => {}}
+          />
+        </Box>
+      ),
+    },
+    // ---- Labelled fields ----
+    //
+    // DECISION: the theme keeps supporting `<TextField label>`, these are derived-tier pairs, and
+    // they are judged on GEOMETRY rather than on pixels.
+    //
+    // The alternative was to document `label` as unsupported and tell apps to compose FormField's
+    // static FormLabel by hand. That was rejected: `label` is a first-class prop on the most-used
+    // MUI input, so a drop-in theme that renders it wrong is worse than one that renders it well,
+    // and the theme cannot opt out of Autocomplete's `renderInput` anyway - which is where most
+    // apps meet a labelled field.
+    //
+    // What the theme does instead is take MUI's FLOAT off (see the MuiInputLabel block) so the
+    // label becomes an ordinary first child of the FormControl's column - which is already the
+    // kit's own FormField layout, transcribed from its module. So no geometry is invented for the
+    // label: it inherits the column the kit already describes.
+    //
+    // That is why these can be ref-less and still held to a real standard. The claim is a relation
+    // between the label and the control beside it - in flow, above the control, at the column's own
+    // spacing - so each field checks itself with no reference to diff against. The `label placement`
+    // sweep in e2e/behavior.spec.ts does the measuring; the pixel suite skips these pairs, as it
+    // does every ref-less one.
+    //
+    // One resting and one filled field per size. Size no longer moves the label under this design,
+    // but it does move the CONTROL (32/36/40), and the defect these exist to catch was a label
+    // positioned against a box the design system does not have.
+    ...(["small", "medium", "large"] as const).map((size) => ({
+      id: `derived-textfield-label-${size}`,
+      mui: (
+        <div style={{ display: "flex", gap: 12 }}>
+          <MuiTextField size={size} label="Region" sx={{ width: 130 }} />
+          <MuiTextField size={size} label="Region" defaultValue="iad-1" sx={{ width: 130 }} />
+        </div>
+      ),
+    })),
   ],
 }
