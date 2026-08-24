@@ -40,6 +40,8 @@ const DELIBERATE_GAPS: Record<"shadcn" | "kumo" | "blink", Record<string, string
       "same surface, different key: list interactivity is themed via MuiListItem/MuiMenuItem; kumo's list rows are ListItemButtons",
     MuiNativeSelect:
       "blink-only surface: blink's Select twin is MUI's native variant; shadcn's select is the listbox Select",
+    MuiPaper:
+      "open gap: a bare Paper under shadcn still wears Material's elevation chrome. blink closed this from its kit's one flat surface; shadcn's needs its own extraction (its Card carries a border and shadow-sm, and its overlay radii differ, so blink's value-equal rounded tie does not transfer). Delete this entry when shadcn.ts gains its MuiPaper block",
     MuiSnackbar:
       "same surface, different key: shadcn's snackbar twin is sonner, themed through MuiSnackbarContent",
   },
@@ -51,6 +53,8 @@ const DELIBERATE_GAPS: Record<"shadcn" | "kumo" | "blink", Record<string, string
       "same surface, different key: kumo's Dialog is themed through the panel plus MuiDialogContentText",
     MuiDialogContent: "same surface, different key: see MuiDialogActions",
     MuiNativeSelect: "blink-only surface: kumo's Select replicates the listbox variant, not the native one",
+    MuiPaper:
+      "open gap: a bare Paper under kumo still wears Material's elevation chrome. blink closed this from its kit's one flat surface; kumo's needs its own extraction (its plain surface is the bordered kumo-base LayerCard, a different construction). Delete this entry when kumo.ts gains its MuiPaper block",
   },
   blink: {
     MuiBackdrop:

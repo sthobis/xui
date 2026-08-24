@@ -9,6 +9,7 @@ import {
   CircleCheckIcon,
   InfoIcon,
   TriangleAlertIcon,
+  XIcon,
 } from "lucide-react"
 import * as React from "react"
 import { transform } from "sucrase"
@@ -51,6 +52,7 @@ const MODULES: Record<string, object> = {
     CircleCheckIcon,
     InfoIcon,
     TriangleAlertIcon,
+    XIcon,
   }),
   "@phosphor-icons/react": wrapIconModule("@phosphor-icons/react", {
     CheckIcon: PhosphorCheckIcon,
