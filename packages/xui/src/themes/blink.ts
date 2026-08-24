@@ -2685,7 +2685,20 @@ export const blinkTheme = createTheme({
       },
       styleOverrides: {
         root: {
-          color: "inherit", // blink: .root `color: inherit` - the kit's spinner takes its parent's ink
+          // blink: .root `color: inherit` - the kit's spinner takes its parent's ink. NOT stated on
+          // the root: unconditional there it also beat every explicit `color` prop, so a
+          // `<CircularProgress color="error">` - a determinate health ring, a destructive loading
+          // state - silently painted text-colour. Measured in a consuming app: score rings carrying
+          // colorError/colorSuccess classes all rendered #262626.
+          //
+          // Keyed on the colorPrimary CLASS instead, because MUI resolves an UNSTATED color prop to
+          // "primary" - the default and the explicit value share one class, so "the caller chose
+          // nothing" is not distinguishable from "the caller chose primary". The trade, stated
+          // rather than hidden: an explicit color="primary" inherits too, while the semantic
+          // colours - the ones that carry information - keep their palette value.
+          "&.MuiCircularProgress-colorPrimary, &.MuiCircularProgress-colorInherit": {
+            color: "inherit",
+          },
           // blink: .ring `animation: spin 0.8s linear infinite`. MUI's own rotation is 1.4s with an
           // eased curve.
           animationDuration: "0.8s",
