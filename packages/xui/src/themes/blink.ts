@@ -2625,6 +2625,24 @@ export const blinkTheme = createTheme({
           height: "auto",
           color: theme.vars.palette.textMuted, // blink: Select .chevron / Input ::placeholder
           "& .MuiTypography-root": { color: "inherit", fontSize: "inherit" },
+          // An IconButton inside an adornment is an in-field affordance (a clear button, a
+          // visibility toggle), and without this rule it takes the IconButton block's 36px ghost
+          // button - the full height of the field it sits in, the same defect the Autocomplete
+          // indicators had. Same values as that fix, for the same reason: the kit's xs step at
+          // --radius-2 with the chevron's muted ink, and the icon at the chevron's own 16px. No
+          // `&&` needed here, unlike the Autocomplete slots: this is a descendant selector, so it
+          // is two classes deep and outranks the IconButton root's single class on its own.
+          "& .MuiIconButton-root": {
+            width: 24,
+            height: 24, // blink: --control-h-xs
+            borderRadius: 6, // blink: --radius-2
+            color: theme.vars.palette.textMuted, // blink: Select .chevron ink
+            "& .MuiSvgIcon-root": { fontSize: 16 }, // blink: the chevron's icon size
+            "&:hover": {
+              color: theme.vars.palette.primary.main,
+              background: `color-mix(in srgb, ${theme.vars.palette.primary.main} 15%, transparent)`,
+            },
+          },
         }),
       },
     },
