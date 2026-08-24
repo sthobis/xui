@@ -2637,7 +2637,7 @@ export const blinkTheme = createTheme({
             height: 24, // blink: --control-h-xs
             borderRadius: 6, // blink: --radius-2
             color: theme.vars.palette.textMuted, // blink: Select .chevron ink
-            "& .MuiSvgIcon-root": { fontSize: 16 }, // blink: the chevron's icon size
+            "& .MuiSvgIcon-root": { fontSize: 14 }, // blink: Combobox clear `XIcon size={14}`
             "&:hover": {
               color: theme.vars.palette.primary.main,
               background: `color-mix(in srgb, ${theme.vars.palette.primary.main} 15%, transparent)`,
@@ -3114,8 +3114,8 @@ export const blinkTheme = createTheme({
       // sit visibly outside the kit's icon language, so both are swapped for their lucide
       // equivalents at the chevron's own size.
       defaultProps: {
-        popupIcon: createElement(ChevronDownIcon, { size: 16 }),
-        clearIcon: createElement(XIcon, { size: 16 }),
+        popupIcon: createElement(ChevronDownIcon, { size: 16 }), // blink: Combobox .chevron `ChevronDownIcon size={16}`
+        clearIcon: createElement(XIcon, { size: 14 }), // blink: Combobox clear `XIcon size={14}`
       },
       styleOverrides: {
         // The two indicators are IconButtons, so without a rule here they take the IconButton
@@ -3128,28 +3128,35 @@ export const blinkTheme = createTheme({
         // `&&` because the IconButton root states its 36px at the same single-class specificity,
         // and which Emotion sheet lands later is an implementation detail; doubling makes the
         // override deterministic. Same trick the Select's paddingRight documents above.
+        // The kit's Combobox draws these two DIFFERENTLY, and the difference is the design:
+        // the clear is a real ghost xs button (hover tint and all), while the chevron is a
+        // passive span - `color: text-muted`, NO hover state, its only motion the 180deg open
+        // rotation (which MUI's popupIndicatorOpen already provides). A hover tint on the
+        // chevron made it read as a second button crowding the field.
         popupIndicator: ({ theme }) => ({
           "&&": {
             width: 24,
-            height: 24, // blink: --control-h-xs
-            borderRadius: 6, // blink: --radius-2
-            color: theme.vars.palette.textMuted, // blink: Select .chevron ink
-            "&:hover": {
-              color: theme.vars.palette.primary.main,
-              background: `color-mix(in srgb, ${theme.vars.palette.primary.main} 15%, transparent)`,
-            },
+            height: 24, // a click target for what the kit draws as a bare 16px icon
+            borderRadius: 6,
+            color: theme.vars.palette.textMuted, // blink: Combobox .chevron `color: var(--color-text-muted)`
+            "&:hover": { background: "transparent" }, // blink: .chevron has no hover state
           },
         }),
         clearIndicator: ({ theme }) => ({
           "&&": {
             width: 24,
-            height: 24, // blink: --control-h-xs
-            borderRadius: 6, // blink: --radius-2
-            color: theme.vars.palette.textMuted, // blink: Select .chevron ink
+            height: 24, // blink: Combobox clear `Button size="xs"` - --control-h-xs
+            borderRadius: 6, // blink: --radius-2, the xs button's radius
+            color: theme.vars.palette.textMuted,
+            // blink: the clear IS a ghost button in the kit, so the ghost hover is correct here
+            // (and only here - see the chevron above).
             "&:hover": {
               color: theme.vars.palette.primary.main,
               background: `color-mix(in srgb, ${theme.vars.palette.primary.main} 15%, transparent)`,
             },
+            // blink: the kit shows its clear whenever the field HAS a value (`clearable &&
+            // hasValue`); MUI gates it behind hover/focus with `visibility: hidden`.
+            visibility: "visible",
           },
         }),
         // The popup is a kit menu - the Menu block above owns that surface, so only what
