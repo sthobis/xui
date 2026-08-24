@@ -1005,6 +1005,38 @@ export const blinkTheme = createTheme({
       ],
     },
 
+    // ---- Paper ----
+    //
+    // Ground truth: the same Card.module.css the Card block below extracts, because a bare
+    // <Paper> is the kit's plain surface and the kit has exactly one of those: `--color-surface`
+    // at `--radius-3`, flat. The kit has no elevation ladder at all - its ONLY shadows are
+    // `--shadow-popover` on overlays and `--shadow-card` on the ToggleGroup strip - so a Paper
+    // left at Material's elevation-1 was the one surface in a themed app still wearing another
+    // design system's chrome (measured: a chart panel with a 4px radius and the stock
+    // 0 2px 1px -1px shadow beside flat 8px-radius Cards).
+    //
+    // Deliberately NOT here, in each case because of what else Paper is:
+    //   - `boxShadow: "none"` on the root. Menu, Popover, Drawer, Snackbar and Autocomplete all
+    //     render Paper and each RESTATES `--shadow-popover` in its own block; an unscoped kill
+    //     here would tie with every one of them at equal specificity and win or lose by sheet
+    //     order. `elevation: 0` as a DEFAULT gets the bare case without touching any component
+    //     that passes its own elevation - which is every overlay, via its own defaultProps.
+    //   - a background restatement. MUI's Paper already paints `background.paper`, which IS the
+    //     kit's surface token; writing it again asserts nothing and is the MuiBackdrop mistake.
+    //
+    // `rounded` at 8 reaches every Paper that has not opted out via `square`, including the
+    // overlay papers - and every themed paper slot states the same 8, so the tie is value-equal
+    // and cascade order cannot matter.
+    MuiPaper: {
+      defaultProps: { elevation: 0 }, // blink: Card .root - the kit's surface is flat
+      styleOverrides: {
+        root: {
+          backgroundImage: "none", // MUI tints elevated papers in dark schemes; the kit never does
+        },
+        rounded: { borderRadius: 8 }, // blink: Card .root `border-radius: var(--radius-3)`
+      },
+    },
+
     // ---- Card ----
     //
     // Ground truth: reference/primitives/Card/Card.module.css.
