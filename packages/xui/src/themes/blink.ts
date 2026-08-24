@@ -37,6 +37,7 @@ import {
   CircleCheckIcon,
   InfoIcon,
   TriangleAlertIcon,
+  XIcon,
 } from "lucide-react"
 // createElement rather than JSX: this is a plain .ts module, and JSX is only valid in .tsx. React
 // is not a new dependency - it is already xui's peer, required by every MUI component.
@@ -3077,7 +3078,49 @@ export const blinkTheme = createTheme({
       styleOverrides: { root: { gap: 8 } }, // --space-2
     },
     MuiAutocomplete: {
+      // The kit's own icon-in-a-field is the Select chevron: lucide, 16px, muted ink. MUI's
+      // defaults here are Material glyphs (a filled ArrowDropDown triangle and a 20px Clear) that
+      // sit visibly outside the kit's icon language, so both are swapped for their lucide
+      // equivalents at the chevron's own size.
+      defaultProps: {
+        popupIcon: createElement(ChevronDownIcon, { size: 16 }),
+        clearIcon: createElement(XIcon, { size: 16 }),
+      },
       styleOverrides: {
+        // The two indicators are IconButtons, so without a rule here they take the IconButton
+        // block's 36px ghost button - the kit's standalone icon-only control - and two of those
+        // inside a 36px field fill its entire height and hover as full-height squares flush with
+        // the border. Inside a field the kit's affordances are QUIET: the ink is the Select
+        // chevron's textMuted, and the box is the kit's xs step - 24px at --radius-2 - the size it
+        // uses where a control has to live inside another control.
+        //
+        // `&&` because the IconButton root states its 36px at the same single-class specificity,
+        // and which Emotion sheet lands later is an implementation detail; doubling makes the
+        // override deterministic. Same trick the Select's paddingRight documents above.
+        popupIndicator: ({ theme }) => ({
+          "&&": {
+            width: 24,
+            height: 24, // blink: --control-h-xs
+            borderRadius: 6, // blink: --radius-2
+            color: theme.vars.palette.textMuted, // blink: Select .chevron ink
+            "&:hover": {
+              color: theme.vars.palette.primary.main,
+              background: `color-mix(in srgb, ${theme.vars.palette.primary.main} 15%, transparent)`,
+            },
+          },
+        }),
+        clearIndicator: ({ theme }) => ({
+          "&&": {
+            width: 24,
+            height: 24, // blink: --control-h-xs
+            borderRadius: 6, // blink: --radius-2
+            color: theme.vars.palette.textMuted, // blink: Select .chevron ink
+            "&:hover": {
+              color: theme.vars.palette.primary.main,
+              background: `color-mix(in srgb, ${theme.vars.palette.primary.main} 15%, transparent)`,
+            },
+          },
+        }),
         // The popup is a kit menu - the Menu block above owns that surface, so only what
         // Autocomplete adds is here.
         paper: ({ theme }) => ({
