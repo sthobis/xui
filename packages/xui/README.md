@@ -8,7 +8,7 @@ Three themes ship today:
 | --- | --- | --- | --- | --- |
 | `shadcnTheme` | [shadcn/ui](https://ui.shadcn.com) (new-york style, neutral base) | Geist | `lucide-react` | `.dark` class on `<html>` |
 | `kumoTheme` | [Kumo](https://kumo-ui.com), Cloudflare's design system | Inter | `@phosphor-icons/react` | `data-mode="dark"` on `<html>` |
-| `blinkTheme` | the Pulse Kit (Pulse / NeverBlink) | Source Sans Pro | `lucide-react` | light only so far |
+| `blinkTheme` | Pulse / NeverBlink's own system - **covers all of MUI** | Source Sans Pro | `lucide-react` | light only so far |
 
 ## Install
 
@@ -57,7 +57,7 @@ Each theme follows its own design system's convention, so it drops into an app a
 
 - **shadcn** - a `.dark` class on `<html>` (`colorSchemeSelector: "class"`).
 - **kumo** - `data-mode="dark"` on `<html>`.
-- **blink** - light only for now; the Pulse Kit's own convention is `[data-theme="dark"]`, which is what a dark scheme here will use when it lands.
+- **blink** - light only for now; the design system's own convention is `[data-theme="dark"]`, which is what a dark scheme here will use when it lands.
 
 Either way, MUI's own `useColorScheme().setMode` writes the selector, so one toggle drives the MUI theme and the design system's stylesheet together.
 

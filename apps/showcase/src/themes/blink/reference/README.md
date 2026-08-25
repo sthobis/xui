@@ -1,18 +1,34 @@
-# Blink reference layer (vendored Pulse Kit)
+# Blink reference snapshot (regression baseline)
 
-This directory is the **reference side** of every blink parity pair: the real Pulse Kit
-as it exists in the app repo, copied in so the harness can render it next to a plain MUI
-component under `blinkTheme`.
+**Read this first: this directory is a BASELINE, not an authority.**
 
-Nothing here is authored. Treat every file as read-only ground truth.
-If a value looks wrong, it is wrong *upstream* - fix it there and re-vendor, never here.
+It is a snapshot of the design system's component source as it stood when `blinkTheme` was first
+written, copied in so the harness can render it beside a plain MUI component under the theme.
+It had a different job then - blink was built by replicating this code, and these files were the
+ground truth every value was extracted from.
 
-**One exception now exists, and it is bounded: see "Local design changes pending upstream" at the
-bottom of this file.** That table is the complete list of places this copy no longer matches what
-was vendored, and every one of them is a design decision taken here that has to be ported back
-upstream. Nothing else in this directory may be edited, and nothing may be added to that table to
-make a pair pass - each entry is a change to the KIT, made deliberately, and the theme carries the
-identical change so parity stays at zero.
+That is no longer what blink is. The design system is **ours**, so `blinkTheme` is the definition of
+the design rather than a copy of it, and blink now covers **all of MUI** - far more than this
+snapshot contains. Most of what the theme styles today has no twin in here at all.
+
+So this directory now does exactly one thing: **it keeps the components that were already right from
+silently moving.** The pairs built against it diff at zero, and they must keep diffing at zero, so a
+refactor cannot quietly change a component nobody was looking at. That is worth keeping. It is not
+worth mistaking for a design authority.
+
+Concretely, this directory:
+
+- **does NOT bound blink's surface.** A component absent from here is not out of scope; it is the
+  normal case. See "Deriving a component blink has no twin for" in the root `AGENTS.md`.
+- **does NOT settle a design question.** If a value here and a considered improvement disagree, the
+  improvement can win - see the table at the bottom of this file for how that is recorded.
+- **is still read-only in the ordinary case.** Nothing here is authored for this repo, and a value
+  is not to be edited to make a pair pass. That is the same offence as raising a threshold.
+
+The bounded exception is the **"Local design changes pending upstream"** table at the bottom: the
+complete list of places this copy no longer matches what was vendored, each one a deliberate design
+change made here that the theme carries identically, so parity stays at zero and the diff is what
+gets ported back upstream.
 
 ## Where it came from
 

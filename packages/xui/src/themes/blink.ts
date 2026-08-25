@@ -32,6 +32,7 @@
  */
 import { createTheme } from "@mui/material/styles"
 import {
+  ArrowDownIcon,
   ChevronDownIcon,
   CircleAlertIcon,
   CircleCheckIcon,
@@ -221,6 +222,16 @@ const palette = (c: typeof color) => ({
  */
 const SelectChevron = (props: { className?: string }) =>
   createElement(ChevronDownIcon, { size: 16, ...props }) // blink: Select/index.tsx
+
+/**
+ * The sort indicator, bound to the kit's 14px. Same reason as SelectChevron above: MUI hands
+ * `IconComponent` only a className, and an inline arrow would remount the icon every render.
+ *
+ * ArrowDown rather than ArrowUp because MUI rotates this element 180 degrees for the ascending
+ * direction - so one glyph covers both of the kit's sorted states.
+ */
+const SortArrow = (props: { className?: string }) =>
+  createElement(ArrowDownIcon, { size: 14, ...props }) // blink: Table/index.tsx SortIndicator
 
 export const blinkTheme = createTheme({
   cssVariables: true,
@@ -1768,6 +1779,21 @@ export const blinkTheme = createTheme({
         root: ({ theme }) => ({
           minHeight: 40, // blink: .tabs `min-height: 40px` (MUI's own is 48)
           borderBottom: `1px solid ${theme.vars.palette.borderStrong}`, // blink: .tabs `border-bottom`
+          // DERIVED - the scroll arrows. The kit's tabs never scroll, so these are new, and they are
+          // styled from HERE rather than through `MuiTabScrollButton` because MUI v9 ships that
+          // component with a `name: "MuiTabScrollButton"` at runtime but omits the key from its
+          // `Components` type - a theme block would not typecheck. They are a child of this root, so
+          // a descendant selector reaches them without a cast.
+          //
+          // An in-rail affordance rather than a standalone control, which is the call
+          // MuiInputAdornment documents: quiet ink, no box of its own, sized to the rail.
+          "& .MuiTabScrollButton-root": {
+            width: 32, // derived: --control-h-sm, narrower than the 40px rail so it reads as inset
+            color: theme.vars.palette.textMuted, // derived: the in-field affordance ink
+            opacity: 1, // MUI fades the whole button to 0.8; the kit states its ink outright
+            "&.Mui-disabled": { opacity: 0.4 }, // derived: the disabled treatment is opacity, as on Button
+            "&:hover": { color: theme.vars.palette.text.primary },
+          },
         }),
         indicator: ({ theme }) => ({
           // The background is already primary.main by MUI's default and the height already 2px;
@@ -3481,6 +3507,299 @@ export const blinkTheme = createTheme({
         root: { "& .MuiSnackbarContent-root": { minWidth: 0 } }, // the kit sizes to content
       },
     },
+    // =====================================================================================
+    // DERIVED - the components blink has no twin for
+    // =====================================================================================
+    //
+    // blink covers ALL of MUI, and the design system has no equivalent for any of the blocks below.
+    // Nothing here is extracted; every value is AUTHORED from one of two places, and the comment
+    // says which: a token from the sheet, or a decision a block ABOVE already makes. The recurring
+    // ones, so they are not re-derived each time:
+    //
+    //   controls      24 / 32 / 36 / 40           --control-h-xs..lg
+    //   radius        6 below 32px, 8 at or above (the Button's own ladder)
+    //   type          13 / 14 / 15 / 18           --text-xs / sm / md / lg
+    //   quiet ink     textMuted, textSubtle when further back
+    //   rules         1px borderStrong between rows, 1px border for a panel seam (see MuiCardActions)
+    //   hover         surfaceMuted for a neutral row, the accent at 15% for a tinted one
+    //   focus ring    3px of the accent at 50%
+    //
+    // See AGENTS.md, "Deriving a component blink has no twin for". These are considered choices,
+    // not ground truth: they carry no pixel claim, and their gallery entries are ref-less.
+
+    // DERIVED - AccordionActions. No blink twin; built from the Accordion's own details padding.
+    // The kit's Accordion ends at `.details`, so an action row continues that box rather than
+    // opening a new one: same 16px gutters, no top border (the details are already inside the
+    // panel), and the 8px button gap the Dialog's footer uses.
+    MuiAccordionActions: {
+      styleOverrides: {
+        root: {
+          padding: "0 16px 16px", // derived: MuiAccordionDetails' own padding, continued
+          gap: 8, // derived: --space-2, the button gap MuiDialogActions uses
+        },
+      },
+    },
+
+    // DERIVED - CardActionArea. No blink twin; built from the Card and the kit's hover language.
+    // A whole card that is clickable is still a card, so it takes the Card's radius and the neutral
+    // row hover the Menu and List rows use. MUI's own focus highlight is a translucent black
+    // overlay element, which is Material's language rather than blink's - it is taken off and
+    // replaced with the ring every other focusable surface here uses.
+    MuiCardActionArea: {
+      defaultProps: { disableRipple: true }, // derived: the global ButtonBase default, restated
+      styleOverrides: {
+        root: ({ theme }) => ({
+          borderRadius: 8, // derived: MuiCard's --radius-3
+          "&:hover": { backgroundColor: theme.vars.palette.surfaceMuted }, // derived: the neutral row hover
+          "&.Mui-focusVisible": {
+            // derived: --focus-ring, the same 3px/50% every focusable surface here uses
+            boxShadow: `color-mix(in srgb, ${theme.vars.palette.primary.main} 50%, transparent) 0px 0px 0px 3px`,
+          },
+          // MUI paints hover and focus through a full-bleed overlay span. Left in, it would sit on
+          // top of the background above AND square off the card's corners.
+          "& .MuiCardActionArea-focusHighlight": { display: "none" },
+        }),
+      },
+    },
+
+    // DERIVED - CardMedia. No blink twin; built from the Card's surface.
+    // Media is the one child that reaches the card's edge, so the only decision is what happens at
+    // the corners: it inherits nothing from the Card (a child cannot), so the radius is restated
+    // and the media clipped to it. The muted surface stands in while an image loads, which is what
+    // the Skeleton and the Avatar both use for the same job.
+    MuiCardMedia: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          backgroundColor: theme.vars.palette.surfaceMuted, // derived: MuiAvatar's placeholder fill
+          display: "block",
+          // derived: MuiCard's --radius-3, on the top corners only - media sits at the head of the
+          // card, above the content's own padding box.
+          borderTopLeftRadius: 8,
+          borderTopRightRadius: 8,
+        }),
+      },
+    },
+
+    // DERIVED - ListItemAvatar. No blink twin; built from MuiAvatar's 32px default.
+    // MUI reserves 56px for a 40px Material avatar. blink's avatar is 32px, so the gutter is the
+    // avatar plus the kit's own 12px row gap - otherwise every list row with an avatar carries 16px
+    // of empty space its text should be using.
+    MuiListItemAvatar: {
+      styleOverrides: {
+        root: {
+          minWidth: 44, // derived: MuiAvatar's 32px + --space-3
+          // MUI nudges the avatar down 8px to sit against a two-line row's first line. blink's rows
+          // are single-line by default, so it centres instead.
+          marginTop: 0,
+        },
+      },
+    },
+
+    // DERIVED - ListSubheader. No blink twin; built from the List family's own inset.
+    // A subheader is the quietest thing in a list: the kit's smallest step and muted ink. The
+    // horizontal inset is the interesting value and it is 8px, NOT the 12px a first pass took from
+    // the Menu's item - this is the List family, where the only inset blink states anywhere is
+    // MuiListItemButton's 8px (MuiListItem is deliberately flush, with a comment saying the BUTTON
+    // owns the inset). Measured with 12px: the heading's text sat 12px right of the avatar column
+    // below it, which reads as a mistake rather than an indent.
+    // It also has to opt out of MUI's 48px min-height, which is Material's touch target rather than
+    // a type decision.
+    MuiListSubheader: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          background: "transparent", // MUI paints `background: paper` so it can stick; blink's lists do not
+          color: theme.vars.palette.textMuted, // derived: the quiet ink
+          fontSize: 13, // derived: --text-xs
+          fontWeight: 600, // derived: the weight every label in this file carries
+          lineHeight: 1.5, // derived: the reset's body line-height, as MuiPaginationItem restates it
+          padding: 8, // derived: --space-2, MuiListItemButton's own inset - see above
+          minHeight: 0,
+        }),
+      },
+    },
+
+    // DERIVED - MobileStepper. No blink twin; built from the Stepper family plus the Switch's track.
+    // The dots are the interesting part: there is no dot anywhere in the design system, so they are
+    // sized off the Switch's knob relationship (a small round mark on a muted rail) and coloured
+    // with the same active/inactive pair the StepIcon uses - primary when current, borderStrong when
+    // not. The bar variant reuses the LinearProgress block's rail rather than inventing a second.
+    MuiMobileStepper: {
+      styleOverrides: {
+        root: {
+          background: "transparent", // MUI paints `background: paper`; blink's steppers sit on the page
+          padding: 8, // derived: --space-2
+          gap: 8,
+        },
+        dots: { gap: 8 }, // derived: --space-2
+        dot: ({ theme }) => ({
+          width: 8,
+          height: 8,
+          backgroundColor: theme.vars.palette.borderStrong, // derived: MuiStepConnector's line colour
+          margin: 0, // MUI spaces dots with a 2px margin; the gap above owns the spacing
+        }),
+        dotActive: ({ theme }) => ({ backgroundColor: theme.vars.palette.primary.main }), // derived: MuiStepIcon's active
+        progress: { width: "100%" },
+      },
+    },
+
+    // DERIVED - ScopedCssBaseline. No blink twin, and it needs one for a real reason: it is how a
+    // consumer applies blink to PART of a page, and without a block it hands that subtree Material's
+    // Roboto stack and background instead of the kit's. The values are the ones MuiCssBaseline
+    // already states globally - this is the same baseline, scoped.
+    MuiScopedCssBaseline: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          backgroundColor: theme.vars.palette.background.default, // derived: MuiCssBaseline's own
+          color: theme.vars.palette.text.primary,
+          fontFamily: theme.typography.fontFamily,
+          fontSize: 15, // derived: --text-md, the body step
+          lineHeight: 1.5, // derived: the kit's reset `body { line-height: 1.5 }`
+        }),
+      },
+    },
+
+    // DERIVED - SpeedDialIcon. No blink twin; built from the Fab it sits inside.
+    // Only the CROSSFADE is styled, because that is all this component is: MUI rotates the icon 45°
+    // and scales the open icon in. The rotation is Material's plus-becomes-x idiom and the kit draws
+    // an explicit XIcon instead, so the transform goes and a plain opacity swap stays.
+    MuiSpeedDialIcon: {
+      styleOverrides: {
+        icon: { transition: "opacity 0.2s" }, // derived: the 0.2s every control in this file transitions at
+        iconOpen: { transform: "none" }, // no 45° rotation - blink swaps the glyph rather than spinning it
+        openIcon: { transition: "opacity 0.2s" },
+      },
+    },
+
+    // DERIVED - StepButton. No blink twin; built from the StepLabel it wraps.
+    // The label already carries every colour decision, so this only has to stop being a Material
+    // button: no ripple, the kit's radius, and enough padding that the focus ring clears the text.
+    MuiStepButton: {
+      defaultProps: { disableRipple: true },
+      styleOverrides: {
+        root: ({ theme }) => ({
+          borderRadius: 6, // derived: --radius-2, the ladder's step below 32px
+          padding: "4px 8px", // derived: --space-1 / --space-2
+          margin: "-4px -8px", // ...taken back out, so adding the hit area does not move the label
+          "&:hover": { backgroundColor: theme.vars.palette.surfaceMuted }, // derived: the neutral row hover
+          "&.Mui-focusVisible": {
+            backgroundColor: "transparent",
+            boxShadow: `color-mix(in srgb, ${theme.vars.palette.primary.main} 50%, transparent) 0px 0px 0px 3px`, // derived: --focus-ring
+          },
+        }),
+      },
+    },
+
+    // DERIVED - StepContent. No blink twin; built from the vertical StepConnector.
+    // A vertical stepper's content hangs off the same rule the connector draws, so it takes that
+    // border and lines up with it. The 12px inset is the connector's own indent - see the note on
+    // MuiStepConnector about the vertical rule being an indent rather than a gap.
+    MuiStepContent: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          borderLeft: `1px solid ${theme.vars.palette.borderStrong}`, // derived: MuiStepConnector's line
+          marginLeft: 12, // derived: --space-3, the connector's own indent
+          paddingLeft: 20, // derived: --space-5, clearing the 12px icon column
+          paddingRight: 8,
+          color: theme.vars.palette.textMuted, // derived: MuiAccordionDetails' body ink
+          fontSize: 15, // derived: --text-md
+        }),
+      },
+    },
+
+    // DERIVED - SvgIcon. No blink twin, and the block is deliberately SMALL for that reason.
+    // blink's icon language is lucide, whose icons carry their own `size` prop and render at an
+    // explicit width - so every icon this theme places is already sized and none of them reads this.
+    // What DOES read it is a consumer's own `<SvgIcon>` and MUI's internal Material glyphs, and for
+    // those the only blink decision available is the ladder its controls use: 16px is the size every
+    // chevron, clear and adornment in this file is drawn at.
+    //
+    // SCOPE: the `fontSize` ladder only. Colour is left to `currentColor` on purpose - an icon takes
+    // the ink of whatever control holds it, which is what every block above already relies on.
+    MuiSvgIcon: {
+      styleOverrides: {
+        fontSizeSmall: { fontSize: 14 }, // derived: the Combobox clear's own 14px
+        fontSizeMedium: { fontSize: 16 }, // derived: the 16px every control icon here is drawn at
+        fontSizeLarge: { fontSize: 20 }, // derived: the Fab's icon step
+      },
+    },
+
+    // DERIVED - TablePaginationActions. No blink twin; built from the pagination arrows next door.
+    // MUI renders these as plain IconButtons, which would take the IconButton block's 36px ghost
+    // control - a standalone affordance inside a 48px toolbar. The same call the Autocomplete's
+    // indicators document applies: inside another control, the kit's affordances are the xs step.
+    MuiTablePaginationActions: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          "& .MuiIconButton-root": {
+            width: 24, // derived: --control-h-xs, the in-control step
+            height: 24,
+            borderRadius: 6, // derived: --radius-2, the ladder's step below 32px
+            color: theme.vars.palette.textMuted, // derived: the quiet affordance ink
+            "&:hover": { background: theme.vars.palette.surfaceMuted, color: theme.vars.palette.text.primary },
+            "&.Mui-disabled": { color: theme.vars.palette.textSubtle },
+          },
+          // derived: --space-1, matching the gap MuiPagination puts between its own items
+          "& .MuiIconButton-root + .MuiIconButton-root": { marginLeft: 4 },
+        }),
+      },
+    },
+
+    // ---- TableSortLabel ----
+    //
+    // Ground truth: reference/primitives/Table/Table.module.css `.sortButton`/`.sortIcon`/
+    // `.sortIconIdle`, plus the `SortIndicator` in Table/index.tsx. NOT derived - a first pass
+    // authored this from the header cell's type and got four values wrong (radius 6 against the
+    // kit's 4, an invented hover colour, an invented active colour, and MUI's own icon size).
+    //
+    // The kit's sort control is a bare <button> inside the header cell: it takes the cell's ink and
+    // type outright (`color: inherit`, `font: inherit`) and adds only a weight, a gap and a radius.
+    //
+    // SCOPE: the IDLE indicator. This is a many-to-few mapping of the kind AGENTS.md describes. The
+    // kit draws three different glyphs - ArrowUp when ascending, ArrowDown when descending, and
+    // ChevronsUpDown at 40% when a column is sortable but unsorted - while MUI ships ONE icon and
+    // rotates it, hiding it entirely until hover. The two sorted states map exactly (MUI's
+    // `directionAsc` is a 180 degree rotation, which turns the kit's own ArrowDown into its
+    // ArrowUp), so those are reproduced. The unsorted state cannot be: no theme can make MUI swap
+    // in a different GLYPH. It is left at MUI's hidden-until-hover behaviour rather than faked with
+    // a 40% arrow, which would be a third thing that is neither system.
+    MuiTableSortLabel: {
+      defaultProps: {
+        // blink: SortIndicator `<ArrowDownIcon size={14} />` - MUI rotates this for ascending.
+        IconComponent: SortArrow,
+      },
+      styleOverrides: {
+        root: ({ theme }) => ({
+          gap: 8, // blink: .sortButton `gap: var(--space-2)`
+          fontWeight: 600, // blink: .sortButton `font-weight: 600`
+          color: "inherit", // blink: .sortButton `color: inherit` - the header cell owns the ink
+          borderRadius: 4, // blink: .sortButton `border-radius: var(--radius-1)`
+          // MUI sets `vertical-align: middle` on this root; the kit's `.sortButton` states no
+          // vertical-align at all, so a <button> keeps the initial `baseline`. On an inline-flex box
+          // the difference is not cosmetic - `middle` aligns the box's centre to the baseline plus
+          // half an x-height, which grew the header cell from 47.0px to 48.1px and moved every
+          // pixel in it. 5033 differing pixels at Δ8, which is what a whole-cell shift looks like.
+          verticalAlign: "baseline",
+          // MUI darkens the label on hover and again when active. The kit states `color: inherit`
+          // and nothing else, so both have to be taken back or a sorted column reads darker than
+          // its neighbours.
+          "&:hover": { color: "inherit" },
+          "&.Mui-active": {
+            color: "inherit",
+            "& .MuiTableSortLabel-icon": { color: "currentColor" }, // blink: .sortIcon inherits
+          },
+          "&.Mui-focusVisible": {
+            outline: "none", // blink: .sortButton:focus-visible `outline: none`
+            boxShadow: `color-mix(in srgb, ${theme.vars.palette.primary.main} 50%, transparent) 0px 0px 0px 3px`, // blink: --focus-ring
+          },
+        }),
+        icon: {
+          flex: "none", // blink: .sortIcon `flex: none`
+          // MUI spaces its icon with an 4px margin either side; the kit's gap above owns that.
+          margin: 0,
+        },
+      },
+    },
+
     MuiSpeedDial: {
       styleOverrides: {
         // The trigger is a Fab and is themed there; this is only the stack's own spacing.

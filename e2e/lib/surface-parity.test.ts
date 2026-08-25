@@ -22,39 +22,31 @@ import { shadcnTheme } from "../../packages/xui/src/themes/shadcn.js"
  *    MuiBackdrop - MUI's default already IS the kit's scrim, and a root override breaks the
  *    invisible backdrops Menu/Select/Popover rely on).
  */
+/**
+ * Open gaps against blink, kept here as a note because the assertion below no longer sees them.
+ *
+ * `shared` is shadcn + kumo, so a component only blink styles is out of scope for this test by
+ * design - blink covers ALL of MUI and holding the other two to that would be a ratchet pointing
+ * the wrong way. Most of what that removed was mapping detail ("blink's Select twin is the native
+ * variant"), which is no longer information. One is not:
+ *
+ *   MuiPaper - a bare <Paper> under shadcn or kumo still wears Material's elevation chrome. blink
+ *   closed this from its own flat surface; the other two each need their own extraction (shadcn's
+ *   Card carries a border and shadow-sm and its overlay radii differ, so blink's value does not
+ *   transfer). This is a real quality gap in both themes, not a difference of surface.
+ */
 const DELIBERATE_GAPS: Record<"shadcn" | "kumo" | "blink", Record<string, string>> = {
   shadcn: {
-    MuiAlertTitle:
-      "same surface, different key: the title's font-medium lives in the MuiAlert block's own selectors",
-    MuiCssBaseline:
-      "blink-only surface: the Pulse Kit styles every bare <a> globally; shadcn's link treatment is MuiLink's alone",
-    MuiDialogActions:
-      "same surface, different key: dialog spacing is built on the panel plus MuiDialogTitle/MuiDialogContentText",
-    MuiDialogContent:
-      "same surface, different key: see MuiDialogActions",
     MuiFormControl:
       "same surface, different key: the field family is themed through MuiInputLabel/MuiFormHelperText, the components shadcn's own field markup maps to",
     MuiFormLabel:
       "same surface, different key: see MuiFormControl",
     MuiListItemButton:
       "same surface, different key: list interactivity is themed via MuiListItem/MuiMenuItem; kumo's list rows are ListItemButtons",
-    MuiNativeSelect:
-      "blink-only surface: blink's Select twin is MUI's native variant; shadcn's select is the listbox Select",
-    MuiPaper:
-      "open gap: a bare Paper under shadcn still wears Material's elevation chrome. blink closed this from its kit's one flat surface; shadcn's needs its own extraction (its Card carries a border and shadow-sm, and its overlay radii differ, so blink's value-equal rounded tie does not transfer). Delete this entry when shadcn.ts gains its MuiPaper block",
     MuiSnackbar:
       "same surface, different key: shadcn's snackbar twin is sonner, themed through MuiSnackbarContent",
   },
   kumo: {
-    MuiAlertTitle: "kumo's Banner is single-line; the reference has no title element to extract",
-    MuiCssBaseline:
-      "blink-only surface: kumo styles links through MuiLink; the kit has no global bare-anchor rule to carry",
-    MuiDialogActions:
-      "same surface, different key: kumo's Dialog is themed through the panel plus MuiDialogContentText",
-    MuiDialogContent: "same surface, different key: see MuiDialogActions",
-    MuiNativeSelect: "blink-only surface: kumo's Select replicates the listbox variant, not the native one",
-    MuiPaper:
-      "open gap: a bare Paper under kumo still wears Material's elevation chrome. blink closed this from its kit's one flat surface; kumo's needs its own extraction (its plain surface is the bordered kumo-base LayerCard, a different construction). Delete this entry when kumo.ts gains its MuiPaper block",
   },
   blink: {
     MuiBackdrop:
@@ -72,14 +64,29 @@ describe("theme surface parity", () => {
   const themes = { shadcn: shadcnTheme, kumo: kumoTheme, blink: blinkTheme } as const
   const keysOf = (theme: (typeof themes)[keyof typeof themes]) =>
     new Set(Object.keys(theme.components ?? {}))
-  const union = new Set(Object.values(themes).flatMap((t) => [...keysOf(t)]))
+
+  /**
+   * The shared surface is what shadcn and kumo cover, NOT the union of all three.
+   *
+   * blink is deliberately excluded from it, and that is the whole asymmetry: shadcn and kumo
+   * replicate systems somebody else owns, so their surface stops where the original's does and
+   * they are held to each other. blink's design system is ours, so it covers ALL of MUI and is a
+   * strict SUPERSET of both - measured against MUI itself in `blink-coverage.test.ts`.
+   *
+   * Folding blink into the union would turn every component it authors for full coverage into a
+   * fresh "gap" the other two have to excuse, which is a ratchet pointing the wrong way: it would
+   * either block blink from covering MUI or fill the allowlist with entries that say nothing.
+   * blink is still checked in the direction that MATTERS here - it must not fall behind the shared
+   * surface - because the loop below still runs over it against that same shared set.
+   */
+  const shared = new Set([...keysOf(shadcnTheme), ...keysOf(kumoTheme)])
 
   for (const [name, theme] of Object.entries(themes) as Array<
     [keyof typeof themes, (typeof themes)[keyof typeof themes]]
   >) {
-    it(`${name} covers every Mui* key the other themes cover, minus its recorded gaps`, () => {
+    it(`${name} covers every Mui* key the shared surface covers, minus its recorded gaps`, () => {
       const keys = keysOf(theme)
-      const missing = [...union].filter((k) => !keys.has(k)).sort()
+      const missing = [...shared].filter((k) => !keys.has(k)).sort()
       const excused = Object.keys(DELIBERATE_GAPS[name]).sort()
       // One assertion, both directions: `missing` beyond the allowlist means a new component was
       // themed elsewhere and this theme has not caught up (or has not recorded why it will not);

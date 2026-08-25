@@ -5,6 +5,7 @@ import MuiTableContainer from "@mui/material/TableContainer"
 import MuiTableFooter from "@mui/material/TableFooter"
 import MuiTableHead from "@mui/material/TableHead"
 import MuiTableRow from "@mui/material/TableRow"
+import MuiTableSortLabel from "@mui/material/TableSortLabel"
 import {
   Table,
   TableBody,
@@ -222,6 +223,51 @@ export const tableSection: Section = {
                   </MuiTableRow>
                 ))}
               </MuiTableBody>
+            </MuiTable>
+          </MuiTableContainer>
+        </Box>
+      ),
+    },
+    {
+      // The sortable header cell. A real pair rather than a derived entry, because the kit HAS this
+      // control (`.sortButton` + `SortIndicator`) - an earlier pass authored it from the header
+      // cell's type and got four values wrong, including a radius of 6 where the kit says 4.
+      //
+      // ACTIVE only, and the SCOPE note on MuiTableSortLabel says why: the kit swaps between three
+      // glyphs (ArrowUp / ArrowDown / a 40% ChevronsUpDown when unsorted) while MUI ships one and
+      // rotates it. The two sorted states map exactly - MUI's `directionAsc` is a 180 degree
+      // rotation, which turns the kit's ArrowDown into its ArrowUp - so this pair judges those. The
+      // unsorted state cannot be paired at all; no theme makes MUI swap in a different glyph.
+      id: "table-sort-active",
+      states: ["default", "focus"],
+      ref: (
+        <Box>
+          <TableContainer>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableHeaderCell data-target sortable sortDirection="asc">
+                    Cluster
+                  </TableHeaderCell>
+                </TableRow>
+              </TableHead>
+            </Table>
+          </TableContainer>
+        </Box>
+      ),
+      mui: (
+        <Box>
+          <MuiTableContainer>
+            <MuiTable>
+              <MuiTableHead>
+                <MuiTableRow>
+                  <MuiTableCell>
+                    <MuiTableSortLabel data-target active direction="asc">
+                      Cluster
+                    </MuiTableSortLabel>
+                  </MuiTableCell>
+                </MuiTableRow>
+              </MuiTableHead>
             </MuiTable>
           </MuiTableContainer>
         </Box>

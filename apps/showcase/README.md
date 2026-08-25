@@ -13,7 +13,7 @@ maps the terrain.
 | `index.html` | The SHOWCASE: one row per component, four columns - stock MUI, shadcn-themed, kumo-themed, blink-themed. Deployed to GitHub Pages. |
 | `shadcn.html` / `pure.html` | shadcn's parity gallery (real shadcn/ui beside themed MUI), and the same MUI cells with no Tailwind loaded. |
 | `kumo.html` / `kumo-pure.html` | The same pair of pages for kumo. |
-| `blink.html` / `blink-pure.html` | The same pair for blink (the Pulse Kit). |
+| `blink.html` / `blink-pure.html` | The same pair for blink. Most of its entries are ref-less: blink covers all of MUI, so most components have no twin to diff against. |
 | `export.html` | The EXPORT page: pick a theme, turn a few preset knobs (shadcn only - primary colour, font, radius), choose TypeScript or JavaScript and whether comments ship, and download the one-file theme. See `src/export/customize.ts` for the contract with the theme files. |
 
 The separation is the point, not an accident of growth: two design systems' Tailwind themes, base
@@ -36,7 +36,7 @@ pixel diff cannot see (the helper's banner carries the measurements).
 - `src/showcase/` - the four-column showcase page and its `columnOverrides`.
 - `src/components/ui/` - the real shadcn/ui source, installed by the shadcn CLI. **This is
   shadcn's ground truth** (see AGENTS.md), so files here are never edited to make a pair pass.
-- `src/themes/blink/reference/` - the vendored Pulse Kit. Read its own README before touching
+- `src/themes/blink/reference/` - a vendored snapshot, kept only as a regression baseline. Read its own README before touching
   anything in it.
 
 ### Vendored shadcn components without a pair

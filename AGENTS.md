@@ -7,12 +7,28 @@ Three themes ship today:
 
 - **shadcn** - shadcn/ui's default look (new-york style, neutral base, Geist, light and dark). Complete.
 - **kumo** - Kumo, Cloudflare's design system (https://kumo-ui.com), Inter, light and dark. Complete, including the portalled tier (Tooltip, DropdownMenu, Select, Popover, Dialog, Toast).
-- **blink** - the Pulse Kit, the design system of Pulse / NeverBlink, Source Sans Pro. **Light only.** Complete across the same surface, portalled tier included. The kit ships a dark scheme and `blink.ts`'s palette is a factory over a token set precisely so adding it is a one-line change; until it is done there is deliberately no `blink-dark` project, so a future one cannot silently run in light and pass everything.
+- **blink** - Pulse / NeverBlink's own design system, Source Sans Pro. **Light only.** Portalled tier included. There is deliberately no `blink-dark` project until a dark scheme is written, so a future one cannot silently run in light and pass everything; `blink.ts`'s palette is a factory over a token set precisely so adding it is a one-line change.
 
-All three cover the same MUI surface - at the level of what a user sees, not the letter of the key list.
+**blink is not like the other two, and the difference decides how you work on it.**
+shadcn and kumo replicate systems somebody else owns, so their job is finished when the copy is exact and their surface stops where the original's does.
+blink's design system is OURS.
+That makes blink the *definition* of the design rather than a copy of it, and it carries two consequences:
+
+- **blink covers ALL of MUI.** Not "the same surface the other two do" - every component MUI ships that a user can see. Where the design system has no equivalent, the style is DERIVED: authored here from blink's own tokens and from the decisions its existing blocks already make, so a consumer who drops the theme in never meets a stock-Material control.
+  `e2e/lib/blink-coverage.test.ts` holds that claim - every visible MUI component is either styled or carries a recorded reason not to be.
+- **The design can change here.** For shadcn and kumo a difference from the original is a bug by definition. For blink, a considered improvement is a legitimate change to the design system, made here and ported back.
+
+`apps/showcase/src/themes/blink/reference/` is a vendored snapshot of the kit as it stood when this theme was first written, and its ONLY remaining job is a regression baseline: the ~100 pairs built against it must keep diffing at zero, so a refactor cannot quietly move a component that was already right.
+It is not an authority.
+It does not bound blink's surface, it is not the arbiter of a design question, and a new component does not need a twin in it - most of what blink covers now has none.
+Read `reference/README.md` before touching it.
+
+shadcn and kumo cover the same MUI surface as each other - at the level of what a user sees, not the letter of the key list.
 A theme may reach a surface through a different `Mui*` key (shadcn's snackbar twin is sonner, themed through `MuiSnackbarContent` where kumo themes a real `MuiSnackbar`), and twice the correct block is provably NO block (blink's `MuiBackdrop` and `MuiTableHead` - see the mistake section below).
-`e2e/lib/surface-parity.test.ts` holds the claim: the three key sets must match up to an allowlist whose every entry records its reason, in both directions, so closing a gap fails until its stale entry is deleted.
-Each theme also reaches part of the surface through the derived tier described below, because every one of these systems ships fewer components than MUI does; that tier is marked in the theme file and is held to a different standard.
+`e2e/lib/surface-parity.test.ts` holds the claim: their key sets must match up to an allowlist whose every entry records its reason, in both directions, so closing a gap fails until its stale entry is deleted.
+blink is measured against MUI itself instead, by `blink-coverage.test.ts`, for the reason above - so it is expected to be a SUPERSET of the other two, and the allowlist is one-directional where it is.
+Every theme also reaches part of the surface through the derived tier described below, because every one of these systems ships fewer components than MUI does; that tier is marked in the theme file and is held to a different standard.
+For blink that tier is most of the file rather than a footnote.
 
 Everything below applies to all three. Where they differ, the theme name is called out.
 
@@ -42,9 +58,9 @@ Everything below applies to all three. Where they differ, the theme name is call
 - Ground truth per theme:
   - shadcn - `apps/showcase/src/components/ui/<name>.tsx`, the real source installed by the shadcn CLI.
   - kumo - the installed `@cloudflare/kumo` package, pinned to an exact version. The real component source is in `node_modules/@cloudflare/kumo/dist/chunks/<name>-<hash>.js` (the files under `dist/components/` are 200-byte re-exports), and the tokens are in `dist/styles/`.
-  - blink - `apps/showcase/src/themes/blink/reference/`, the Pulse Kit vendored from the app's own source. Read its README first; that source is private, so committed files describe it by role and the real paths live in a gitignored `PROVENANCE.private.md` beside it.
-    It is the one ground truth in this repo that is a COPY rather than an installed package, which makes it the one you can edit - and the README bounds that: a "Local design changes pending upstream" table lists every file that no longer matches what was vendored, each one a deliberate change to the KIT that the theme carries identically, so parity stays at zero and the diff is what gets ported back.
-    Changing a value there to make a pair pass is the same offence as raising a threshold. Changing one because the DESIGN should change is the only reason, and it goes in that table with the theme edit in the same commit.
+  - blink - there is no external ground truth, because the design system is ours. For the components the vendored snapshot in `apps/showcase/src/themes/blink/reference/` covers, that snapshot is the regression baseline and its values still win - those pairs diff at zero and must keep doing so. For everything else, ground truth is `blink.ts` itself plus the token sheet, and a new block is DERIVED from them (see "Deriving a component blink has no twin for").
+    That source is private, so committed files describe it by role and the real paths live in a gitignored `PROVENANCE.private.md` beside it.
+    Changing a snapshot value to make a pair pass is the same offence as raising a threshold. Changing one because the DESIGN should change is legitimate here in a way it is not for the other two - it goes in the README's "Local design changes pending upstream" table with the theme edit in the same commit, so the diff is what gets ported back upstream.
 - `export.html` is the EXPORT page (`src/export/`): a shadcn-create-style customizer that downloads a theme as the same single file with a few PRESET knobs applied - primary colour, font and radius for shadcn; TypeScript/JavaScript and keep/strip-comments for every theme. kumo and blink take no design knobs on purpose: they replicate fixed, branded systems, so a recoloured copy would be neither the brand nor verified.
   Two contracts hold it together, and both are enforced rather than remembered. Substitution is ANCHORED on exact shipped lines in the theme file (`src/export/customize.ts` - a missed anchor throws), and `customize.test.ts` runs every anchor against the real sources on each `pnpm test:unit`, so a theme edit that reshapes an anchored line fails the suite at the moment of the edit. Substituted lines trade their `// shadcn:` provenance for an `// export:` note naming the shipped value - a customized file must never claim an extraction it does not have. The preview EVALUATES the exact text the download contains (sucrase type-strip, two-line require shim in `src/export/evaluate.ts`), so the preview cannot drift from the artifact; the same test evaluates all three shipped themes, which is also what keeps the shim's icon list honest.
 - `e2e/` is the parity harness: Playwright screenshots each ref/MUI cell pair and pixelmatch diffs them.
@@ -202,6 +218,35 @@ A sharper version of the same thing: **sometimes the obvious value is not merely
 - `MuiTableHead` - a head reads white in the kit only because whatever is behind the table is; its container paints no background at all. `--color-surface` there does not match the kit, it overpaints the page: 57948 pixels at Δ18, exactly #fff against the #edeff0 canvas.
 
 Both look like harmless restatements of a value you can see on screen. Neither is.
+
+## Deriving a component blink has no twin for
+
+This is most of blink's work now, and it is a different job from the extraction the rest of this file describes.
+There is nothing to copy: the design system has no such component, and blink is the design system, so the style is AUTHORED.
+Authored does not mean invented - the point is that the result must look like it was always part of blink, and a reader must be able to check that.
+
+**Derive from decisions blink has already made, not from taste.**
+Every value comes from one of three places, and the comment says which:
+
+1. **A token.** `--control-h-md`, `--radius-3`, `--text-sm`, `--color-border` - the sheet in `reference/tokens.css` is the palette blink is built from and stays the first place to look.
+2. **A neighbouring block's decision.** The interesting one, and where most values come from. blink's controls are 24/32/36/40 tall; its radius is 6 below 32px and 8 at or above; a quiet in-field affordance is the xs step at `--radius-2` in `textMuted`; a focus ring is 3px of the accent at 50%; a hover on a tinted surface is the same ink at 15%. These are not tokens, they are patterns the file already commits to, and a new component inherits them. Cite the block: `// derived: the Input's in-field affordance, see MuiInputAdornment`.
+3. **MUI's own geometry, kept deliberately.** Sometimes the right answer is to leave a value alone, and that has to be written as a choice rather than an omission - the same `SCOPE:` rule as everywhere else.
+
+**Say it is derived, at the block.**
+Everything below the derived-tier banner already carries that meaning, but a reader skimming one block should not have to find the banner to know which standard applies.
+A derived block's banner reads `DERIVED - <component>. No blink twin; built from <what>.` and then the reasoning.
+
+**A derived component still gets a gallery entry, and it is still ref-less.**
+There is no reference component, so there is no pixel claim - `PairRow` enforces that on its own by publishing `data-states=""` for any pair without a `ref`.
+What the entry buys is real anyway, and it is why "author it but skip the gallery" is not an option:
+
+- preflight compares the MUI cell with and without the kit's stylesheet, which needs no reference, and that is the check that catches a derived block leaning on someone else's reset. It has caught this three times now, most recently on `MuiPaginationItem`, where an icon that overflowed its box measured 16px with Tailwind and 18px without.
+- the behaviour sweeps - `painted geometry`, `text metrics`, `inline-level buttons`, `no ripple` - all run over it.
+- the showcase puts it on screen beside the same component under the other themes, which is the only way anyone SEES that a control still looks like blink.
+
+**The bar is coherence, and the way to check it is the showcase.**
+A derived component is right when it sits in a row with blink's real ones and nothing about it stands out: same heights, same corner radii, same ink, same focus ring, same hover language.
+Look at it before you call it done - `pnpm dev` and read the row.
 
 ## When MUI's props do not line up with shadcn's variants
 
