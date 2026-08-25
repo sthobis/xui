@@ -29,6 +29,16 @@ export const switchSection: Section = {
       mui: <MuiSwitch data-target defaultChecked />,
     },
     {
+      // The kit ships ONE switch, so this pair asserts that MUI's `size="small"` still comes out as
+      // that switch rather than as Material's smaller one. It is not a redundant copy of switch-on:
+      // MUI's own sizeSmall variant reaches the thumb and switchBase through descendant selectors,
+      // which outrank a slot override, so the knob shrank to 16px inside a correctly-sized track and
+      // nothing in the gallery looked. 956 differing pixels at Δ176 before the theme's variant.
+      id: "switch-small",
+      ref: <Switch data-target defaultChecked />,
+      mui: <MuiSwitch data-target size="small" defaultChecked />,
+    },
+    {
       id: "switch-disabled",
       ref: <Switch data-target disabled />,
       mui: <MuiSwitch data-target disabled />,

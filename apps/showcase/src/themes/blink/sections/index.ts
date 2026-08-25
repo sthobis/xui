@@ -12,7 +12,7 @@ import { linkSection } from "./link"
 import { derivedSection } from "./derived"
 import { dialogSection, menuSection, popoverSection, tooltipSection } from "./overlay"
 import { selectSection } from "./select"
-import { iconButtonSection, spinnerSection } from "./spinner"
+import { iconButtonSection, progressRingSection, spinnerSection } from "./spinner"
 import { switchSection } from "./switch"
 import { tableSection } from "./table"
 import { toggleGroupSection } from "./toggle-group"
@@ -33,6 +33,7 @@ export const sections: Section[] = [
   menuSection,
   popoverSection,
   selectSection,
+  progressRingSection,
   spinnerSection,
   switchSection,
   tableSection,

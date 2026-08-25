@@ -1011,6 +1011,9 @@ test.describe("painted geometry", () => {
       // constructions dim through different layer trees. The measurements are there.
       "switch-off",
       "switch-on",
+      // Same construction at MUI's other size step, where the theme has to hand the thumb its kit
+      // dimensions back because MUI's own sizeSmall variant outranks a slot override.
+      "switch-small",
       "switch-disabled",
       "switch-disabled-on",
 

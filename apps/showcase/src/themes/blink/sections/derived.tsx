@@ -167,6 +167,19 @@ export const derivedSection: Section = {
       mui: <MuiPagination count={5} page={2} />,
     },
     {
+      // The two non-default steps, and they are here because their absence hid a real bug: the
+      // item's `minWidth`/`height`/`fontSize` sat unscoped on the root, so both of these rendered
+      // pixel-identical 32px items and MUI's own 26/32/40 ladder was dead. Derived, so no ref -
+      // but preflight covers them, and a size that renders at the wrong step is visible in the
+      // showcase whether or not a pixel diff is watching.
+      id: "derived-pagination-small",
+      mui: <MuiPagination size="small" count={5} page={2} />,
+    },
+    {
+      id: "derived-pagination-large",
+      mui: <MuiPagination size="large" count={5} page={2} />,
+    },
+    {
       id: "derived-stepper",
       mui: (
         <Box w={320}>

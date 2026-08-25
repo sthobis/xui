@@ -1,6 +1,7 @@
 import MuiCircularProgress from "@mui/material/CircularProgress"
 import MuiIconButton from "@mui/material/IconButton"
 import Spinner from "../reference/primitives/Spinner"
+import ProgressRing from "../reference/primitives/ProgressRing"
 import Button from "../reference/primitives/Button"
 import { RefProviders } from "../Providers"
 import { XIcon } from "lucide-react"
@@ -45,6 +46,61 @@ export const spinnerSection: Section = {
       id: "spinner-lg",
       ref: <Spinner size="lg" />,
       mui: <MuiCircularProgress size={24} />,
+    },
+  ],
+}
+
+// ProgressRing. A SECOND kit primitive reached through the same MUI component - `variant="determinate"`
+// is the kit's ring, `variant="indeterminate"` is the Spinner above - and that is exactly why these
+// pairs exist. Every Spinner value was originally written unscoped, so it also styled the ring: a
+// determinate ring rendered at the Spinner's 20px in the Spinner's ink, 2943 differing pixels at Δ202,
+// with nothing in the gallery looking at it.
+//
+// `size` and `thickness` are stated at the call site for the reason the Spinner's `sm` states its
+// own: both are PROPS rather than styles, so defaultProps cannot vary them per variant. 3.52 is the
+// kit's `stroke = px * 0.08` in MUI's 44-unit viewBox, which scales with `size` - one number for
+// every step, unlike the Spinner's non-proportional ladder.
+//
+// The centred value the kit draws is passed as an EMPTY child on both sides. It is the kit's own
+// documented slot (`children ?? Math.round(value)`), not a workaround, and MUI ships no element for
+// it at all - so with it left in, the pair would measure a label MUI structurally cannot have
+// instead of measuring the ring the theme actually claims. Emptied, the ring is 19px at Δ1; the
+// label alone accounts for the other 386.
+export const progressRingSection: Section = {
+  title: "ProgressRing",
+  pairs: [
+    {
+      id: "progressring-md",
+      ref: <ProgressRing value={70}>{""}</ProgressRing>,
+      mui: <MuiCircularProgress variant="determinate" value={70} size={64} thickness={3.52} />,
+    },
+    {
+      id: "progressring-sm",
+      ref: (
+        <ProgressRing value={70} size="sm">
+          {""}
+        </ProgressRing>
+      ),
+      mui: <MuiCircularProgress variant="determinate" value={70} size={48} thickness={3.52} />,
+    },
+    {
+      // The colour axis, which is where the `colorPrimary` scoping earns its keep: the kit's
+      // success/warning/error rings ARE MUI's palette colours, so only the default may inherit.
+      id: "progressring-error",
+      ref: (
+        <ProgressRing value={40} size="lg" variant="error">
+          {""}
+        </ProgressRing>
+      ),
+      mui: (
+        <MuiCircularProgress
+          variant="determinate"
+          value={40}
+          size={80}
+          thickness={3.52}
+          color="error"
+        />
+      ),
     },
   ],
 }

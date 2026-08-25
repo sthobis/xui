@@ -1403,6 +1403,29 @@ export const blinkTheme = createTheme({
               { background: theme.vars.palette.textMuted },
           }),
         },
+        {
+          // The kit ships ONE switch, so `size="small"` has to come out as the kit's switch - and
+          // it did not. MUI's own `sizeSmall` variant sits on the ROOT and reaches the two inner
+          // slots through DESCENDANT selectors (`& .MuiSwitch-thumb`, `& .MuiSwitch-switchBase`),
+          // which is two classes against the one that a `thumb`/`switchBase` styleOverride gets -
+          // so the root above kept the kit's 36x20 track while the knob shrank to MUI's 16px and
+          // re-seated itself at a 4px inset. Measured: 956 differing pixels at Δ176, an undersized
+          // knob floating off-centre in a correctly-sized track.
+          //
+          // Handing the two slots their kit values back AT THE SAME SPECIFICITY is the whole fix;
+          // theme overrides are applied after a component's own variants, so equal weight wins.
+          // The checked travel is restated for a different reason: MUI's small variant happens to
+          // say `translateX(16px)` too, so the pair was passing on a coincidence rather than on
+          // the kit's value.
+          props: { size: "small" },
+          style: {
+            "& .MuiSwitch-thumb": { width: 18, height: 18 }, // blink: .root::after `width/height: 18px`
+            "& .MuiSwitch-switchBase": {
+              padding: 1, // blink: .root::after `top: 1px; left: 1px`
+              "&.Mui-checked": { transform: "translateX(16px)" }, // blink: .root:checked::after
+            },
+          },
+        },
       ],
     },
 
@@ -2728,8 +2751,12 @@ export const blinkTheme = createTheme({
           // nothing" is not distinguishable from "the caller chose primary". The trade, stated
           // rather than hidden: an explicit color="primary" inherits too, while the semantic
           // colours - the ones that carry information - keep their palette value.
-          "&.MuiCircularProgress-colorPrimary, &.MuiCircularProgress-colorInherit": {
-            color: "inherit",
+          // ...and scoped to the INDETERMINATE variant, because the determinate one is a different
+          // kit component with a colour of its own - see the ProgressRing variant below.
+          "&.MuiCircularProgress-indeterminate": {
+            "&.MuiCircularProgress-colorPrimary, &.MuiCircularProgress-colorInherit": {
+              color: "inherit",
+            },
           },
           // blink: .ring `animation: spin 0.8s linear infinite`. MUI's own rotation is 1.4s with an
           // eased curve.
@@ -2737,7 +2764,9 @@ export const blinkTheme = createTheme({
           animationTimingFunction: "linear",
         },
         track: {
-          opacity: 0.2, // blink: .track `opacity: 0.2` - MUI's is `action.activatedOpacity`
+          // blink: Spinner .track `opacity: 0.2` - MUI's is `action.activatedOpacity`. Scoped to
+          // the indeterminate variant: the ProgressRing's track is a TOKEN, not a cut of the ink.
+          ".MuiCircularProgress-indeterminate &": { opacity: 0.2 },
         },
         circle: {
           strokeLinecap: "round" as const, // blink: .head `stroke-linecap: round`
@@ -2763,6 +2792,43 @@ export const blinkTheme = createTheme({
           },
         },
       },
+      variants: [
+        {
+          // ---- ProgressRing - the kit's DETERMINATE ring, not the Spinner ----
+          //
+          // Ground truth: reference/primitives/ProgressRing/{index.tsx,ProgressRing.module.css}.
+          //
+          // A DIFFERENT kit component reached through the same MUI one, which is exactly the trap
+          // AGENTS.md names: every Spinner value above was written unscoped and therefore also
+          // styled this. Left that way a determinate ring came out at the Spinner's 20px in the
+          // Spinner's ink - 2943 differing pixels at Δ202 against the kit's 64px primary ring, and
+          // still 2862 at Δ202 once the caller stated the size, because the stroke was wrong too.
+          //
+          // SCOPE: `size` and `thickness`, both of which a determinate ring states at the call
+          // site - `size={64} thickness={3.52}` for the kit's md, 48 and 80 for sm and lg. Neither
+          // can live here. Both are PROPS rather than styles, so defaultProps cannot vary them per
+          // variant and the ones there are the Spinner's; and `thickness` in particular must not be
+          // reached through CSS even though `stroke-width` looks like the obvious lever, because
+          // MUI derives the circle's `r` AND its dash array from the PROP - overriding only the
+          // paint leaves a correctly-thick ring on a circle 1.44px too small, which measured 1355
+          // differing pixels at Δ202 where the untouched 5.5 measured 2943. 3.52 is the kit's
+          // `stroke = px * 0.08` expressed in the 44-unit viewBox, which scales with `size`, so one
+          // number serves every step; its 3px floor only bites below 37.5px, under the 48px sm.
+          //
+          // The centred value label has no MUI slot at all and stays a call-site concern too.
+          props: { variant: "determinate" },
+          style: ({ theme }) => ({
+            // blink: .track `stroke: var(--color-border)` - a token of its OWN, not the 20% cut of
+            // the ink that the Spinner's track is. That rule is scoped away from here for this.
+            "& .MuiCircularProgress-track": { stroke: theme.vars.palette.border, opacity: 1 },
+            // blink: `.default .progress { stroke: var(--color-primary) }`. Keyed on colorPrimary
+            // for the same reason the root's `color: inherit` is: MUI resolves an unstated `color`
+            // to "primary", and the kit's success/warning/error rings ARE MUI's palette colours,
+            // so those have to keep theirs.
+            "&.MuiCircularProgress-colorPrimary": { color: theme.vars.palette.primary.main },
+          }),
+        },
+      ],
     },
 
     // =====================================================================================
@@ -3039,6 +3105,13 @@ export const blinkTheme = createTheme({
         li: ({ theme }) => ({ "& a": { color: theme.vars.palette.primary.main } }),
       },
     },
+    // The size ladder is the kit's control ladder, and it is stated per size rather than pinned to
+    // the covered one - the mistake AGENTS.md tabulates for MuiFab and MuiRating, which this block
+    // had made too: `minWidth`/`height`/`fontSize` sat unscoped on the root, so `size="small"` and
+    // `size="large"` rendered pixel-identical 32px items and MUI's own 26/32/40 ladder was dead.
+    // Medium keeps --control-h-sm because that is what the covered pair was built against; small
+    // and large take the steps either side of it, with the radius following the kit's own Button
+    // (xs and sm at --radius-2, md and lg at --radius-3).
     MuiPaginationItem: {
       styleOverrides: {
         root: ({ theme }) => ({
@@ -3054,6 +3127,18 @@ export const blinkTheme = createTheme({
           // wider than it should be and wrapped its last arrow onto a second line inside a column
           // narrow enough to matter. The gap is the kit's spacing; the margin is Material's.
           margin: 0,
+          // Every chevron the kit draws is 16px - Select, Accordion and Combobox all say
+          // `ChevronDownIcon size={16}` - and MUI's ladder here is Material's instead: 18/20/22 by
+          // size. Stated once on the root rather than per size, because the kit's number does not
+          // vary with the control.
+          //
+          // It is also what keeps the sizes below env-independent. MUI pairs its own boxes with
+          // those icons so tightly that two of the three OVERFLOW their content box - 18px of icon
+          // in the 16px a 24px item leaves, 22px in the 20px a 40px one leaves - and an overflowing
+          // flex item is then shrunk by whatever reset happens to be on the page. preflight caught
+          // exactly that: the small item's chevron measured 16px with Tailwind and 18px without,
+          // Δ76, reported as "the theme is leaning on Tailwind" because it was.
+          "& .MuiPaginationItem-icon": { fontSize: 16 },
           "&:hover": { backgroundColor: theme.vars.palette.surfaceMuted },
           "&.Mui-selected": {
             backgroundColor: theme.vars.palette.primary.main,
@@ -3062,6 +3147,26 @@ export const blinkTheme = createTheme({
           },
         }),
       },
+      variants: [
+        {
+          props: { size: "small" },
+          style: {
+            minWidth: 24, // --control-h-xs
+            height: 24,
+            fontSize: 13, // --text-xs
+            borderRadius: 6, // --radius-2, the kit's Button .xs
+          },
+        },
+        {
+          props: { size: "large" },
+          style: {
+            minWidth: 40, // --control-h-lg
+            height: 40,
+            fontSize: 15, // --text-md
+            borderRadius: 8, // --radius-3, the kit's Button .lg
+          },
+        },
+      ],
     },
     MuiTablePagination: {
       styleOverrides: {
