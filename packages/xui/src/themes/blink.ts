@@ -1,34 +1,42 @@
 /**
- * xui blink theme - MUI v9 restyled 1:1 to the Pulse Kit, the design system of Pulse /
- * NeverBlink (an operational data-tool UI: dense, warm light-gray canvas, one indigo accent).
+ * xui blink theme - Pulse / NeverBlink's design system as a MUI v9 theme (an operational data-tool
+ * UI: dense, warm light-gray canvas, one indigo accent).
  *
- * Self-contained: imports only from @mui/material/styles, lucide-react (the kit's own icon set)
- * and React's createElement, so the file can be copied into any app as a single unit.
+ * Self-contained: imports only from @mui/material/styles, lucide-react (the design system's own
+ * icon set) and React's createElement, so the file can be copied into any app as a single unit.
  *
- * Token source: the Pulse Kit as it exists in the app repo, vendored for the harness at
- *   apps/showcase/src/themes/blink/reference/tokens.css              (colors, spacing, type, radius)
- *   apps/showcase/src/themes/blink/reference/primitives/<Name>/*.css (per-component values)
- * Read apps/showcase/src/themes/blink/reference/README.md before changing anything here: it
- * records where the kit came from, that it was UNCOMMITTED upstream when copied, and that the kit
- * runs MUI v5 while this theme targets v9.
+ * THIS FILE IS THE DESIGN SYSTEM, not a copy of one. That is what separates blink from xui's other
+ * two themes, and it decides how to work on it:
  *
- * Where sources disagree - and they do - the order is:
- *   the primitive's CSS module (what actually paints)  >  tokens.css  >  the kit's design spec
+ *   - It covers ALL of MUI, not one design system's slice. Where there is no existing equivalent,
+ *     the style is DERIVED here - authored from the tokens and from decisions the blocks above
+ *     already make - so a consumer never meets a stock Material control. `blink-coverage.test.ts`
+ *     holds that claim.
+ *   - A considered improvement is a legitimate change to the DESIGN, made here and ported back.
+ *     For a theme that replicates somebody else's system, any difference is a bug; here it is not.
+ *
+ * Two standards live in this file, and each block says which applies:
+ *
+ *   ABOVE the derived-tier banner - extracted from a real component, every value carrying a
+ *   `// blink:` comment naming the token or class it came from. A vendored snapshot of those
+ *   components is kept as a REGRESSION BASELINE (the pairs built on it diff at zero and must keep
+ *   doing so) at apps/showcase/src/themes/blink/reference/. It is not an authority: it does not
+ *   bound this file's surface and it does not settle a design question. Read its README first.
+ *
+ *   BELOW the banner - derived, every value carrying a `// derived:` comment naming the token or
+ *   the neighbouring block's decision it came from. No pixel claim; those pairs are ref-less.
+ *
+ * Where extraction sources disagree - and they do - the order is:
+ *   the component's CSS module (what actually paints)  >  tokens.css  >  the written spec
  * The spec says button labels are weight 500; Button.module.css says 600 and the live page
- * measures 600. The CSS module wins.
+ * measures 600. What paints wins.
  *
- * Prior art, ported rather than reinvented: the app carries its own MUI theme holding the same
- * design as ~45 modular override files. Values here are ported from it and then re-verified
- * against the primitive that paints them. (That source is private, like the kit itself - the
- * reference README explains how both are cited here, and a gitignored PROVENANCE.private.md
- * beside it holds the real paths.)
+ * The design-system source is private, so committed files cite it by role; a gitignored
+ * PROVENANCE.private.md beside the reference README holds the real paths.
  *
- * Light scheme only. The kit ships a dark scheme (`[data-theme="dark"]`, a dark token sheet) and
- * the app's MUI theme a matching `colorDark`, but blink covers light for now; the `palette()`
- * factory below is kept in the shape that makes adding `colorSchemes.dark` a one-line change.
- *
- * Every value below carries a `// blink:` provenance comment naming the token or class it came
- * from.
+ * Light scheme only for now. The `palette()` factory below is kept in the shape that makes adding
+ * `colorSchemes.dark` a one-line change; until that is written there is deliberately no dark
+ * project in the harness, so a future one cannot silently run in light and pass everything.
  */
 import { createTheme } from "@mui/material/styles"
 import {
