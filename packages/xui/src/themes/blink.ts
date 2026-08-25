@@ -141,6 +141,23 @@ declare module "@mui/material/TextField" {
   }
 }
 
+// ...and the two components that COMPOSE a field, which is how most apps actually write one. Both
+// resolve their size through the same rules `large` already works under - InputBase reads
+// `size: fcs.size` off FormControl's context, and Autocomplete hands its own size straight to the
+// TextField it renders - so the third step worked at RUNTIME in both while the compiler rejected
+// it. Augmenting only the leaf components left `<FormControl size="large">` and
+// `<Autocomplete size="large">` as type errors on a size the theme fully implements.
+declare module "@mui/material/FormControl" {
+  interface FormControlPropsSizeOverrides {
+    large: true
+  }
+}
+declare module "@mui/material/Autocomplete" {
+  interface AutocompletePropsSizeOverrides {
+    large: true
+  }
+}
+
 /**
  * The kit's light token set, transcribed from reference/tokens.css exactly as written there -
  * `#5a63b0` stays hex, `rgb(229, 49, 10)` stays rgb(). Both parse; neither is converted, because a
@@ -230,6 +247,20 @@ const SelectChevron = (props: { className?: string }) =>
  * ArrowDown rather than ArrowUp because MUI rotates this element 180 degrees for the ascending
  * direction - so one glyph covers both of the kit's sorted states.
  */
+/**
+ * A quarter of the circle's path length, as MUI's `strokeDasharray` wants it.
+ *
+ * MUI draws its ring in a fixed 44-unit viewBox and derives the radius from `thickness`
+ * (`r = (44 - thickness) / 2`), so the path is `PI * (44 - thickness)` long and a quarter of it
+ * moves with the stroke. The kit's arc is always a quarter turn, so this has to be computed rather
+ * than written down - see the note in the MuiCircularProgress block.
+ */
+const dashForThickness = (thickness: number | undefined) => {
+  const length = Math.PI * (44 - (thickness ?? 3.6))
+  const quarter = length / 4
+  return `${quarter.toFixed(2)} ${(length - quarter).toFixed(2)}`
+}
+
 const SortArrow = (props: { className?: string }) =>
   createElement(ArrowDownIcon, { size: 14, ...props }) // blink: Table/index.tsx SortIndicator
 
@@ -2742,7 +2773,20 @@ export const blinkTheme = createTheme({
         }),
       },
       variants: [
-        { props: { size: "small" }, style: { height: 32, width: 32 } }, // blink: .sm `var(--control-h-sm)`
+        {
+          // blink: .sm `height`/`min-width: var(--control-h-sm)` AND `border-radius: var(--radius-2)`.
+          // The radius is easy to miss and was: the kit's Button ladder changes CORNER as well as
+          // size - xs and sm at --radius-2 (6px), md and lg inheriting .root's --radius-3 (8px) -
+          // so a small icon button carried the root's 8px against the kit's 6px.
+          //
+          // It survived because a ghost button paints nothing at rest: the corners only exist once
+          // the 15% hover fill lands, and the iconbutton-sm pair had no hover state. Even hovered it
+          // measured 20px at Δ23, inside both caps - so this is a ground-truth fix, not a failing
+          // pair. The pair now carries `hover` so the value is actually watched.
+          props: { size: "small" },
+          style: { height: 32, width: 32, borderRadius: 6 },
+        },
+        // .lg states no radius, so it keeps .root's --radius-3 - which is what the root above sets.
         { props: { size: "large" }, style: { height: 40, width: 40 } }, // blink: .lg `var(--control-h-lg)`
       ],
     },
@@ -2848,7 +2892,7 @@ export const blinkTheme = createTheme({
           // the indeterminate variant: the ProgressRing's track is a TOKEN, not a cut of the ink.
           ".MuiCircularProgress-indeterminate &": { opacity: 0.2 },
         },
-        circle: {
+        circle: ({ ownerState }) => ({
           strokeLinecap: "round" as const, // blink: .head `stroke-linecap: round`
           // Scoped to the INDETERMINATE root, and it has to be: MUI rotates the root by -90deg for
           // the determinate variant already, so an unscoped rotation here would take a determinate
@@ -2858,7 +2902,21 @@ export const blinkTheme = createTheme({
             // `dash = circumference * 0.25`. In MUI's 44-unit viewBox at the 5.5 thickness above,
             // r is 19.25 and the circumference 120.95 - so a quarter is 30.24. MUI's own value is
             // `80px, 200px`, which is most of the ring.
-            strokeDasharray: "30.24 90.71",
+            // blink: Spinner draws `strokeDasharray={dash} {circumference - dash}` with
+            // `dash = circumference * 0.25` - a quarter TURN, at every size.
+            //
+            // COMPUTED from thickness rather than written as a literal, because MUI derives the
+            // circle's radius from it (`r = (44 - thickness) / 2`), so the path length is
+            // `PI * (44 - thickness)` and a fixed pair of numbers is only a quarter for the one
+            // thickness it was measured at. It used to be `30.24 90.71`, the 5.5 case - under which
+            // the two sizes that state their own thickness drew 26.3% and 25.9% of the ring instead
+            // of 25%. Measured on a 12px spinner as 2 pixels at Δ111, small only because a 12px arc
+            // has few pixels left to be wrong in.
+            //
+            // Read off ownerState so it is right for ANY thickness a caller passes, rather than for
+            // the two the kit happens to use - keying variants on an exact float would have missed
+            // a caller who wrote 7.33 instead of 7.3333.
+            strokeDasharray: dashForThickness(ownerState?.thickness),
             strokeDashoffset: 0,
             // blink: the kit's arc carries `transform="rotate(-90 cx cy)"`, so it starts at twelve
             // o'clock; MUI's dash starts at three.
@@ -2870,7 +2928,7 @@ export const blinkTheme = createTheme({
             transformBox: "fill-box",
             transformOrigin: "center",
           },
-        },
+        }),
       },
       variants: [
         {

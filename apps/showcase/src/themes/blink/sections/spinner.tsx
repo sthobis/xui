@@ -43,6 +43,13 @@ export const spinnerSection: Section = {
       mui: <MuiCircularProgress size={16} thickness={6.875} />,
     },
     {
+      // The kit's smallest step. `thickness` at the call site for the reason the SCOPE note gives -
+      // 44 * (2/12), the kit's 2px stroke on a 12px ring expressed in MUI's viewBox.
+      id: "spinner-xs",
+      ref: <Spinner size="xs" />,
+      mui: <MuiCircularProgress size={12} thickness={7.3333} />,
+    },
+    {
       id: "spinner-lg",
       ref: <Spinner size="lg" />,
       mui: <MuiCircularProgress size={24} />,
@@ -131,16 +138,20 @@ export const iconButtonSection: Section = {
       ),
     },
     {
+      // `hover` on purpose: a ghost button paints nothing at rest, so its CORNERS do not exist until
+      // the 15% fill lands - and the kit's `.sm` uses --radius-2 where .root uses --radius-3. With
+      // default alone the pair sat at 0 while carrying an 8px radius against the kit's 6px.
       id: "iconbutton-sm",
+      states: ["default", "hover"],
       ref: (
         <RefProviders>
-          <Button variant="ghost" size="sm" iconOnly aria-label="Close">
+          <Button data-target variant="ghost" size="sm" iconOnly aria-label="Close">
             <XIcon size={16} />
           </Button>
         </RefProviders>
       ),
       mui: (
-        <MuiIconButton size="small" aria-label="Close">
+        <MuiIconButton data-target size="small" aria-label="Close">
           <XIcon size={16} />
         </MuiIconButton>
       ),
