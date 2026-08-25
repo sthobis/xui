@@ -851,8 +851,14 @@ export const blinkTheme = createTheme({
     // breaks the pattern in soft, for the same reason it does in Alert: there is no
     // `--color-info-text`, so its ink is the plain colour.
     MuiChip: {
+      // blink: Badge/index.tsx renders `<XIcon size={12} />` inside its delete button. MUI's own
+      // glyph is a filled circle-X from the Material set, which is not in the kit's icon language
+      // at all - the same swap the Select and Combobox blocks make for their chevron and clear.
+      defaultProps: {
+        deleteIcon: createElement(XIcon, { size: 12 }),
+      },
       styleOverrides: {
-        root: {
+        root: ({ theme }) => ({
           gap: 4, // blink: .root `gap: var(--space-1)`
           borderRadius: 999, // blink: .root `border-radius: 999px`
           fontFamily: "inherit", // blink: .root `font-family: inherit`
@@ -866,7 +872,57 @@ export const blinkTheme = createTheme({
           "&.Mui-focusVisible": {
             outline: "none",
           },
-        },
+          // blink: `.delete` - a 16px round button holding a 12px `x` at 60% of the badge's own
+          // ink, whose hover is a 16% tint of that same ink. The kit spaces it from the label with
+          // the root's `gap: var(--space-1)` (set above) and then pulls it 4px back into the root's
+          // padding, so a removable badge is not wider on the right than a plain one.
+          //
+          // MUI's default is a 22px filled `CancelIcon` at `margin: 0 5px 0 -6px`. That negative
+          // LEFT margin is sized for Material's chip, where the LABEL carries 12px of padding for
+          // it to eat into - and the label slot below deliberately moves that padding to the root,
+          // exactly as the kit does. With nothing left to eat the icon reaches back OVER the text:
+          // measured, its left edge landed 2px inside the label's right edge and the 22px glyph
+          // overflowed a 28px chip's box.
+          //
+          // Aimed from the ROOT rather than written in the `deleteIcon` slot, and that is the part
+          // easy to get wrong: MUI compiles that slot as `.root .MuiChip-deleteIcon`, so an `&&`
+          // inside it yields `.root .deleteIcon.root .deleteIcon` - an element that is both the
+          // icon and its own chip, which matches nothing. `&&` on the root gives (0,3,0) and clears
+          // both MUI's base rule and its per-colour ones (`deleteIconColorPrimary` and friends),
+          // which sit at (0,2,0).
+          "&& .MuiChip-deleteIcon": {
+            width: 16, // blink: .delete `width: 16px`
+            height: 16, // blink: .delete `height: 16px`
+            // The kit's `.delete` is a 16px BUTTON wrapping a 12px `<XIcon size={12} />`; MUI
+            // renders no wrapper, so its deleteIcon element is both. The two sizes are reconciled
+            // with a 2px pad on a border-box element: the box stays 16 (which is what the hover
+            // tint and the -4px pull are measured against) while the svg's viewport - and so the
+            // glyph - is the kit's 12. Without it the `size: 12` below is overridden by the width
+            // above and the X is drawn at 16: measured, 43 pixels at Δ79 on a matching box.
+            boxSizing: "border-box",
+            flex: "none", // blink: .delete `flex: none`
+            margin: "0 -4px 0 0", // blink: .delete `margin-right: -4px`
+            padding: 2, // see above - the kit's 16px button around a 12px glyph, in one element
+            border: 0, // blink: .delete `border: 0`
+            borderRadius: 999, // blink: .delete `border-radius: 999px`
+            background: "transparent", // blink: .delete `background: transparent`
+            color: "currentColor", // blink: .delete `color: currentColor`
+            opacity: 0.6, // blink: .delete `opacity: 0.6`
+            "&:hover": {
+              color: "currentColor",
+              opacity: 1, // blink: .delete:hover `opacity: 1`
+              background: "color-mix(in srgb, currentColor 16%, transparent)", // blink: .delete:hover
+            },
+            // blink: .delete:focus-visible - the kit's ring, and the opacity goes to full with it.
+            // MUI puts no focus style on this element at all, so without this a keyboard user gets
+            // nothing; the kit's own button is `tabIndex={-1}`, but MUI's is focusable.
+            "&:focus-visible": {
+              outline: "none",
+              opacity: 1,
+              boxShadow: `color-mix(in srgb, ${theme.vars.palette.primary.main} 50%, transparent) 0px 0px 0px 3px`,
+            },
+          },
+        }),
         label: {
           // blink: .label - the kit's label carries no padding of its own; the ROOT owns it, per
           // size. MUI splits it the other way (12px on the label, none on the root), which would
@@ -1337,6 +1393,27 @@ export const blinkTheme = createTheme({
           // knob overlaps the track, so two half-transparent shapes composite differently from one
           // half-transparent control (measured 2571 differing pixels).
           "&:has(.Mui-disabled)": { opacity: 0.5 },
+          // The kit ships ONE switch - Switch.module.css carries no size axis - so the dimensions
+          // above are the whole story and MUI's second size has to come out as the same control.
+          // It did not: MUI's `sizeSmall` variant re-sizes the THUMB and the switchBase padding
+          // through DESCENDANT selectors, which outrank the `thumb`/`switchBase` slot overrides
+          // below (two classes against one), while leaving root and track to the rules here. The
+          // halves then disagree - measured, a 16px knob at a 4px inset inside this 20px track,
+          // sitting flush to the track's bottom edge and, once checked, its right edge too.
+          // 956 differing pixels at Δ176.
+          //
+          // Scoped through `.MuiSwitch-sizeSmall` rather than declared as a `props: { size }`
+          // variant, and the difference matters: the extra class puts this at (0,3,0), so it beats
+          // MUI's own variant on SPECIFICITY rather than on which rule Emotion inserts last.
+          "&.MuiSwitch-sizeSmall": {
+            "& .MuiSwitch-thumb": { width: 18, height: 18 }, // blink: .root::after `width/height: 18px`
+            "& .MuiSwitch-switchBase": {
+              padding: 1, // blink: .root::after `top: 1px; left: 1px`
+              // Restated rather than inherited: MUI's small variant happens to say the same 16px,
+              // so without this the travel would be right by coincidence, not by the kit's value.
+              "&.Mui-checked": { transform: "translateX(16px)" }, // blink: .root:checked::after
+            },
+          },
         },
         switchBase: ({ theme }) => ({
           // blink: .root::after `top: 1px; left: 1px` - the knob's inset is MUI's switchBase
@@ -1402,29 +1479,6 @@ export const blinkTheme = createTheme({
             "&:hover .MuiSwitch-switchBase:not(.Mui-checked):not(.Mui-disabled) + .MuiSwitch-track":
               { background: theme.vars.palette.textMuted },
           }),
-        },
-        {
-          // The kit ships ONE switch, so `size="small"` has to come out as the kit's switch - and
-          // it did not. MUI's own `sizeSmall` variant sits on the ROOT and reaches the two inner
-          // slots through DESCENDANT selectors (`& .MuiSwitch-thumb`, `& .MuiSwitch-switchBase`),
-          // which is two classes against the one that a `thumb`/`switchBase` styleOverride gets -
-          // so the root above kept the kit's 36x20 track while the knob shrank to MUI's 16px and
-          // re-seated itself at a 4px inset. Measured: 956 differing pixels at Δ176, an undersized
-          // knob floating off-centre in a correctly-sized track.
-          //
-          // Handing the two slots their kit values back AT THE SAME SPECIFICITY is the whole fix;
-          // theme overrides are applied after a component's own variants, so equal weight wins.
-          // The checked travel is restated for a different reason: MUI's small variant happens to
-          // say `translateX(16px)` too, so the pair was passing on a coincidence rather than on
-          // the kit's value.
-          props: { size: "small" },
-          style: {
-            "& .MuiSwitch-thumb": { width: 18, height: 18 }, // blink: .root::after `width/height: 18px`
-            "& .MuiSwitch-switchBase": {
-              padding: 1, // blink: .root::after `top: 1px; left: 1px`
-              "&.Mui-checked": { transform: "translateX(16px)" }, // blink: .root:checked::after
-            },
-          },
         },
       ],
     },
@@ -3255,6 +3309,61 @@ export const blinkTheme = createTheme({
         clearIcon: createElement(XIcon, { size: 14 }), // blink: Combobox clear `XIcon size={14}`
       },
       styleOverrides: {
+        // blink: Input .root `padding: 0 var(--space-3)` plus the 1px the kit's border occupies,
+        // restated here because MUI's Autocomplete REPLACES OutlinedInput's own padding with its
+        // 9px tag layout and adds a 5px left pad on `.MuiAutocomplete-input`. That put a combobox's
+        // text at 14px while every other field in the kit sits at 13 - a one-pixel step that shows
+        // up whenever an Autocomplete and an Input share a row or a card.
+        //
+        // The SECOND half is a real bug rather than a pixel, and it is the one that made this
+        // urgent: the MuiOutlinedInput block pins `height` on the root because the kit's Input is a
+        // fixed-height flex row, while MUI's Autocomplete uses that SAME root as a WRAPPING
+        // container for its tag chips. Both cannot be true. Measured on this theme with `multiple`:
+        // a 28px chip plus its margins needs 34px inside a box whose content height is 36 - 18 = 18,
+        // so the second tag rendered 54px down and hung 46px BELOW the field's own border, and a
+        // third hung 88px out. The tags were floating outside the control entirely, not merely
+        // clipped.
+        //
+        // The fix is the shape the root block already uses for `multiline`, which is the kit's
+        // Textarea: swap the fixed height for a MIN height and let the content drive the rest.
+        //   - 4px vertical padding, so a 28px tag lands exactly inside a 36px field (and a 22px tag
+        //     inside a 32px one)
+        //   - the tag's own margin goes horizontal-only at the design's 6px badge-row gap, with
+        //     `rowGap` taking over when tags wrap, so rows do not collapse onto each other
+        //   - `.MuiAutocomplete-input`'s padding zeroed on BOTH axes: MUI's 7.5px top/bottom is what
+        //     would otherwise make an EMPTY combobox 44px tall once the height stops clamping it.
+        //     With it gone the input is its own 21px line box, centred by the root's flex.
+        //
+        // Written from the ROOT slot rather than `inputRoot`, and this is the part that is easy to
+        // get wrong: MUI compiles `inputRoot` as `.root .MuiAutocomplete-inputRoot`, so an `&&`
+        // inside that slot doubles the whole descendant chain into `.root .inputRoot.root
+        // .inputRoot` - a selector that matches nothing. Both of MUI's rules live on the root as
+        // descendants, the widest at (0,4,0)
+        // (`.root .MuiOutlinedInput-root.MuiInputBase-sizeSmall .MuiAutocomplete-input`), so the
+        // tripled root class here lands at (0,5,0) and wins on specificity rather than on which
+        // Emotion sheet happens to be inserted last.
+        //
+        // SCOPE: derived, and unusually so - the kit's Combobox is NOT among the vendored
+        // primitives, so unlike every block above this one the `blink: Combobox` citations here
+        // cannot be checked against anything in this repo. The horizontal inset is real extraction
+        // (it is the Input's, which IS vendored); the vertical rules are a correction to MUI's own
+        // layout so the kit's fixed-height field can host a wrapping tag list at all.
+        root: {
+          "&&& .MuiAutocomplete-inputRoot.MuiOutlinedInput-root": {
+            paddingLeft: 13, // blink: Input .root `padding: 0 var(--space-3)` + the kit's 1px border
+            paddingTop: 4,
+            paddingBottom: 4,
+            height: "auto",
+            minHeight: 36, // blink: --control-h-md, the height the root would otherwise pin
+            rowGap: 4,
+          },
+          "&&& .MuiAutocomplete-inputRoot.MuiOutlinedInput-root.MuiInputBase-sizeSmall": {
+            minHeight: 32, // blink: --control-h-sm
+          },
+          "&&& .MuiAutocomplete-inputRoot .MuiAutocomplete-input": { padding: 0 },
+          // blink: the design's badge row is `display: flex; flex-wrap: wrap; gap: 6px`.
+          "&&& .MuiAutocomplete-tag": { margin: "0 6px 0 0" },
+        },
         // The two indicators are IconButtons, so without a rule here they take the IconButton
         // block's 36px ghost button - the kit's standalone icon-only control - and two of those
         // inside a 36px field fill its entire height and hover as full-height squares flush with

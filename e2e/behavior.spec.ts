@@ -1017,6 +1017,14 @@ test.describe("painted geometry", () => {
       "switch-disabled",
       "switch-disabled-on",
 
+      // The Badge's delete affordance, and the same shape of substitution as the Switch above: the
+      // kit builds it as a 16px <button> wrapping a 12px <XIcon>, while MUI renders ONE element
+      // that is both. So the kit contributes a 12x12 svg rect (its button is transparent at rest
+      // and paints nothing) where MUI contributes a 16x16 one - the theme reconciles the two sizes
+      // with a 2px pad on a border-box svg, which keeps the ink identical but cannot make MUI grow
+      // a wrapper. Forced, and pixel-neutral: badge-delete diffs at 7px, Δ1.
+      "badge-delete",
+
       // The Input family: same shape of difference, at the other end. The kit puts a real
       // `1px solid` border on the root div, so its box IS the border. MUI paints the border on an
       // absolutely positioned <fieldset> - the notched outline - which is a second painted element,

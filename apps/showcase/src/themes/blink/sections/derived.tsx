@@ -254,6 +254,26 @@ export const derivedSection: Section = {
       ),
     },
     {
+      // The multi-value combobox, and it is here because its absence hid a real bug rather than a
+      // pixel: the theme pins `height` on the OutlinedInput root (the kit's Input is a fixed-height
+      // flex row) while Autocomplete uses that same root as a WRAPPING container for its tags.
+      // Measured before the fix, with two tags the second rendered 54px down and hung 46px below
+      // the field's border; with three the last hung 88px out. The tags were outside the control
+      // altogether. Two values, at a width that forces the second onto its own row.
+      id: "derived-autocomplete-tags",
+      mui: (
+        <Box w={220}>
+          <MuiAutocomplete
+            multiple
+            options={["Washington", "Chicago", "San Francisco"]}
+            value={["Washington", "Chicago"]}
+            onChange={() => {}}
+            renderInput={(params) => <MuiTextField {...params} />}
+          />
+        </Box>
+      ),
+    },
+    {
       // The other half of that construction: TablePagination puts its prev/next arrows in a plain
       // div. Page 1 of 3 so both arrows are live - a disabled arrow still lays out, but an enabled
       // pair is what a reader recognises as "one row" or "stacked".
