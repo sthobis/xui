@@ -105,6 +105,17 @@ export const derivedSection: Section = {
       ),
     },
     {
+      // The buffer variant: the dot-grid rail goes back to being the plain rail, and the buffer
+      // bar is the accent at 20% - the Spinner's own track relationship - where Material's second
+      // colour under the plain bar rule came out full primary, indistinguishable from the value.
+      id: "derived-progress-buffer",
+      mui: (
+        <Box>
+          <MuiLinearProgress variant="buffer" value={40} valueBuffer={70} />
+        </Box>
+      ),
+    },
+    {
       id: "derived-skeleton",
       mui: (
         <Box>
@@ -165,6 +176,13 @@ export const derivedSection: Section = {
     {
       id: "derived-pagination",
       mui: <MuiPagination count={5} page={2} />,
+    },
+    {
+      // COLLAPSE guard: `variant="outlined"` renders the same item, per the root's `border: 0` -
+      // before it, Material's rgba(0,0,0,0.23) border leaked, the one colour on the page from no
+      // token.
+      id: "derived-pagination-outlined",
+      mui: <MuiPagination variant="outlined" count={5} page={2} />,
     },
     {
       // The two non-default steps, and they are here because their absence hid a real bug: the
@@ -269,6 +287,24 @@ export const derivedSection: Section = {
             value={["Washington", "Chicago"]}
             onChange={() => {}}
             renderInput={(params) => <MuiTextField {...params} />}
+          />
+        </Box>
+      ),
+    },
+    {
+      // The same construction through a COLLAPSED shape. The unpinning above is qualified per
+      // variant (see the theme's note on why one unqualified rule is wrong by a border pixel), so
+      // the outlined pair cannot stand in for this one: this is what failed when the collapse
+      // pinned height on FilledInput - a 36px clamp with the second tag 48px outside the field.
+      id: "derived-autocomplete-tags-filled",
+      mui: (
+        <Box w={220}>
+          <MuiAutocomplete
+            multiple
+            options={["Washington", "Chicago", "San Francisco"]}
+            value={["Washington", "Chicago"]}
+            onChange={() => {}}
+            renderInput={(params) => <MuiTextField {...params} variant="filled" />}
           />
         </Box>
       ),

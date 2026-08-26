@@ -1272,6 +1272,11 @@ export const blinkTheme = createTheme({
     // `rounded` at 8 reaches every Paper that has not opted out via `square`, including the
     // overlay papers - and every themed paper slot states the same 8, so the tie is value-equal
     // and cascade order cannot matter.
+    // `variant="outlined"` is a MAPPED variant, not a collapsed one, and deliberately: Material
+    // draws it in `palette.divider`, which this theme's palette pins to the kit's own
+    // --color-border-strong - so an outlined Paper (and the Card, Accordion and AppBar that
+    // inherit this axis) is the kit's flat surface with the kit's hairline, a quiet emphasis
+    // built entirely from decisions already made. Measured: 1px solid #e8e8e8, no shadow.
     MuiPaper: {
       defaultProps: { elevation: 0 }, // blink: Card .root - the kit's surface is flat
       styleOverrides: {
@@ -1396,6 +1401,12 @@ export const blinkTheme = createTheme({
         root: ({ theme }) => ({
           borderColor: theme.vars.palette.borderStrong, // blink: .horizontal `background: var(--color-border-strong)`
         }),
+        // DERIVED - the `inset` variant. The kit's Divider has no inset axis, and Material's 72px
+        // is Material's number: it clears ITS 40px list avatar in ITS 56px gutter. blink's rows are
+        // flush (MuiListItem strips the padding; the button owns any inset) and its avatar gutter
+        // is ListItemAvatar's 44px, so an inset divider lines up with the text above it at 44 - 28px
+        // left of where Material's would land it.
+        inset: { marginLeft: 44 },
         // blink: .withLabel - the labelled form is a flex row whose two rules are ::before/::after.
         // MUI builds it the same way, so only the type and colour need stating.
         withChildren: ({ theme }) => ({
@@ -2777,6 +2788,11 @@ export const blinkTheme = createTheme({
           "&&&": { paddingRight: 24 },
         }),
         icon: ({ theme }) => ({
+          // The collapsed shapes carry a REAL border, so the chevron's inset loses the pixel the
+          // outlined value below adds for a fieldset that occupies no space - the same -1 as
+          // everywhere else in the collapse. Measured before: 14px from the outer edge against the
+          // kit's 13.
+          ".MuiInput-root > &, .MuiFilledInput-root > &": { right: 12 },
           // blink: .chevron `right: var(--space-3)` (12px) PLUS the 1px the kit's own border
           // occupies, for exactly the reason the OutlinedInput's `padding: 0 13px` carries the same
           // extra pixel: `right` resolves against the PADDING box, and the kit's root has a real
@@ -3285,7 +3301,31 @@ export const blinkTheme = createTheme({
           borderRadius: 999,
           backgroundColor: theme.vars.palette.primary.main,
         }),
+        // The buffer/query variants swap the plain rail for a DOTTED one - a radial-gradient dot
+        // grid pulsing in a computed light primary. Nothing in this design system is dotted, so the
+        // dashed element goes back to being the rail (it REPLACES the root background on these
+        // variants rather than sitting on it), and its pulse animation goes with the dots it
+        // existed to pulse.
+        dashed: ({ theme }) => ({
+          backgroundImage: "none",
+          backgroundColor: theme.vars.palette.surfaceMuted,
+          animation: "none",
+        }),
       },
+      variants: [
+        {
+          // The buffer bar was Material's second colour and under the plain `bar` rule above it
+          // came out FULL primary - indistinguishable from the value bar in front of it. The
+          // derived choice is the Spinner's own track relationship: the not-yet-value portion is
+          // the same ink at 20%.
+          props: { variant: "buffer" },
+          style: ({ theme }) => ({
+            "& .MuiLinearProgress-bar2": {
+              backgroundColor: `color-mix(in srgb, ${theme.vars.palette.primary.main} 20%, transparent)`,
+            },
+          }),
+        },
+      ],
     },
     MuiSkeleton: {
       styleOverrides: {
@@ -3417,6 +3457,11 @@ export const blinkTheme = createTheme({
           borderRadius: 6, // --radius-2
           minWidth: 32, // --control-h-sm
           height: 32,
+          // COLLAPSE: `variant="outlined"` renders the same item. The design has one pagination
+          // look and Material's outlined border is not a token of this palette (rgba(0,0,0,0.23),
+          // measured) - and a border resizes the box besides. A root rule outranks Material's
+          // variant by order at equal specificity, the same mechanism the Chip block documents.
+          border: 0,
           fontSize: 14, // --text-sm
           fontWeight: 600, // the kit's control weight
           color: theme.vars.palette.textMuted,
@@ -3605,6 +3650,27 @@ export const blinkTheme = createTheme({
           "&&& .MuiAutocomplete-inputRoot.MuiOutlinedInput-root.MuiInputBase-sizeSmall": {
             minHeight: 32, // blink: --control-h-sm
           },
+          // The COLLAPSED shapes need the same unpinning, and qualifying it is not optional: these
+          // values are the outlined ones minus the pixel their REAL border occupies on every side
+          // (12 against 13, 3 against 4 - the same -1 the collapsedFieldRoot note documents), so a
+          // multi-value combobox is the same 36px box under all three variants. One unqualified
+          // rule was the tempting fix and is wrong by exactly that pixel. Measured before this
+          // rule: a filled combobox clamped at the helper's 36px height and its second tag hung
+          // 48px below the field's border - the collapse had recreated the very bug the outlined
+          // rule above exists to fix.
+          "&&& .MuiAutocomplete-inputRoot.MuiInput-root, &&& .MuiAutocomplete-inputRoot.MuiFilledInput-root":
+            {
+              paddingLeft: 12,
+              paddingTop: 3,
+              paddingBottom: 3,
+              height: "auto",
+              minHeight: 36, // blink: --control-h-md, outer box equal to the outlined 36
+              rowGap: 4,
+            },
+          "&&& .MuiAutocomplete-inputRoot.MuiInput-root.MuiInputBase-sizeSmall, &&& .MuiAutocomplete-inputRoot.MuiFilledInput-root.MuiInputBase-sizeSmall":
+            {
+              minHeight: 32, // blink: --control-h-sm
+            },
           "&&& .MuiAutocomplete-inputRoot .MuiAutocomplete-input": { padding: 0 },
           // blink: the design's badge row is `display: flex; flex-wrap: wrap; gap: 6px`.
           "&&& .MuiAutocomplete-tag": { margin: "0 6px 0 0" },
