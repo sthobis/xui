@@ -46,6 +46,27 @@ const pairs: Pair[] = VARIANTS.map((v) => ({
   ),
 }))
 
+for (const muiVariant of ["filled", "outlined"] as const) {
+  pairs.push({
+    // THE COLLAPSE: the kit has one alert box, so Material's filled (inverted solid) and outlined
+    // (bordered, transparent) variants must render it too. The severity variants in the theme key
+    // on `severity` alone, so they already reach every variant value; these pairs are what prove
+    // nothing of Material's own variant styling leaks through underneath them.
+    id: `alert-variant-${muiVariant}`,
+    ref: (
+      <Alert variant="error" icon={<AlertCircleIcon />} title="Cluster status changed">
+        Three nodes left the cluster in the last hour.
+      </Alert>
+    ),
+    mui: (
+      <MuiAlert severity="error" variant={muiVariant} icon={<AlertCircleIcon />}>
+        <MuiAlertTitle>Cluster status changed</MuiAlertTitle>
+        Three nodes left the cluster in the last hour.
+      </MuiAlert>
+    ),
+  })
+}
+
 pairs.push({
   // The prose-only shape: no title, so the icon centres on the single line instead of anchoring to
   // the top. This is the pair that exercises the `:has` rule.

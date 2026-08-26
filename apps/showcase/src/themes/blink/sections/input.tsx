@@ -1,11 +1,14 @@
+import MuiFilledInput from "@mui/material/FilledInput"
+import MuiStandardInput from "@mui/material/Input"
 import MuiOutlinedInput from "@mui/material/OutlinedInput"
 import Input from "../reference/primitives/Input"
 import type { Section, Pair } from "../../../gallery/types"
 
 // The kit's Input is a bordered box: `1px solid var(--color-border-strong)` on a surface fill at
-// `--radius-2`, with a borderless <input> inside it. That is MUI's OUTLINED input, not the `filled`
-// one - the app's own MUI theme styles both, but its filled block is compatibility with the app's older
-// `common/TextField` wrapper and has no kit twin, so it is not ported here.
+// `--radius-2`, with a borderless <input> inside it. That is MUI's OUTLINED input - and it is also
+// MUI's standard and filled inputs, because the design system has ONE field and the theme COLLAPSES
+// the other two shapes onto it (see collapsedFieldRoot in the theme). The input-standard and
+// input-filled pairs below hold that collapse at zero against this same kit Input.
 //
 // The two are built differently and that is the interesting part: the kit paints its border on the
 // root <div>, while MUI paints it on an absolutely positioned <fieldset> (the notched outline) that
@@ -53,6 +56,25 @@ pairs.push(
     id: "input-disabled",
     ref: <Input data-target disabled defaultValue="Read only" />,
     mui: <MuiOutlinedInput data-target disabled defaultValue="Read only" />,
+  }
+)
+
+pairs.push(
+  {
+    // THE COLLAPSE, held to pixels: MUI's standard (underlined) input renders the kit's one field.
+    // Same ref as input-md; the construction differs (a real border on the root at 12px padding,
+    // against the outlined fieldset at 13px) and the picture must not.
+    id: "input-standard",
+    states: ["default", "focus"],
+    ref: <Input data-target defaultValue="Cluster name" />,
+    mui: <MuiStandardInput data-target defaultValue="Cluster name" />,
+  },
+  {
+    // ...and MUI's filled input, whose grey wash, top-only corners and underline all go.
+    id: "input-filled",
+    states: ["default", "focus"],
+    ref: <Input data-target defaultValue="Cluster name" />,
+    mui: <MuiFilledInput data-target defaultValue="Cluster name" />,
   }
 )
 

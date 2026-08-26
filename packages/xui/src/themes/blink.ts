@@ -38,7 +38,7 @@
  * `colorSchemes.dark` a one-line change; until that is written there is deliberately no dark
  * project in the harness, so a future one cannot silently run in light and pass everything.
  */
-import { createTheme } from "@mui/material/styles"
+import { createTheme, type Theme } from "@mui/material/styles"
 import {
   ArrowDownIcon,
   ChevronDownIcon,
@@ -101,7 +101,9 @@ declare module "@mui/material/Button" {
 
 // The kit's Badge has two emphases against MUI's filled/outlined, and three sizes against two.
 // `solid` is the saturated fill (MUI's `filled` already carries the soft tint); `xs` is the 18px
-// pill. MUI's `outlined` is left unstyled on purpose - the kit ships no bordered pill.
+// pill. MUI's `outlined` is COLLAPSED onto the soft tint: the design system ships no bordered
+// pill, and a drop-in consumer writing `variant="outlined"` must get a blink badge rather than
+// Material's - see the outlined entry in the Chip variants.
 declare module "@mui/material/Chip" {
   interface ChipPropsVariantOverrides {
     solid: true
@@ -268,6 +270,115 @@ const dashForThickness = (thickness: number | undefined) => {
   const quarter = length / 4
   return `${quarter.toFixed(2)} ${(length - quarter).toFixed(2)}`
 }
+
+/**
+ * THE COLLAPSE - MUI's other two field shapes, rendered as the design system's ONE field.
+ *
+ * MUI offers three field variants (outlined / filled / standard); the design system has exactly
+ * one field, the bordered box the MuiOutlinedInput block carries. The other two are collapsed onto
+ * it rather than given looks of their own: a `variant="filled"` in consumer code must come out as
+ * blink's field, because the alternatives are stock Material (which this theme exists to prevent)
+ * or an invented second field style (a design decision made by a prop instead of by the design
+ * system). An earlier revision did invent both - an underlined field and a tinted one in blink's
+ * colours - and nothing in the design says either exists; they were exactly the taste-derivation
+ * AGENTS.md forbids.
+ *
+ * Collapsing also upgrades the verification. These two shapes are pixel-paired against the SAME
+ * vendored Input the outlined pairs use (`input-standard` / `input-filled`), so they hold zero
+ * like any extracted block - the invented shapes were ref-less forever.
+ *
+ * One helper, two keys, because this is one design fact stated once. The construction differs
+ * from the outlined block in exactly one way, and it makes these SIMPLER: Input and FilledInput
+ * have no notched-outline fieldset, so the kit's border is a REAL border on the root and the
+ * padding is the kit's own 12px - not the 13px the outlined block pays for a border that
+ * occupies no space.
+ */
+// The bare `Theme` type keeps `vars` optional; inside a theme with `cssVariables: true` it always
+// exists, which is the type MUI hands its own styleOverrides callbacks. These helpers are called
+// from exactly those callbacks, so they take the same shape.
+type VarsTheme = Omit<Theme, "vars"> & { vars: NonNullable<Theme["vars"]> }
+
+const collapsedFieldRoot = ({ theme }: { theme: VarsTheme }) => ({
+  background: theme.vars.palette.surface, // blink: Input .root `background: var(--color-surface)`
+  color: theme.vars.palette.text.primary, // blink: .root `color: var(--color-text-default)`
+  border: `1px solid ${theme.vars.palette.borderStrong}`, // blink: .root `border: 1px solid var(--color-border-strong)`
+  borderRadius: 6, // blink: .root `border-radius: var(--radius-2)` - Material's filled shape rounds only the top corners
+  fontSize: 15, // blink: .root `font-size: var(--text-md)`
+  lineHeight: 1.4, // blink: .root `line-height: 1.4`
+  gap: 8, // blink: .root `gap: var(--space-2)`
+  padding: "0 12px", // blink: .root `padding: 0 var(--space-3)` - 12, not the outlined block's 13; see above
+  height: 36, // blink: .md `height: var(--control-h-md)` - on the root, for the reason the outlined block documents
+  cursor: "text", // blink: .root `cursor: text`
+  transition:
+    "border-color 120ms cubic-bezier(0.165, 0.84, 0.44, 1), box-shadow 120ms cubic-bezier(0.165, 0.84, 0.44, 1)", // blink: .root
+  // Everything that makes these shapes THEMSELVES is switched off: the underline both hang off
+  // ::before/::after, and the 16px slot standard reserves under a floating label that no longer
+  // floats (see MuiInputLabel). CSS rather than `disableUnderline` in defaultProps, so an explicit
+  // consumer prop cannot resurrect a shape the design system does not have.
+  "&::before, &::after": { display: "none" },
+  "label + &": { marginTop: 0 },
+  // Material's filled shape repaints its wash on hover and focus; every repaint is pinned back to
+  // the kit's surface so the border and the ring are the only state signals, as on the kit's field.
+  "&:hover:not(.Mui-disabled)": { backgroundColor: theme.vars.palette.surface },
+  "&.Mui-focused": { backgroundColor: theme.vars.palette.surface },
+  "&:hover:not(.Mui-focused):not(.Mui-error):not(.Mui-disabled)": {
+    borderColor: theme.vars.palette.borderInput, // blink: .root:hover:not(.disabled):not(.error)
+  },
+  "&.Mui-focused:not(.Mui-error)": {
+    borderColor: theme.vars.palette.primary.main, // blink: .root:has(.input:focus):not(.error)
+    boxShadow: `color-mix(in srgb, ${theme.vars.palette.primary.main} 50%, transparent) 0px 0px 0px 3px`, // blink: --focus-ring
+  },
+  "&.Mui-error": { borderColor: theme.vars.palette.error.main }, // blink: .root.error
+  "&.Mui-error.Mui-focused": {
+    // blink: .root.error:has(.input:focus) `box-shadow: var(--focus-ring-destructive)`
+    boxShadow: `color-mix(in srgb, ${theme.vars.palette.error.main} 35%, transparent) 0px 0px 0px 3px`,
+  },
+  "&.Mui-disabled": {
+    background: theme.vars.palette.surfaceMuted, // blink: .root.disabled
+    borderColor: theme.vars.palette.borderStrong, // the kit leaves a disabled border exactly as it was
+    cursor: "not-allowed",
+  },
+  "&:has(select)": { cursor: "pointer" }, // blink: Select .root - same scope note as the outlined block
+  // blink: Textarea .root + .md - the multiline shape, the outlined block's values minus its +1
+  "&.MuiInputBase-multiline": {
+    height: "auto",
+    padding: "8px 12px",
+    lineHeight: 1.5,
+    alignItems: "normal" as const,
+    gap: "normal",
+  },
+})
+
+// Mirrors the outlined block's `input` slot: the inner control carries no box of its own.
+const collapsedFieldInput = ({ theme }: { theme: VarsTheme }) => ({
+  padding: 0,
+  height: "100%",
+  font: "inherit",
+  color: "inherit",
+  ".MuiInputBase-multiline &": {
+    height: "auto",
+    resize: "vertical" as const, // blink: Textarea `.textarea { resize: vertical }`
+    boxSizing: "border-box" as const,
+  },
+  "&::placeholder": { color: theme.vars.palette.textMuted, opacity: 1 }, // blink: .input::placeholder
+  "&:disabled": {
+    color: theme.vars.palette.textSubtle, // blink: .input:disabled
+    WebkitTextFillColor: theme.vars.palette.textSubtle,
+    cursor: "not-allowed",
+  },
+})
+
+// The other two heights, as the outlined block declares them - minus its border pixel.
+const collapsedFieldSizes = [
+  {
+    props: { size: "small" as const },
+    style: { height: 32, "&.MuiInputBase-multiline": { height: "auto", padding: "4px 12px" } }, // blink: .sm
+  },
+  {
+    props: { size: "large" as const },
+    style: { height: 40, "&.MuiInputBase-multiline": { height: "auto", padding: "12px 12px" } }, // blink: .lg
+  },
+]
 
 const SortArrow = (props: { className?: string }) =>
   createElement(ArrowDownIcon, { size: 14, ...props }) // blink: Table/index.tsx SortIndicator
@@ -786,7 +897,20 @@ export const blinkTheme = createTheme({
       // Each variant sets the same three things from its own pair of tokens: the tint, the bar, and
       // the ink. Written out four times rather than generated, both because it keeps every value
       // greppable to its token and because `info` genuinely differs (see its note).
+      //
+      // The severity entries key on `severity` ALONE, and that is what collapses Material's
+      // `variant` axis: filled and outlined alerts get the same tint, ring and ink as standard,
+      // because the design system has one alert box. Only one thing of Material's leaks past them
+      // and needs its own kill - outlined's real `border`, which does not merely recolour the box
+      // but RESIZES it (a border participates in layout; the kit draws its ring as an inset shadow
+      // for exactly this reason, its own comment says so). Measured before this entry: 8115
+      // differing pixels at Δ255, the whole alert shifted 1px by its border. The
+      // `alert-variant-*` pairs hold both collapses at zero.
       variants: [
+        {
+          props: { variant: "outlined" },
+          style: { border: 0 },
+        },
         {
           props: { severity: "error" },
           style: ({ theme }) => ({
@@ -1017,16 +1141,31 @@ export const blinkTheme = createTheme({
           style: { height: 28, padding: "0 12px", fontSize: 14 },
         },
 
+        // ---- outlined: COLLAPSED onto soft ----
+        //
+        // The design system has two emphases (soft, solid) and no bordered pill, so Material's
+        // third is not given a look of its own - the colour entries below match `outlined` as well
+        // as `filled`, and this entry removes the one thing Material's outlined variant adds that
+        // they do not restate: its border. The `badge-outlined` pair holds the result at zero
+        // against the same kit Badge the soft pairs use.
         // ---- soft: a 10% tint of the colour, inked with its AA text cut ----
+        //
+        // Each entry matches `outlined` as well as `filled`, and that IS the collapse: the design
+        // system has two emphases (soft, solid) and no bordered pill, so Material's third variant
+        // renders the soft tint rather than a look of its own. The border Material's outlined
+        // would add is already dead - the root's `border: 0` above is the kit's own `.root` rule,
+        // and a theme override outranks a component variant of equal specificity by order. The
+        // `badge-outlined` pair holds the collapse at zero against the same kit Badge the soft
+        // pairs use.
         {
-          props: { variant: "filled", color: "default" },
+          props: (props) => (props.variant === "filled" || props.variant === "outlined") && props.color === "default",
           style: ({ theme }) => ({
             background: theme.vars.palette.surfaceMuted, // blink: .soft.default
             color: theme.vars.palette.textMuted,
           }),
         },
         {
-          props: { variant: "filled", color: "primary" },
+          props: (props) => (props.variant === "filled" || props.variant === "outlined") && props.color === "primary",
           style: ({ theme }) => ({
             // blink: .soft.primary `background: var(--color-primary-bg)`
             background: `color-mix(in srgb, ${theme.vars.palette.primary.main} 10%, transparent)`,
@@ -1034,28 +1173,28 @@ export const blinkTheme = createTheme({
           }),
         },
         {
-          props: { variant: "filled", color: "error" },
+          props: (props) => (props.variant === "filled" || props.variant === "outlined") && props.color === "error",
           style: ({ theme }) => ({
             background: `color-mix(in srgb, ${theme.vars.palette.error.main} 10%, transparent)`,
             color: theme.vars.palette.errorText, // blink: .soft.error
           }),
         },
         {
-          props: { variant: "filled", color: "warning" },
+          props: (props) => (props.variant === "filled" || props.variant === "outlined") && props.color === "warning",
           style: ({ theme }) => ({
             background: `color-mix(in srgb, ${theme.vars.palette.warning.main} 10%, transparent)`,
             color: theme.vars.palette.warningText, // blink: .soft.warning
           }),
         },
         {
-          props: { variant: "filled", color: "success" },
+          props: (props) => (props.variant === "filled" || props.variant === "outlined") && props.color === "success",
           style: ({ theme }) => ({
             background: `color-mix(in srgb, ${theme.vars.palette.success.main} 10%, transparent)`,
             color: theme.vars.palette.successText, // blink: .soft.success
           }),
         },
         {
-          props: { variant: "filled", color: "info" },
+          props: (props) => (props.variant === "filled" || props.variant === "outlined") && props.color === "info",
           style: ({ theme }) => ({
             background: `color-mix(in srgb, ${theme.vars.palette.info.main} 10%, transparent)`,
             // blink: .soft.info - the plain colour, there being no --color-info-text
@@ -1709,6 +1848,20 @@ export const blinkTheme = createTheme({
           },
         },
       ],
+    },
+
+    // ---- Input, MUI's other two shapes - COLLAPSED onto the kit's one field ----
+    //
+    // See the note at collapsedFieldRoot for why these render the same field as MuiOutlinedInput
+    // rather than looks of their own. `input-standard` and `input-filled` hold both at zero
+    // against the same vendored kit Input the outlined pairs use.
+    MuiInput: {
+      styleOverrides: { root: collapsedFieldRoot, input: collapsedFieldInput },
+      variants: collapsedFieldSizes,
+    },
+    MuiFilledInput: {
+      styleOverrides: { root: collapsedFieldRoot, input: collapsedFieldInput },
+      variants: collapsedFieldSizes,
     },
 
     // ---- Accordion ----
@@ -3888,36 +4041,6 @@ export const blinkTheme = createTheme({
     MuiImageList: {
       styleOverrides: {
         root: { margin: 0, gap: 8 }, // --space-2; MUI ships a 16px block margin the kit never has
-      },
-    },
-    // The two input SHAPES the kit does not have. Its only field is the bordered box themed as
-    // MuiOutlinedInput above, so a standard (underlined) or filled input has no twin to extract -
-    // these are the kit's tokens arranged into MUI's two other shapes so that a `<TextField
-    // variant="standard">` is recognisably the same design system rather than Material.
-    MuiInput: {
-      styleOverrides: {
-        root: ({ theme }) => ({
-          fontSize: 15, // --text-md
-          color: theme.vars.palette.text.primary,
-          "&::before": { borderBottom: `1px solid ${theme.vars.palette.borderStrong}` },
-          "&:hover:not(.Mui-disabled, .Mui-error)::before": {
-            borderBottom: `1px solid ${theme.vars.palette.borderInput}`,
-          },
-          "&::after": { borderBottom: `1px solid ${theme.vars.palette.primary.main}` },
-        }),
-      },
-    },
-    MuiFilledInput: {
-      styleOverrides: {
-        root: ({ theme }) => ({
-          fontSize: 15,
-          borderRadius: 6, // --radius-2
-          backgroundColor: theme.vars.palette.surfaceMuted,
-          "&:hover": { backgroundColor: theme.vars.palette.surfaceMuted },
-          "&.Mui-focused": { backgroundColor: theme.vars.palette.surfaceMuted },
-          // The kit has no underlined field anywhere, so the filled shape loses MUI's.
-          "&::before, &::after": { display: "none" },
-        }),
       },
     },
     // ---- InputLabel: the kit has no floating label, so this one does not float ----

@@ -53,7 +53,7 @@ const NOT_STYLED: Record<string, string> = {
 
   // ---- same surface, different key ----
   MuiInputBase:
-    "same surface, different key: blink's field is MUI's OUTLINED input, so every field rule lives in MuiOutlinedInput. A block here would also reach the filled and standard variants, which blink deliberately does not style",
+    "same surface, different key: the field rules live on the three shape components - MuiOutlinedInput carries the kit's field, and MuiInput/MuiFilledInput COLLAPSE onto the same design (see collapsedFieldRoot in the theme). A block here would state shared rules a fourth time at a key none of the pairs exercise",
   MuiTextField:
     "same surface, different key: TextField renders a FormControl around an OutlinedInput and an InputLabel, all three of which carry blink's rules; its own root paints nothing",
   MuiModal:

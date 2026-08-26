@@ -68,6 +68,19 @@ const SIZES = [
   { kit: "md", mui: "medium" },
 ] as const
 
+pairs.push({
+  // THE COLLAPSE: the kit ships no bordered pill, so `variant="outlined"` renders the soft tint -
+  // the same picture as badge-soft-primary, from a different Material variant. The ref is the same
+  // kit Badge that pair uses; zero here is what proves the collapse rather than a third look.
+  id: "badge-outlined",
+  ref: (
+    <Badge emphasis="soft" variant="primary" size="sm">
+      Staging
+    </Badge>
+  ),
+  mui: <MuiChip label="Staging" variant="outlined" color="primary" size="small" />,
+})
+
 for (const s of SIZES) {
   pairs.push({
     id: `badge-size-${s.kit}`,
