@@ -88,6 +88,19 @@ declare module "@mui/material/styles" {
     tooltipBg?: string
     tooltipText?: string
   }
+
+  // The kit's radius ladder and shadow set (the `radius` and `shadow` consts below), carried on
+  // the theme itself rather than squeezed into MUI's own slots: `shape.borderRadius` is a single
+  // number against the kit's three steps, and the 25-step `shadows` array would bury two real
+  // tokens in 23 invented ones. `theme.radius.md` / `theme.shadow.card` instead.
+  interface Theme {
+    radius: { sm: number; md: number; lg: number }
+    shadow: { card: string; popover: string }
+  }
+  interface ThemeOptions {
+    radius?: { sm: number; md: number; lg: number }
+    shadow?: { card: string; popover: string }
+  }
 }
 
 // The kit's Button axes are wider than MUI's on both sides: five variants against three, and four
@@ -215,6 +228,32 @@ const color = {
 }
 
 /**
+ * The kit's radius ladder, transcribed from tokens.css. Three steps is the whole ladder - the
+ * kit's only other radii are the 999px pill and 50% circle, which are shapes rather than steps,
+ * so they stay spelled at their sites. The semantic names are ours (the kit numbers its vars);
+ * every consuming line still carries the `--radius-N` comment naming the source var.
+ * Exposed on the theme (`theme.radius.md`) so an app styling its own components can name the
+ * step instead of repeating the number - the same reason the palette above declares the kit's
+ * neutral tokens.
+ */
+const radius = {
+  sm: 4, // blink: tokens.css --radius-1
+  md: 6, // blink: tokens.css --radius-2
+  lg: 8, // blink: tokens.css --radius-3
+}
+
+/**
+ * The kit's shadow set, transcribed from tokens.css - and two entries is the whole set. The kit
+ * has no elevation ladder: overlays get `--shadow-popover`, resting cards get `--shadow-card`
+ * (see the Paper block for how that maps onto MUI's 25-step `elevation`). Exposed on the theme
+ * (`theme.shadow.popover`) for the same reason as `radius`.
+ */
+const shadow = {
+  card: "0 1px 2px rgba(0, 0, 0, 0.04)", // blink: tokens.css --shadow-card
+  popover: "0 8px 32px rgba(0, 0, 0, 0.1)", // blink: tokens.css --shadow-popover
+}
+
+/**
  * Kept as a factory over a token set rather than an inline object literal, even though it is called
  * once. The kit ships a dark scheme (a dark token sheet) and the app's MUI theme a `colorDark`;
  * blink covers light only for now, and this shape is what keeps adding it a one-line change
@@ -305,7 +344,7 @@ const collapsedFieldRoot = ({ theme }: { theme: VarsTheme }) => ({
   background: theme.vars.palette.surface, // blink: Input .root `background: var(--color-surface)`
   color: theme.vars.palette.text.primary, // blink: .root `color: var(--color-text-default)`
   border: `1px solid ${theme.vars.palette.borderStrong}`, // blink: .root `border: 1px solid var(--color-border-strong)`
-  borderRadius: 6, // blink: .root `border-radius: var(--radius-2)` - Material's filled shape rounds only the top corners
+  borderRadius: radius.md, // blink: .root `border-radius: var(--radius-2)` - Material's filled shape rounds only the top corners
   fontSize: 15, // blink: .root `font-size: var(--text-md)`
   lineHeight: 1.4, // blink: .root `line-height: 1.4`
   gap: 8, // blink: .root `gap: var(--space-2)`
@@ -396,6 +435,15 @@ const SortArrow = (props: { className?: string }) =>
 export const blinkTheme = createTheme({
   cssVariables: true,
   colorSchemes: { light: { palette: palette(color) } },
+  radius,
+  shadow,
+  // The kit's spacing scale (tokens.css --space-1..10) is a 4px grid: --space-N = N * 4px.
+  // MUI's spacing stays at its default 8 - the ecosystem's idiom (`p: 2` meaning 16px, every MUI
+  // doc example, every sx shorthand in an existing app) is written against it, and rebasing to 4
+  // would silently halve all of that plus the nine core components that call theme.spacing()
+  // internally. The whole kit grid is still exactly expressible: theme.spacing(N / 2) = --space-N,
+  // so 0.5 → 4px, 1 → 8px, 1.5 → 12px, 2 → 16px, 3 → 24px, 4 → 32px, 5 → 40px.
+  spacing: 8,
   typography: {
     // The design's face is Source Sans 3 - the maintained successor of the Source Sans Pro the
     // kit originally shipped, adopted as a design change here (see the reference README's
@@ -555,7 +603,7 @@ export const blinkTheme = createTheme({
           alignItems: "center", // blink: .root `align-items: center`
           justifyContent: "center", // blink: .root `justify-content: center`
           gap: 8, // blink: .root `gap: var(--space-2)`
-          borderRadius: 8, // blink: .root `border-radius: var(--radius-3)`
+          borderRadius: radius.lg, // blink: .root `border-radius: var(--radius-3)`
           // The kit says `font-family: inherit`. MUI would otherwise apply
           // `theme.typography.button`, and a <button> does not inherit font-family on its own -
           // this is the same trap that made an AccordionSummary measure wider on the shadcn and
@@ -612,6 +660,8 @@ export const blinkTheme = createTheme({
           },
           "&.Mui-disabled:not(.MuiButton-loading)": {
             opacity: 0.6, // blink: .root:disabled:not(.loading) `opacity: 0.6`
+            // The :not matters and was missing: MUI marks a loading button disabled, and the kit's
+            // own selector excludes loading from the dim - a busy button is not a dimmed one.
             // MUI greys a disabled button out - its own `action.disabled` on the label and
             // `action.disabledBackground` on the border. The kit does not: `.root:disabled` sets
             // opacity and nothing else, so every variant keeps its own colours and is simply
@@ -842,7 +892,7 @@ export const blinkTheme = createTheme({
             padding: "0 8px", // blink: .xs `padding: 0 var(--space-2)`
             gap: 4, // blink: .xs `gap: var(--space-1)`
             fontSize: 13, // blink: .xs `font-size: var(--text-xs)`
-            borderRadius: 6, // blink: .xs `border-radius: var(--radius-2)`
+            borderRadius: radius.md, // blink: .xs `border-radius: var(--radius-2)`
           },
         },
         {
@@ -853,7 +903,7 @@ export const blinkTheme = createTheme({
             padding: "0 12px", // blink: .sm `padding: 0 var(--space-3)`
             gap: 4, // blink: .sm `gap: var(--space-1)`
             fontSize: 14, // blink: .sm `font-size: var(--text-sm)`
-            borderRadius: 6, // blink: .sm `border-radius: var(--radius-2)`
+            borderRadius: radius.md, // blink: .sm `border-radius: var(--radius-2)`
           },
         },
         {
@@ -914,7 +964,7 @@ export const blinkTheme = createTheme({
           alignItems: "flex-start", // blink: .stacked `align-items: flex-start`
           gap: 12, // blink: .md `gap: var(--space-3)`
           padding: "12px 16px", // blink: .md `padding: var(--space-3) var(--space-4)`
-          borderRadius: 8, // blink: .md `border-radius: var(--radius-3)`
+          borderRadius: radius.lg, // blink: .md `border-radius: var(--radius-3)`
           fontSize: 15, // blink: .md `font-size: var(--text-md)`
           lineHeight: 1.5, // blink: .md `line-height: 1.5`
           // blink: .inline `align-items: center` - the kit picks this layout when there is no
@@ -1070,7 +1120,7 @@ export const blinkTheme = createTheme({
           // without the kit's reset still gets the kit's metrics.
           lineHeight: 1.5,
         }),
-        rounded: { borderRadius: 6 }, // blink: .square `border-radius: var(--radius-2)`
+        rounded: { borderRadius: radius.md }, // blink: .square `border-radius: var(--radius-2)`
         circular: { borderRadius: "50%" }, // blink: .circle `border-radius: 50%`
         img: { objectFit: "contain" }, // blink: .image - note `.circle .image` switches to cover
       },
@@ -1354,7 +1404,7 @@ export const blinkTheme = createTheme({
         root: {
           backgroundImage: "none", // MUI tints elevated papers in dark schemes; the kit never does
         },
-        rounded: { borderRadius: 8 }, // blink: Card .root `border-radius: var(--radius-3)`
+        rounded: { borderRadius: radius.lg }, // blink: Card .root `border-radius: var(--radius-3)`
       },
     },
 
@@ -1376,7 +1426,7 @@ export const blinkTheme = createTheme({
           display: "flex", // blink: .root `display: flex`
           flexDirection: "column", // blink: .root `flex-direction: column`
           background: theme.vars.palette.surface, // blink: .root `background: var(--color-surface)`
-          borderRadius: 8, // blink: .root `border-radius: var(--radius-3)`
+          borderRadius: radius.lg, // blink: .root `border-radius: var(--radius-3)`
           backgroundImage: "none", // MUI's Paper paints an elevation overlay gradient; the kit has none
         }),
       },
@@ -1531,7 +1581,7 @@ export const blinkTheme = createTheme({
           boxSizing: "border-box",
           background: theme.vars.palette.surface, // blink: .root `background: var(--color-surface)`
           border: `1px solid ${theme.vars.palette.borderStrong}`, // blink: .root `border: 1px solid var(--color-border-strong)`
-          borderRadius: 4, // blink: .root `border-radius: var(--radius-1)`
+          borderRadius: radius.sm, // blink: .root `border-radius: var(--radius-1)`
           // blink: .root `transition: background-color 120ms var(--ease-out), border-color ..., box-shadow ...`
           transition:
             "background-color 120ms cubic-bezier(0.165, 0.84, 0.44, 1), border-color 120ms cubic-bezier(0.165, 0.84, 0.44, 1), box-shadow 120ms cubic-bezier(0.165, 0.84, 0.44, 1)",
@@ -1772,7 +1822,7 @@ export const blinkTheme = createTheme({
         root: ({ theme }) => ({
           background: theme.vars.palette.surface, // blink: .root `background: var(--color-surface)`
           color: theme.vars.palette.text.primary, // blink: .root `color: var(--color-text-default)`
-          borderRadius: 6, // blink: .root `border-radius: var(--radius-2)`
+          borderRadius: radius.md, // blink: .root `border-radius: var(--radius-2)`
           fontSize: 15, // blink: .root `font-size: var(--text-md)`
           lineHeight: 1.4, // blink: .root `line-height: 1.4`
           gap: 8, // blink: .root `gap: var(--space-2)`
@@ -1966,7 +2016,7 @@ export const blinkTheme = createTheme({
           // The lighter `--color-border`, NOT the `--color-border-strong` the Input and the Tabs
           // rule use. Transcribed from this module rather than carried across from theirs.
           border: `1px solid ${theme.vars.palette.border}`, // blink: .root `border: 1px solid var(--color-border)`
-          borderRadius: 8, // blink: .root `border-radius: var(--radius-3)`
+          borderRadius: radius.lg, // blink: .root `border-radius: var(--radius-3)`
           boxShadow: "none", // blink: .root `box-shadow: none` - MUI ships an accordion at elevation 1
           // MUI paints a 1px divider above every panel with a ::before pseudo-element, so a lone
           // bordered panel gets a stray line inside its own top border.
@@ -1994,7 +2044,7 @@ export const blinkTheme = createTheme({
           fontWeight: 600, // blink: .summary `font-weight: 600`
           lineHeight: 1.4, // blink: .summary `line-height: 1.4`
           color: theme.vars.palette.text.primary, // blink: .summary `color: var(--color-text-default)`
-          borderRadius: 8, // blink: .summary `border-radius: var(--radius-3)`
+          borderRadius: radius.lg, // blink: .summary `border-radius: var(--radius-3)`
           "&.Mui-expanded": {
             // MUI grows an expanded summary to 64px. The kit holds it at 44 and squares off the
             // two corners the details block now sits under.
@@ -2118,7 +2168,7 @@ export const blinkTheme = createTheme({
             outline: "none", // blink: .tab:focus-visible `outline: none`
             // blink: tokens.css --focus-ring
             boxShadow: `color-mix(in srgb, ${theme.vars.palette.primary.main} 50%, transparent) 0px 0px 0px 3px`,
-            borderRadius: 6, // blink: .tab:focus-visible `border-radius: var(--radius-2)`
+            borderRadius: radius.md, // blink: .tab:focus-visible `border-radius: var(--radius-2)`
           },
           "&.Mui-disabled": {
             color: theme.vars.palette.textSubtle, // blink: .tab.Mui-disabled `color: var(--color-text-subtle)`
@@ -2282,7 +2332,7 @@ export const blinkTheme = createTheme({
           // The md tier, which is the kit's default size. Here rather than in a `size: "medium"`
           // variant for the same reason the Input's height is: MUI leaves `size` undefined unless a
           // caller states it, so a medium-keyed variant would never match a plain group.
-          borderRadius: 8, // blink: .md inherits `--toggle-radius: var(--radius-3)`
+          borderRadius: radius.lg, // blink: .md inherits `--toggle-radius: var(--radius-3)`
           height: 36, // blink: .md `height: var(--control-h-md)`
           fontSize: 15, // blink: .md `font-size: var(--text-md)`
           "& .MuiToggleButton-root": { padding: "0 12px" }, // blink: .md .option `padding: 0 var(--space-3)`
@@ -2310,7 +2360,7 @@ export const blinkTheme = createTheme({
         {
           props: { size: "xs" as const },
           style: {
-            borderRadius: 6, // blink: .xs `--toggle-radius: var(--radius-2)`
+            borderRadius: radius.md, // blink: .xs `--toggle-radius: var(--radius-2)`
             height: 24, // blink: .xs `height: var(--control-h-xs)`
             fontSize: 13, // blink: .xs `font-size: var(--text-xs)`
             "& .MuiToggleButton-root": { padding: "0 8px", gap: 4 }, // blink: .xs .option
@@ -2319,7 +2369,7 @@ export const blinkTheme = createTheme({
         {
           props: { size: "small" as const },
           style: {
-            borderRadius: 6, // blink: .sm `--toggle-radius: var(--radius-2)`
+            borderRadius: radius.md, // blink: .sm `--toggle-radius: var(--radius-2)`
             height: 32, // blink: .sm `height: var(--control-h-sm)`
             fontSize: 14, // blink: .sm `font-size: var(--text-sm)`
             "& .MuiToggleButton-root": { padding: "0 12px" }, // blink: .sm .option
@@ -2328,7 +2378,7 @@ export const blinkTheme = createTheme({
         {
           props: { size: "large" as const },
           style: {
-            borderRadius: 8, // blink: .lg keeps the default `--toggle-radius`
+            borderRadius: radius.lg, // blink: .lg keeps the default `--toggle-radius` (--radius-3)
             height: 40, // blink: .lg `height: var(--control-h-lg)`
             fontSize: 15, // blink: .lg `font-size: var(--text-md)`
             "& .MuiToggleButton-root": { padding: "0 16px" }, // blink: .lg .option `padding: 0 var(--space-4)`
@@ -2435,7 +2485,7 @@ export const blinkTheme = createTheme({
             // this pill's column - and in MULTIPLE mode it is the pill's own
             // `.root[role="group"] .option.active`. Same rectangle, same colour, one rule.
             backgroundColor: theme.vars.palette.surface, // blink: .slider / .option.active `background-color`
-            boxShadow: "0 1px 2px rgba(0, 0, 0, 0.04)", // blink: tokens.css --shadow-card
+            boxShadow: shadow.card, // blink: tokens.css --shadow-card
             "&:hover": { backgroundColor: theme.vars.palette.surface },
           },
           "&.Mui-focusVisible": {
@@ -2463,7 +2513,7 @@ export const blinkTheme = createTheme({
       styleOverrides: {
         root: ({ theme }) => ({
           border: `1px solid ${theme.vars.palette.borderStrong}`, // blink: .container `border`
-          borderRadius: 8, // blink: .container `border-radius: var(--radius-3)`
+          borderRadius: radius.lg, // blink: .container `border-radius: var(--radius-3)`
           overflow: "auto", // blink: .container `overflow: auto` - MUI ships overflow-x only
           scrollbarWidth: "thin" as const, // blink: .container `scrollbar-width: thin`
         }),
@@ -2608,7 +2658,7 @@ export const blinkTheme = createTheme({
           lineHeight: "20px", // blink: .tooltip `line-height: 20px`, a LENGTH rather than a ratio
           fontWeight: 400, // blink: .tooltip `font-weight: 400` - MUI's own is 500
           padding: "8px 12px 9px", // blink: .tooltip - note the asymmetric bottom pixel
-          borderRadius: 6, // blink: .tooltip `border-radius: var(--radius-2)`
+          borderRadius: radius.md, // blink: .tooltip `border-radius: var(--radius-2)`
           boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)", // blink: .tooltip `box-shadow`
           maxWidth: 280, // blink: .tooltip `max-width: 280px`
           // blink: `.tooltip b { font-weight: 700 }`. A descendant rule over markup the CONSUMER
@@ -2636,8 +2686,8 @@ export const blinkTheme = createTheme({
           // The lighter `--color-border`, as on the Accordion and NOT the `--color-border-strong`
           // the Input and Tabs use.
           border: `1px solid ${theme.vars.palette.border}`, // blink: .paper `border`
-          borderRadius: 8, // blink: .paper `border-radius: var(--radius-3)`
-          boxShadow: "0 8px 32px rgba(0, 0, 0, 0.1)", // blink: tokens.css --shadow-popover
+          borderRadius: radius.lg, // blink: .paper `border-radius: var(--radius-3)`
+          boxShadow: shadow.popover, // blink: tokens.css --shadow-popover
           fontFamily: "inherit", // blink: .paper `font-family: inherit`
           fontSize: 15, // blink: .paper `font-size: var(--text-md)`
           lineHeight: 1.5, // blink: .paper `line-height: 1.5`
@@ -2659,8 +2709,8 @@ export const blinkTheme = createTheme({
           padding: 4,
           background: theme.vars.palette.surface, // blink: .paper `background: var(--color-surface)`
           border: `1px solid ${theme.vars.palette.border}`, // blink: .paper `border`
-          borderRadius: 8, // blink: .paper `border-radius: var(--radius-3)`
-          boxShadow: "0 8px 32px rgba(0, 0, 0, 0.1)", // blink: tokens.css --shadow-popover
+          borderRadius: radius.lg, // blink: .paper `border-radius: var(--radius-3)`
+          boxShadow: shadow.popover, // blink: tokens.css --shadow-popover
           color: theme.vars.palette.text.primary, // blink: .paper `color: var(--color-text-default)`
         }),
         // blink: .list `padding: 0`. MUI's List ships 8px of block padding, which would sit on top
@@ -2679,7 +2729,7 @@ export const blinkTheme = createTheme({
           gap: 8, // blink: .item `gap: var(--space-2)`
           minHeight: 32, // blink: .item `min-height: var(--control-h-sm)`
           padding: 8, // blink: .item `padding: var(--space-2)`
-          borderRadius: 6, // blink: .item `border-radius: var(--radius-2)`
+          borderRadius: radius.md, // blink: .item `border-radius: var(--radius-2)`
           fontSize: 15, // blink: .item `font-size: var(--text-md)`
           lineHeight: 1.4, // blink: .item `line-height: 1.4`
           // blink: `.list .item:hover`. The kit reaches for a two-class selector deliberately - its
@@ -2724,7 +2774,7 @@ export const blinkTheme = createTheme({
       styleOverrides: {
         paper: ({ theme }) => ({
           background: theme.vars.palette.surface, // blink: .paper `background: var(--color-surface)`
-          borderRadius: 8, // blink: .paper `border-radius: var(--radius-3)`
+          borderRadius: radius.lg, // blink: .paper `border-radius: var(--radius-3)`
           padding: 16, // blink: .paper `padding: var(--space-4)`
           display: "flex", // blink: .paper `display: flex`
           flexDirection: "column" as const, // blink: .paper `flex-direction: column`
@@ -2993,7 +3043,7 @@ export const blinkTheme = createTheme({
           display: "inline-flex",
           alignItems: "center",
           justifyContent: "center",
-          borderRadius: 8, // blink: .root `border-radius: var(--radius-3)`
+          borderRadius: radius.lg, // blink: .root `border-radius: var(--radius-3)`
           padding: 0, // blink: .iconOnly `padding: 0`
           aspectRatio: "1", // blink: .iconOnly `aspect-ratio: 1`
           color: theme.vars.palette.primary.main, // blink: .ghost `color: var(--color-primary)`
@@ -3062,7 +3112,7 @@ export const blinkTheme = createTheme({
           "& .MuiIconButton-root": {
             width: 24,
             height: 24, // blink: --control-h-xs
-            borderRadius: 6, // blink: --radius-2
+            borderRadius: radius.md, // blink: --radius-2
             color: theme.vars.palette.textMuted, // blink: Select .chevron ink
             "& .MuiSvgIcon-root": { fontSize: 14 }, // blink: Combobox clear `XIcon size={14}`
             "&:hover": {
@@ -3270,7 +3320,7 @@ export const blinkTheme = createTheme({
           background: theme.vars.palette.surface, // --color-surface
           color: theme.vars.palette.text.primary,
           backgroundImage: "none", // MUI tints an elevated paper; the kit's surfaces are flat
-          boxShadow: "0 8px 32px rgba(0, 0, 0, 0.1)", // --shadow-popover
+          boxShadow: shadow.popover, // --shadow-popover
         }),
         // The four anchors, keyed by the class MUI puts on the ROOT rather than one blanket rule
         // on the paper - a border set for the right-hand anchor alone turns a top sheet into a
@@ -3296,10 +3346,10 @@ export const blinkTheme = createTheme({
           // transient overlay that has to read against any page - so it takes the same two tokens.
           background: theme.vars.palette.tooltipBg, // --color-tooltip-bg
           color: theme.vars.palette.tooltipText, // --color-tooltip-text
-          borderRadius: 6, // --radius-2, as the tooltip uses
+          borderRadius: radius.md, // --radius-2, as the tooltip uses
           fontSize: 15, // --text-md
           lineHeight: 1.4,
-          boxShadow: "0 8px 32px rgba(0, 0, 0, 0.1)", // --shadow-popover
+          boxShadow: shadow.popover, // --shadow-popover
           padding: "8px 12px", // the tooltip's own padding
         }),
       },
@@ -3324,7 +3374,7 @@ export const blinkTheme = createTheme({
     MuiListItemButton: {
       styleOverrides: {
         root: ({ theme }) => ({
-          borderRadius: 6, // --radius-2, as the kit's menu items use
+          borderRadius: radius.md, // --radius-2, as the kit's menu items use
           minHeight: 32, // --control-h-sm
           padding: 8, // --space-2
           gap: 8,
@@ -3401,7 +3451,7 @@ export const blinkTheme = createTheme({
     MuiSkeleton: {
       styleOverrides: {
         root: ({ theme }) => ({ backgroundColor: theme.vars.palette.surfaceMuted }),
-        rounded: { borderRadius: 6 }, // --radius-2, matching baselineTheme's own choice
+        rounded: { borderRadius: radius.md }, // --radius-2, matching baselineTheme's own choice
       },
     },
 
@@ -3425,7 +3475,7 @@ export const blinkTheme = createTheme({
           height: 16,
           backgroundColor: theme.vars.palette.surface,
           border: `1px solid ${theme.vars.palette.borderStrong}`,
-          boxShadow: "0 1px 2px rgba(0, 0, 0, 0.04)", // --shadow-card
+          boxShadow: shadow.card, // --shadow-card
           "&:hover, &.Mui-focusVisible": {
             boxShadow: `color-mix(in srgb, ${theme.vars.palette.primary.main} 50%, transparent) 0px 0px 0px 3px`,
           },
@@ -3446,7 +3496,7 @@ export const blinkTheme = createTheme({
         // Keyed off the POSITIVE shape class. AGENTS.md records two separate bugs from doing this
         // by negation - `variant="extended"` squashed to a circle, and every size pinned to 56px.
         circular: ({ theme }) => ({
-          boxShadow: "0 8px 32px rgba(0, 0, 0, 0.1)", // --shadow-popover
+          boxShadow: shadow.popover, // --shadow-popover
           backgroundColor: theme.vars.palette.primary.main,
           color: theme.vars.palette.primary.contrastText,
           "&:hover": { backgroundColor: theme.vars.palette.primary.dark },
@@ -3455,7 +3505,7 @@ export const blinkTheme = createTheme({
           borderRadius: 999,
           fontWeight: 600, // the kit's button weight
           textTransform: "none" as const,
-          boxShadow: "0 8px 32px rgba(0, 0, 0, 0.1)",
+          boxShadow: shadow.popover,
           backgroundColor: theme.vars.palette.primary.main,
           color: theme.vars.palette.primary.contrastText,
           "&:hover": { backgroundColor: theme.vars.palette.primary.dark },
@@ -3467,13 +3517,13 @@ export const blinkTheme = createTheme({
         fab: ({ theme }) => ({
           backgroundColor: theme.vars.palette.surface,
           color: theme.vars.palette.text.primary,
-          boxShadow: "0 1px 2px rgba(0, 0, 0, 0.04)", // --shadow-card
+          boxShadow: shadow.card, // --shadow-card
           "&:hover": { backgroundColor: theme.vars.palette.surfaceMuted },
         }),
         staticTooltipLabel: ({ theme }) => ({
           background: theme.vars.palette.tooltipBg,
           color: theme.vars.palette.tooltipText,
-          borderRadius: 6,
+          borderRadius: radius.md,
           fontSize: 15,
           padding: "8px 12px",
           whiteSpace: "nowrap" as const,
@@ -3525,7 +3575,7 @@ export const blinkTheme = createTheme({
     MuiPaginationItem: {
       styleOverrides: {
         root: ({ theme }) => ({
-          borderRadius: 6, // --radius-2
+          borderRadius: radius.md, // --radius-2
           minWidth: 32, // --control-h-sm
           height: 32,
           // COLLAPSE: `variant="outlined"` renders the same item. The design has one pagination
@@ -3569,7 +3619,7 @@ export const blinkTheme = createTheme({
             minWidth: 24, // --control-h-xs
             height: 24,
             fontSize: 13, // --text-xs
-            borderRadius: 6, // --radius-2, the kit's Button .xs
+            borderRadius: radius.md, // --radius-2, the kit's Button .xs
           },
         },
         {
@@ -3578,7 +3628,7 @@ export const blinkTheme = createTheme({
             minWidth: 40, // --control-h-lg
             height: 40,
             fontSize: 15, // --text-md
-            borderRadius: 8, // --radius-3, the kit's Button .lg
+            borderRadius: radius.lg, // --radius-3, the kit's Button .lg
           },
         },
       ],
@@ -3631,7 +3681,7 @@ export const blinkTheme = createTheme({
     // Image lists: a kit tile is a flat surface at the panel radius.
     MuiImageListItem: {
       styleOverrides: {
-        root: { borderRadius: 8, overflow: "hidden" }, // --radius-3
+        root: { borderRadius: radius.lg, overflow: "hidden" }, // --radius-3
       },
     },
     MuiImageListItemBar: {
@@ -3765,7 +3815,7 @@ export const blinkTheme = createTheme({
           "&&": {
             width: 24,
             height: 24, // a click target for what the kit draws as a bare 16px icon
-            borderRadius: 6,
+            borderRadius: radius.md,
             color: theme.vars.palette.textMuted, // blink: Combobox .chevron `color: var(--color-text-muted)`
             "&:hover": { background: "transparent" }, // blink: .chevron has no hover state
           },
@@ -3774,7 +3824,7 @@ export const blinkTheme = createTheme({
           "&&": {
             width: 24,
             height: 24, // blink: Combobox clear `Button size="xs"` - --control-h-xs
-            borderRadius: 6, // blink: --radius-2, the xs button's radius
+            borderRadius: radius.md, // blink: --radius-2, the xs button's radius
             color: theme.vars.palette.textMuted,
             // blink: the clear IS a ghost button in the kit, so the ghost hover is correct here
             // (and only here - see the chevron above).
@@ -3792,13 +3842,13 @@ export const blinkTheme = createTheme({
         paper: ({ theme }) => ({
           background: theme.vars.palette.surface,
           border: `1px solid ${theme.vars.palette.border}`,
-          borderRadius: 8,
-          boxShadow: "0 8px 32px rgba(0, 0, 0, 0.1)",
+          borderRadius: radius.lg,
+          boxShadow: shadow.popover,
           fontSize: 15,
         }),
         listbox: { padding: 8 }, // the kit's menu gutter
         option: ({ theme }) => ({
-          borderRadius: 6,
+          borderRadius: radius.md,
           minHeight: 32,
           padding: 8,
           fontSize: 15,
@@ -3905,7 +3955,7 @@ export const blinkTheme = createTheme({
       defaultProps: { disableRipple: true }, // derived: the global ButtonBase default, restated
       styleOverrides: {
         root: ({ theme }) => ({
-          borderRadius: 8, // derived: MuiCard's --radius-3
+          borderRadius: radius.lg, // derived: MuiCard's --radius-3
           "&:hover": { backgroundColor: theme.vars.palette.surfaceMuted }, // derived: the neutral row hover
           "&.Mui-focusVisible": {
             // derived: --focus-ring, the same 3px/50% every focusable surface here uses
@@ -4033,7 +4083,7 @@ export const blinkTheme = createTheme({
       defaultProps: { disableRipple: true },
       styleOverrides: {
         root: ({ theme }) => ({
-          borderRadius: 6, // derived: --radius-2, the ladder's step below 32px
+          borderRadius: radius.md, // derived: --radius-2, the ladder's step below 32px
           padding: "4px 8px", // derived: --space-1 / --space-2
           margin: "-4px -8px", // ...taken back out, so adding the hit area does not move the label
           "&:hover": { backgroundColor: theme.vars.palette.surfaceMuted }, // derived: the neutral row hover
@@ -4089,7 +4139,7 @@ export const blinkTheme = createTheme({
           "& .MuiIconButton-root": {
             width: 24, // derived: --control-h-xs, the in-control step
             height: 24,
-            borderRadius: 6, // derived: --radius-2, the ladder's step below 32px
+            borderRadius: radius.md, // derived: --radius-2, the ladder's step below 32px
             color: theme.vars.palette.textMuted, // derived: the quiet affordance ink
             "&:hover": { background: theme.vars.palette.surfaceMuted, color: theme.vars.palette.text.primary },
             "&.Mui-disabled": { color: theme.vars.palette.textSubtle },
@@ -4128,7 +4178,7 @@ export const blinkTheme = createTheme({
           gap: 8, // blink: .sortButton `gap: var(--space-2)`
           fontWeight: 600, // blink: .sortButton `font-weight: 600`
           color: "inherit", // blink: .sortButton `color: inherit` - the header cell owns the ink
-          borderRadius: 4, // blink: .sortButton `border-radius: var(--radius-1)`
+          borderRadius: radius.sm, // blink: .sortButton `border-radius: var(--radius-1)`
           // MUI sets `vertical-align: middle` on this root; the kit's `.sortButton` states no
           // vertical-align at all, so a <button> keeps the initial `baseline`. On an inline-flex box
           // the difference is not cosmetic - `middle` aligns the box's centre to the baseline plus
