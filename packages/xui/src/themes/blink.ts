@@ -28,8 +28,10 @@
  *
  * Where extraction sources disagree - and they do - the order is:
  *   the component's CSS module (what actually paints)  >  tokens.css  >  the written spec
- * The spec says button labels are weight 500; Button.module.css says 600 and the live page
- * measures 600. What paints wins.
+ * The canonical example: the spec said button labels are weight 500 while Button.module.css
+ * shipped 600, and the theme carried 600 because what paints wins. (The design has since ADOPTED
+ * the spec's 500 - as a recorded design change with the snapshot edited to match, not as a
+ * re-reading of the sources. The rule stands.)
  *
  * The design-system source is private, so committed files cite it by role; a gitignored
  * PROVENANCE.private.md beside the reference README holds the real paths.
@@ -395,14 +397,20 @@ export const blinkTheme = createTheme({
   cssVariables: true,
   colorSchemes: { light: { palette: palette(color) } },
   typography: {
-    // The kit's own `--font-family-sans` is the bare string "Source Sans Pro" with no fallbacks.
-    // This is the longer stack because it is what the APP's MUI theme uses (reference/
-    // baselineTheme.ts, and the app's own MUI theme after it), and MUI is what this theme
-    // configures. Where
-    // Source Sans Pro is present - the only case parity is measured in - the two resolve to the
-    // same face and render identically.
+    // The design's face is Source Sans 3 - the maintained successor of the Source Sans Pro the
+    // kit originally shipped, adopted as a design change here (see the reference README's
+    // pending-upstream table; tokens.css and baselineTheme.ts carry the same change so parity
+    // stays at zero). The kit's own `--font-family-sans` is the bare family with no fallbacks;
+    // this is the longer stack because it is what the APP's MUI theme uses, and where the real
+    // face is present - the only case parity is measured in - the two resolve identically.
     fontFamily: [
-      "Source Sans Pro",
+      // Quoted INSIDE the CSS string, and it is load-bearing: "Source Sans 3" ends in a bare
+      // digit, which is not a valid CSS identifier, so the unquoted name makes the whole
+      // font-family declaration invalid and browsers DROP it - CssBaseline's body rule shipped
+      // with no family at all, and every page without the kit's own stylesheet fell to Times.
+      // ("Source Sans Pro" happened to be valid unquoted; the successor's name is not. MUI quotes
+      // "Roboto" in its own default stack for exactly this class of reason.)
+      '"Source Sans 3"',
       "ui-sans-serif",
       "system-ui",
       "-apple-system",
@@ -553,7 +561,11 @@ export const blinkTheme = createTheme({
           // this is the same trap that made an AccordionSummary measure wider on the shadcn and
           // kumo themes than on their reset-free preflight page.
           fontFamily: "inherit", // blink: .root `font-family: inherit`
-          fontWeight: 600, // blink: .root `font-weight: 600`
+          // blink: .root `font-weight: 500` - a DESIGN CHANGE, recorded in the reference
+          // README's pending-upstream table. The kit shipped 600 while its own spec said 500;
+          // the design now agrees with the spec, and Button.module.css carries the same edit so
+          // every button pair still diffs at zero.
+          fontWeight: 500,
           // blink: reset.css `body { line-height: 1.5 }`, inherited. Button.module.css sets no
           // line-height at all, so the kit's label takes the document's.
           //
@@ -959,6 +971,16 @@ export const blinkTheme = createTheme({
         {
           props: { variant: "outlined" },
           style: { border: 0 },
+        },
+        {
+          // Material's filled variant bolds the whole box to fontWeightMedium; the kit's alert
+          // body is the page's own 400 (its title carries the weight). This rule was INVISIBLE
+          // until the 500 face was actually loaded - with weights 300/400/600/700 on the page the
+          // browser resolved 500 to the 400 face and the pair sat at zero - and it surfaced as
+          // 5394 differing pixels the moment the Button's new default put 500.css on the page. A
+          // collapse has to kill the weight, not only the colours.
+          props: { variant: "filled" },
+          style: { fontWeight: 400 },
         },
         {
           props: { severity: "error" },

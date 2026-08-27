@@ -8,7 +8,7 @@ Three themes ship today:
 | --- | --- | --- | --- | --- |
 | `shadcnTheme` | [shadcn/ui](https://ui.shadcn.com) (new-york style, neutral base) | Geist | `lucide-react` | `.dark` class on `<html>` |
 | `kumoTheme` | [Kumo](https://kumo-ui.com), Cloudflare's design system | Inter | `@phosphor-icons/react` | `data-mode="dark"` on `<html>` |
-| `blinkTheme` | Pulse / NeverBlink's own system - **covers all of MUI** | Source Sans Pro | `lucide-react` | light only so far |
+| `blinkTheme` | Pulse / NeverBlink's own system - **covers all of MUI** | Source Sans 3 | `lucide-react` | light only so far |
 
 ## Install
 

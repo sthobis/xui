@@ -3,10 +3,11 @@
    including the font OPTIONS (Inter), which the exported file would tell a consumer to install. */
 @import "@fontsource-variable/geist";
 @import "@fontsource-variable/inter";
-@import "@fontsource/source-sans-pro/300.css";
-@import "@fontsource/source-sans-pro/400.css";
-@import "@fontsource/source-sans-pro/600.css";
-@import "@fontsource/source-sans-pro/700.css";
+@import "@fontsource/source-sans-3/300.css";
+@import "@fontsource/source-sans-3/400.css";
+@import "@fontsource/source-sans-3/500.css";
+@import "@fontsource/source-sans-3/600.css";
+@import "@fontsource/source-sans-3/700.css";
 
 body {
   margin: 0;

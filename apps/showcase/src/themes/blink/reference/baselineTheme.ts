@@ -8,7 +8,9 @@ export default createTheme({
     },
     typography: {
         fontFamily: [
-            "Source Sans Pro",
+            // Quoted inside the string: a family name ending in a bare digit is not a valid
+            // CSS identifier, so unquoted it invalidates the whole declaration (see the theme).
+            '"Source Sans 3"',
             "ui-sans-serif",
             "system-ui",
             "-apple-system",

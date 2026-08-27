@@ -79,11 +79,12 @@ the kit's CSS modules and `tokens.css`, which are version-independent.
 **In `base.css`** (both subtractive):
 
 1. **The Inter import dropped** - the app's global stylesheet opens by pulling Inter from Google
-   Fonts. Inter is loaded in the app but never painted: `tokens.css` sets
-   `--font-family-sans: "Source Sans Pro"`, and the live kit page measures
-   `font-family: "Source Sans Pro"` on `<body>`. The kit's design spec confirms Inter is only the
-   documented fallback substitute. The showcase page loads Source Sans Pro through
-   `@fontsource/source-sans-pro` imports in `blink.css` (the app fetches the same faces from
+   Fonts. Inter is loaded in the app but never painted: the vendored `tokens.css` set
+   `--font-family-sans: "Source Sans Pro"`, and the live kit page measures that family on
+   `<body>` (the copy here now says `"Source Sans 3"` - the design change recorded in the table
+   below). The kit's design spec confirms Inter is only the
+   documented fallback substitute. The showcase page loads the family through
+   `@fontsource/source-sans-3` imports in `blink.css` (the app fetches its faces from
    Google Fonts; bundling them keeps the harness's rasterization identical everywhere -
    `blink.css`'s own note records the deviation).
 2. **Everything from `.echarts-tooltip` onward dropped** - chart tooltips, toastify,
@@ -127,7 +128,7 @@ the pair is comparing the new kit against the new theme, and it would go red the
 were changed without the other.
 
 **Port these upstream and re-vendor.** Until that happens, this directory is one commit ahead of the
-kit rather than a copy of it, and a naive re-vendor would silently revert all six.
+kit rather than a copy of it, and a naive re-vendor would silently revert every one of them.
 (`PROVENANCE.private.md` names the paths they go back to.)
 
 | File | Was | Is | Why |
@@ -137,4 +138,7 @@ kit rather than a copy of it, and a naive re-vendor would silently revert all si
 | `primitives/Menu/Menu.module.css` | `.paper { padding: var(--space-2) }` | `var(--space-1)` | The gutter only has to be visible for the item highlight to read as an inset pill. At two steps a three-item menu was mostly gutter. |
 | `primitives/Menu/PopTransition.tsx` | one duration for both directions, defaulting to `150` | duration per direction, defaulting to `{ enter: 150, exit: 0 }` | Opening is new information arriving and is worth animating; closing is the user having already decided, and a fade held over their next click reads as lag. The CSS duration has to follow the direction too, or a 150ms fade-out just gets unmounted mid-way. |
 | `primitives/Menu/index.tsx`, `primitives/Popover/index.tsx` | `transitionDuration = 150` | `transitionDuration = { enter: 150, exit: 0 }` | The same change, at the two call sites that set the default. `Dialog` deliberately keeps a symmetric 150ms - a modal vanishing out from under a click is not the same reassurance as a menu doing it. |
+| `tokens.css` | `--font-family-sans: "Source Sans Pro"` | `"Source Sans 3"` | The design adopts the maintained successor of the same typeface - Source Sans Pro is frozen upstream, Source Sans 3 is where its fixes and hinting work land. Same designer, same metrics by design. `baselineTheme.ts` carries the identical change, and the showcase loads the family from `@fontsource/source-sans-3`. |
+| `baselineTheme.ts` | `fontFamily` begins `"Source Sans Pro"` | `"Source Sans 3"` | The same change, at the stack the seven MUI-wrapping primitives render under. |
+| `primitives/Button/Button.module.css` | `.root { font-weight: 600 }` | `500` | The kit's own spec always said 500; the module shipped 600 and the theme carried what painted. The design now agrees with its spec - a button label at 500 sits between the body's 400 and the headings' 600 instead of matching the headings. |
 | `base.css` (the global `a` rule) | `text-decoration: none` | `underline`, `0.0625em` thick, `0.15em` offset, tinted to 35% of `currentColor`, full strength on `:hover` | A link that is only a colour is a link that is invisible to anyone who cannot see the colour. The browser's own underline sits on the baseline at full strength and clips descenders at 15px, so all three measurements are stated rather than inherited. |

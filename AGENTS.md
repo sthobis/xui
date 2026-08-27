@@ -7,7 +7,7 @@ Three themes ship today:
 
 - **shadcn** - shadcn/ui's default look (new-york style, neutral base, Geist, light and dark). Complete.
 - **kumo** - Kumo, Cloudflare's design system (https://kumo-ui.com), Inter, light and dark. Complete, including the portalled tier (Tooltip, DropdownMenu, Select, Popover, Dialog, Toast).
-- **blink** - Pulse / NeverBlink's own design system, Source Sans Pro. **Light only.** Portalled tier included. There is deliberately no `blink-dark` project until a dark scheme is written, so a future one cannot silently run in light and pass everything; `blink.ts`'s palette is a factory over a token set precisely so adding it is a one-line change.
+- **blink** - Pulse / NeverBlink's own design system, Source Sans 3. **Light only.** Portalled tier included. There is deliberately no `blink-dark` project until a dark scheme is written, so a future one cannot silently run in light and pass everything; `blink.ts`'s palette is a factory over a token set precisely so adding it is a one-line change.
 
 **blink is not like the other two, and the difference decides how you work on it.**
 shadcn and kumo replicate systems somebody else owns, so their job is finished when the copy is exact and their surface stops where the original's does.

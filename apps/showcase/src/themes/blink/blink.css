@@ -5,11 +5,14 @@
 @import "./reference/tokens.css";
 @import "./reference/base.css";
 
-/* The app pulls Source Sans Pro from Google Fonts at weights 300/400/600/700. The harness gets
-   the same family from a package instead: a network font is a flake the pixel diff cannot
-   tolerate, and both sides of every pair read from this one file, so the comparison is
-   unaffected by which copy of the typeface it is. */
-@import "@fontsource/source-sans-pro/300.css";
-@import "@fontsource/source-sans-pro/400.css";
-@import "@fontsource/source-sans-pro/600.css";
-@import "@fontsource/source-sans-pro/700.css";
+/* The design's face is Source Sans 3 (a local design change pending upstream - the app still
+   loads its predecessor Source Sans Pro from Google Fonts; see reference/README.md's table). The
+   harness gets the family from a package rather than the network: a network font is a flake the
+   pixel diff cannot tolerate, and both sides of every pair read from this one file, so the
+   comparison is unaffected by which copy of the typeface it is. 500 joins the weights for the
+   Button's new default. */
+@import "@fontsource/source-sans-3/300.css";
+@import "@fontsource/source-sans-3/400.css";
+@import "@fontsource/source-sans-3/500.css";
+@import "@fontsource/source-sans-3/600.css";
+@import "@fontsource/source-sans-3/700.css";

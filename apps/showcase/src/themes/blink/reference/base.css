@@ -2,8 +2,8 @@
  * = the app's CSS reset, then the generic head of its global stylesheet
  * (everything before .echarts-tooltip).
  * Omitted on purpose: the global sheet's first line imports Inter, which is
- * loaded but never painted (tokens.css --font-family-sans is Source Sans Pro,
- * and the live kit page measures Source Sans Pro); and everything from
+ * loaded but never painted (tokens.css --font-family-sans is Source Sans 3,
+ * and the blink pages load that family); and everything from
  * .echarts-tooltip onward is app furniture (charts, toastify, date-range,
  * bootstrap leftovers).
  * The app loads these as reset -> tokens -> globals; keep that order.
