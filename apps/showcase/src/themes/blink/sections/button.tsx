@@ -84,6 +84,46 @@ for (const v of VARIANTS) {
   })
 }
 
+// The loading state, blink: Button .loading + .spinner. Found broken in a consuming app - MUI
+// hides the label with `color: transparent` and the theme's variant inks, emitted later, won it
+// back, so every loading button drew its text over its spinner. Primary and secondary cover the
+// two inks the spinner inherits; the small pair holds the indicator's per-size scale.
+for (const v of [
+  { kit: "primary", mui: { variant: "contained" } },
+  { kit: "secondary", mui: { variant: "outlined" } },
+] as const) {
+  pairs.push({
+    id: `button-loading-${v.kit}`,
+    ref: (
+      <RefProviders>
+        <Button loading variant={v.kit}>
+          Button
+        </Button>
+      </RefProviders>
+    ),
+    mui: (
+      <MuiButton loading {...(v.mui as MuiButtonProps)}>
+        Button
+      </MuiButton>
+    ),
+  })
+}
+pairs.push({
+  id: "button-loading-sm",
+  ref: (
+    <RefProviders>
+      <Button loading variant="secondary" size="sm">
+        Button
+      </Button>
+    </RefProviders>
+  ),
+  mui: (
+    <MuiButton loading variant="outlined" size="small">
+      Button
+    </MuiButton>
+  ),
+})
+
 export const buttonSection: Section = {
   title: "Button",
   pairs,

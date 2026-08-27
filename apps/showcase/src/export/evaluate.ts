@@ -1,7 +1,9 @@
+import CircularProgress from "@mui/material/CircularProgress"
 import type { Theme } from "@mui/material/styles"
 import * as muiStyles from "@mui/material/styles"
 import { CheckIcon as PhosphorCheckIcon, MinusIcon as PhosphorMinusIcon } from "@phosphor-icons/react"
 import {
+  ArrowDownIcon,
   Check,
   ChevronDown,
   ChevronDownIcon,
@@ -44,7 +46,11 @@ export function toJavaScript(tsSource: string): string {
 const MODULES: Record<string, object> = {
   react: React,
   "@mui/material/styles": muiStyles,
+  // blink's loading-button indicator is a real component bound in defaultProps, so the theme now
+  // imports one component module beside the styles entry point.
+  "@mui/material/CircularProgress": { __esModule: true, default: CircularProgress },
   "lucide-react": wrapIconModule("lucide-react", {
+    ArrowDownIcon,
     Check,
     ChevronDown,
     ChevronDownIcon,

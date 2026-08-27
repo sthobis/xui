@@ -38,6 +38,7 @@
  * `colorSchemes.dark` a one-line change; until that is written there is deliberately no dark
  * project in the harness, so a future one cannot silently run in light and pass everything.
  */
+import CircularProgress from "@mui/material/CircularProgress"
 import { createTheme, type Theme } from "@mui/material/styles"
 import {
   ArrowDownIcon,
@@ -380,6 +381,13 @@ const collapsedFieldSizes = [
   },
 ]
 
+/**
+ * The loading button's spinner, bound once at module scope like the icons above. MUI's own default
+ * is `<CircularProgress color="inherit" size={16} />`; the kit's md spinner is the same 16px but at
+ * the 2.5px stroke - thickness 6.875 - which MUI's element leaves to the 20px default.
+ */
+const LoadingSpinner = createElement(CircularProgress, { color: "inherit", size: 16, thickness: 6.875 })
+
 const SortArrow = (props: { className?: string }) =>
   createElement(ArrowDownIcon, { size: 14, ...props }) // blink: Table/index.tsx SortIndicator
 
@@ -526,6 +534,12 @@ export const blinkTheme = createTheme({
         // the global MuiButtonBase default, because that default does not reach every component
         // that forwards its own.
         disableRipple: true, // blink: Button/index.tsx `disableRipple`
+        // blink: Button/index.tsx `<Spinner size={SPINNER_SIZE[size]} />`. MUI's own default is
+        // the same element at the same 16px - the kit's md - but with `thickness` unset, so it
+        // fell to the Spinner block's 5.5 (the 20px ratio) where a 16px spinner is 2.5px of
+        // stroke: 6.875, exactly as the standalone spinner-sm pair states it. The other button
+        // sizes scale this one element - see the loadingIndicator rules on the root.
+        loadingIndicator: LoadingSpinner,
       },
       styleOverrides: {
         root: ({ theme }) => ({
@@ -564,7 +578,27 @@ export const blinkTheme = createTheme({
           boxShadow: "none",
           "&:hover": { boxShadow: "none" },
           "&:active": { boxShadow: "none" },
-          "&.Mui-disabled": {
+          // ---- loading, blink: Button .loading / .loading .content / .spinner ----
+          //
+          // MUI hides a loading button's label with `color: transparent` on the root - and every
+          // per-variant colour entry below is emitted AFTER that rule, so the variant ink won it
+          // back and the label rendered on top of the spinner (found in a consuming app; every
+          // <Button loading> showed both). The kit's own construction cannot be transcribed
+          // directly either: it hides a .content WRAPPER with `opacity: 0`, and MUI renders bare
+          // children with no wrapper to hide.
+          //
+          // So the label is hidden at the TEXT level - `-webkit-text-fill-color` paints the glyphs
+          // transparent while leaving `color` alive, which matters because the kit's spinner is
+          // `color: inherit`: the variant ink survives for the indicator to inherit, per variant,
+          // for free. What that property cannot hide is an ICON (an svg strokes `currentColor`,
+          // which follows `color`, not text-fill) - so the two icon slots are hidden the kit's own
+          // way, `opacity: 0`.
+          "&.MuiButton-loading": {
+            WebkitTextFillColor: "transparent", // blink: .loading .content `opacity: 0`, for bare text
+            cursor: "progress", // blink: .loading `cursor: progress`
+            "& .MuiButton-startIcon, & .MuiButton-endIcon": { opacity: 0 }, // ...and for icons
+          },
+          "&.Mui-disabled:not(.MuiButton-loading)": {
             opacity: 0.6, // blink: .root:disabled:not(.loading) `opacity: 0.6`
             // MUI greys a disabled button out - its own `action.disabled` on the label and
             // `action.disabledBackground` on the border. The kit does not: `.root:disabled` sets
@@ -574,6 +608,21 @@ export const blinkTheme = createTheme({
             // disabled ghost button's label #262626 instead of brand indigo. Each variant restates
             // its own skin under `.Mui-disabled` instead; see `skin` in each block below.
           },
+          // blink: .spinner `color: inherit` - MUI paints the centred indicator in
+          // `action.disabled`, a grey the kit does not have. Inherit is the whole point of the
+          // text-fill trick above: the ink it inherits is the variant's.
+          "& .MuiButton-loadingIndicator": { color: "inherit" },
+          // blink: Button/index.tsx SPINNER_SIZE - 12/14/16/18 by button size. MUI's default
+          // indicator is a fixed 16px CircularProgress (right for md, stated with the kit's
+          // thickness in defaultProps below) and its size is an SVG attribute a theme cannot
+          // restate, so the other steps SCALE the indicator's wrapper. The scale rides on the
+          // translate MUI already puts there for centring. SCOPE: scaling is proportional, so a
+          // scaled stroke drifts from the kit's non-proportional ladder by under a quarter pixel
+          // (1.875 against 2 at xs, 2.19 against 2 at sm, 2.81 against 3 at lg) - the kit's exact
+          // per-size strokes are unreachable without one indicator element per size.
+          "&.MuiButton-sizeXs .MuiButton-loadingIndicator": { transform: "translate(-50%) scale(0.75)" },
+          "&.MuiButton-sizeSmall .MuiButton-loadingIndicator": { transform: "translate(-50%) scale(0.875)" },
+          "&.MuiButton-sizeLarge .MuiButton-loadingIndicator": { transform: "translate(-50%) scale(1.125)" },
           "&.Mui-focusVisible": {
             outline: "2px solid transparent", // blink: .root:focus-visible
             outlineOffset: 2, // blink: .root:focus-visible `outline-offset: 2px`
