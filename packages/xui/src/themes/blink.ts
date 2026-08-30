@@ -2727,7 +2727,14 @@ export const blinkTheme = createTheme({
           display: "flex", // blink: .item `display: flex`
           alignItems: "center", // blink: .item `align-items: center`
           gap: 8, // blink: .item `gap: var(--space-2)`
-          minHeight: 32, // blink: .item `min-height: var(--control-h-sm)`
+          // blink: .item `min-height: var(--control-h-sm)`, doubled for specificity.
+          //
+          // MUI states this height twice and in two ranges - 48 on the root, then `auto`
+          // from `sm` up, in a VARIANT that is emitted after these overrides. A plain
+          // declaration here loses the second one, and menu rows silently collapse to their
+          // content on every desktop viewport. `&&` outranks both in one line, where
+          // mirroring the breakpoint would mean restating the kit's height twice.
+          "&&": { minHeight: 32 },
           padding: 8, // blink: .item `padding: var(--space-2)`
           borderRadius: radius.md, // blink: .item `border-radius: var(--radius-2)`
           fontSize: 15, // blink: .item `font-size: var(--text-md)`
@@ -2788,15 +2795,14 @@ export const blinkTheme = createTheme({
     MuiDialogTitle: {
       styleOverrides: {
         // The kit splits this across two elements - a `.header` flex row holding an `h2.title` -
-        // and MUI has one. Both sets of declarations land here, which works because the kit's title
-        // is the only in-flow child of its header when there is no close button, and because a
-        // consumer who composes an IconButton into DialogTitle gets exactly the row the kit's
-        // header lays out.
+        // where MUI has one. Only the TITLE's own declarations belong here.
+        //
+        // The header's `display: flex` used to be carried here too, and it cannot be: a title is
+        // prose, and flex promotes every text node and inline `<b>` to a flex item, so a perfectly
+        // ordinary `Remove <b>{name}</b>?` came out as three items spread apart by the row's gap.
+        // The kit's header is the layout AROUND a title - a consumer who wants a close button in
+        // the corner positions it against the paper, which is what MUI's own dialog pattern does.
         root: ({ theme }) => ({
-          display: "flex", // blink: .header `display: flex`
-          justifyContent: "space-between", // blink: .header `justify-content: space-between`
-          alignItems: "flex-start", // blink: .header `align-items: flex-start`
-          gap: 12, // blink: .header `gap: var(--space-3)`
           padding: 0, // blink: neither .header nor .title has padding - the paper owns it
           margin: 0, // blink: .title `margin: 0`
           fontWeight: 600, // blink: .title `font-weight: 600`
@@ -2809,9 +2815,13 @@ export const blinkTheme = createTheme({
     MuiDialogContent: {
       styleOverrides: {
         root: ({ theme }) => ({
-          display: "flex", // blink: .body `display: flex`
-          flexDirection: "column" as const, // blink: .body `flex-direction: column`
-          gap: 12, // blink: .body `gap: var(--space-3)`
+          // blink: .body is a `display: flex` column with `gap: var(--space-3)`, which is
+          // transcribed here as block flow plus the same 12px between element children.
+          // A flex body has the same fault the title had - it promotes bare text and inline
+          // `<b>` to items, so a sentence with emphasis in it breaks across lines - and a
+          // dialog body is prose at least as often as it is stacked sections.
+          display: "block",
+          "& > * + *": { marginTop: 12 },
           color: theme.vars.palette.text.primary, // blink: .body `color: var(--color-text-default)`
           fontSize: 15, // blink: .body `font-size: var(--text-md)`
           lineHeight: 1.5, // blink: .body `line-height: 1.5`
