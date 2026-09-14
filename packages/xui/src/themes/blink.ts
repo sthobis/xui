@@ -314,20 +314,21 @@ const dashForThickness = (thickness: number | undefined) => {
 }
 
 /**
- * THE COLLAPSE - MUI's other two field shapes, rendered as the design system's ONE field.
+ * THE COLLAPSE - MUI's other two field shapes, rendered on the design system's ONE field.
  *
- * MUI offers three field variants (outlined / filled / standard); the design system has exactly
- * one field, the bordered box the MuiOutlinedInput block carries. The other two are collapsed onto
- * it rather than given looks of their own: a `variant="filled"` in consumer code must come out as
- * blink's field, because the alternatives are stock Material (which this theme exists to prevent)
- * or an invented second field style (a design decision made by a prop instead of by the design
- * system). An earlier revision did invent both - an underlined field and a tinted one in blink's
- * colours - and nothing in the design says either exists; they were exactly the taste-derivation
- * AGENTS.md forbids.
+ * MUI offers three field variants (outlined / filled / standard); the design system has one
+ * field, the bordered box the MuiOutlinedInput block carries. `standard` is collapsed onto it
+ * outright: an underlined field in consumer code must come out as blink's field, because the
+ * alternatives are stock Material (which this theme exists to prevent) or an invented second
+ * field style. `filled` shares every value here and then trades the border for a tint - see the
+ * MuiFilledInput block for what that is and why it exists now when an earlier revision of this
+ * note rejected exactly that as taste. The short version: the design system's own conventions
+ * now NAME the tinted field and say where it goes, which is the difference between a derivation
+ * and an invention.
  *
- * Collapsing also upgrades the verification. These two shapes are pixel-paired against the SAME
- * vendored Input the outlined pairs use (`input-standard` / `input-filled`), so they hold zero
- * like any extracted block - the invented shapes were ref-less forever.
+ * Collapsing is also what the verification rests on. `input-standard` is pixel-paired against the
+ * SAME vendored Input the outlined pairs use, so it holds zero like any extracted block; the filled
+ * shape is ref-less, as every derived block is.
  *
  * One helper, two keys, because this is one design fact stated once. The construction differs
  * from the outlined block in exactly one way, and it makes these SIMPLER: Input and FilledInput
@@ -434,6 +435,11 @@ const SortArrow = (props: { className?: string }) =>
 
 export const blinkTheme = createTheme({
   cssVariables: true,
+  // derived: MUI stacks its own layers 1000-1500 with the tooltip on top at 1500, and that is only
+  // true of MUI's overlays. In a consuming app the tooltips sat UNDER a third-party support widget
+  // pinned at 9999. A tooltip is transient and never the thing a user is acting on, so it is the
+  // one layer that can sit above everything else without covering anything that matters.
+  zIndex: { tooltip: 9999 },
   colorSchemes: { light: { palette: palette(color) } },
   radius,
   shadow,
@@ -992,9 +998,12 @@ export const blinkTheme = createTheme({
           padding: 0,
           flex: 1,
           minWidth: 0,
-          display: "flex",
-          flexDirection: "column",
-          gap: 4, // blink: .content `gap: var(--space-1)`
+          // NOT the flex column the kit's .content was (and MUI's message slot is by default).
+          // Flex promotes every child to an item, so a body that mixes text with an inline <code>
+          // or <b> broke into one row per node - the same fault the Dialog title and body had.
+          // Block flow lets prose flow, and the 4px the column's gap put between the title and
+          // the body moves onto the title (see MuiAlertTitle), the one child that always wants a
+          // gap under it. A recorded design change; the snapshot's Alert.module.css carries it too.
         },
         action: {
           // blink: .actions
@@ -1084,6 +1093,14 @@ export const blinkTheme = createTheme({
           // blink: .title. MUI's AlertTitle ships its own margins and a bumped font size; the kit's
           // title is the same size as the body, just heavier, and the gap comes from .content.
           margin: 0,
+          // blink: .title `margin-bottom: var(--space-1)` - the 4px that used to be the .content
+          // column's gap, now that the message is block flow (see `message`). UNCONDITIONAL, and
+          // not `:not(:last-child)`: MUI's idiomatic body is a bare text node after the title
+          // (`<AlertTitle>..</AlertTitle>Some text`), and CSS counts only element siblings, so that
+          // guard read the title as last and dropped the gap on exactly the common case - measured
+          // as 11336 pixels on every titled pair. The cost is a title-only alert carrying 4px it
+          // does not need under the title; the kit's snapshot pays the same so the pairs agree.
+          marginBottom: 4,
           fontSize: "inherit",
           fontWeight: 600, // blink: .title `font-weight: 600`
           lineHeight: 1.3, // blink: .title `line-height: 1.3`
@@ -1714,25 +1731,30 @@ export const blinkTheme = createTheme({
           // knob overlaps the track, so two half-transparent shapes composite differently from one
           // half-transparent control (measured 2571 differing pixels).
           "&:has(.Mui-disabled)": { opacity: 0.5 },
-          // The kit ships ONE switch - Switch.module.css carries no size axis - so the dimensions
-          // above are the whole story and MUI's second size has to come out as the same control.
-          // It did not: MUI's `sizeSmall` variant re-sizes the THUMB and the switchBase padding
-          // through DESCENDANT selectors, which outrank the `thumb`/`switchBase` slot overrides
-          // below (two classes against one), while leaving root and track to the rules here. The
-          // halves then disagree - measured, a 16px knob at a 4px inset inside this 20px track,
-          // sitting flush to the track's bottom edge and, once checked, its right edge too.
-          // 956 differing pixels at Δ176.
+          // DERIVED - the small switch. The kit ships ONE switch (Switch.module.css carries no
+          // size axis), and this block used to hand `size="small"` that same 36x20 control. It is
+          // now a genuinely smaller one: a consuming app needed a switch that fits a dense row and
+          // a menu item, and "small renders medium" left it with nothing to reach for. Built from
+          // the medium's own proportions - the same 1px knob inset, the knob at track height minus
+          // twice that inset, and the track one grid step shorter and two narrower - so it reads
+          // as the same control at the next size down.
           //
-          // Scoped through `.MuiSwitch-sizeSmall` rather than declared as a `props: { size }`
-          // variant, and the difference matters: the extra class puts this at (0,3,0), so it beats
-          // MUI's own variant on SPECIFICITY rather than on which rule Emotion inserts last.
+          // Whatever the values, MUI's `sizeSmall` variant has to be beaten rather than ignored: it
+          // re-sizes the THUMB and the switchBase padding through DESCENDANT selectors, which
+          // outrank the `thumb`/`switchBase` slot overrides below (two classes against one), while
+          // leaving root and track to the rules here. Left alone the halves disagreed - measured, a
+          // 16px knob at a 4px inset inside a 20px track, flush to its bottom edge. 956 differing
+          // pixels at Δ176. Scoped through `.MuiSwitch-sizeSmall` rather than declared as a
+          // `props: { size }` variant, and the difference matters: the extra class puts this at
+          // (0,3,0), so it beats MUI's own variant on SPECIFICITY rather than on which rule
+          // Emotion inserts last.
           "&.MuiSwitch-sizeSmall": {
-            "& .MuiSwitch-thumb": { width: 18, height: 18 }, // blink: .root::after `width/height: 18px`
+            width: 28, // derived: 36 less two 4px grid steps
+            height: 16, // derived: 20 less one grid step
+            "& .MuiSwitch-thumb": { width: 14, height: 14 }, // derived: 16 less the 1px inset on each side
             "& .MuiSwitch-switchBase": {
-              padding: 1, // blink: .root::after `top: 1px; left: 1px`
-              // Restated rather than inherited: MUI's small variant happens to say the same 16px,
-              // so without this the travel would be right by coincidence, not by the kit's value.
-              "&.Mui-checked": { transform: "translateX(16px)" }, // blink: .root:checked::after
+              padding: 1, // blink: .root::after `top: 1px; left: 1px` - the same inset at both sizes
+              "&.Mui-checked": { transform: "translateX(12px)" }, // derived: 28 - 14 - 2 x 1
             },
           },
         },
@@ -1875,6 +1897,32 @@ export const blinkTheme = createTheme({
           // padding and chevron included - and the select does not cover those. Invisible to the
           // pixel harness, which captures no cursor; here because it is part of the transcription.
           "&:has(select)": { cursor: "pointer" },
+          // derived: a button that lives IN a field - a clear, an edit, a confirm - goes in the end
+          // adornment, and the field takes over its geometry so no call site ever names a number:
+          // the right padding trims to 4px, the adornment stretches to the field's height, and the
+          // button fills it square with a 4px inset all round. That is a 24/28/32 button in a
+          // small/default/large field, from the field's own 32/36/40 - the ladder the sizes above
+          // already commit to. A bare IconButton in an adornment keeps the 24px in-field step
+          // MuiInputAdornment gives it; this rule is keyed on the WRAPPED shape and outranks that
+          // one (0,5,0 against 0,2,0), so the two never fight. Text-only adornments are untouched.
+          "&:has(.MuiInputAdornment-positionEnd .MuiButtonBase-root)": {
+            paddingRight: 4,
+            "& .MuiInputAdornment-positionEnd": { maxHeight: "none", alignSelf: "stretch", gap: 4 },
+            "& .MuiInputAdornment-positionEnd .MuiButtonBase-root": {
+              height: "auto",
+              width: "auto",
+              minWidth: 0,
+              alignSelf: "stretch",
+              margin: "4px 0",
+              aspectRatio: "1 / 1",
+            },
+          },
+          // derived: a read-only field is not a text target, and the I-beam the root sets above
+          // promises one. `readOnly` lands on the <input>, not as a class on the root, hence :has.
+          "&:has(input[readonly])": {
+            cursor: "default",
+            "& .MuiOutlinedInput-input": { cursor: "default" },
+          },
           "& .MuiOutlinedInput-notchedOutline": {
             borderColor: theme.vars.palette.borderStrong, // blink: .root `border: 1px solid var(--color-border-strong)`
             borderWidth: 1,
@@ -1984,15 +2032,35 @@ export const blinkTheme = createTheme({
 
     // ---- Input, MUI's other two shapes - COLLAPSED onto the kit's one field ----
     //
-    // See the note at collapsedFieldRoot for why these render the same field as MuiOutlinedInput
-    // rather than looks of their own. `input-standard` and `input-filled` hold both at zero
-    // against the same vendored kit Input the outlined pairs use.
+    // See the note at collapsedFieldRoot for why these start from the same field as
+    // MuiOutlinedInput rather than looks of their own. `input-standard` holds the underlined shape
+    // at zero against the same vendored kit Input the outlined pairs use.
     MuiInput: {
       styleOverrides: { root: collapsedFieldRoot, input: collapsedFieldInput },
       variants: collapsedFieldSizes,
     },
+    // DERIVED - the filled input. The kit's field with its border traded for a tint: the
+    // surface-muted wash at rest and on hover, no visible edge, and the plain surface back on
+    // focus so the ring reads against white. The design system's own conventions name this as
+    // the field for in-panel filter boxes, where a bordered white field beside a bordered white
+    // table reads as a second table - and Material's `filled` is the variant that already means
+    // "the tinted one", so a consumer reaches for it by its MUI name. Same box, same states, same
+    // sizes as collapsedFieldRoot; only the three surface values differ, each from a token the
+    // Input already uses.
     MuiFilledInput: {
-      styleOverrides: { root: collapsedFieldRoot, input: collapsedFieldInput },
+      styleOverrides: {
+        root: ({ theme }) => ({
+          ...collapsedFieldRoot({ theme }),
+          background: theme.vars.palette.surfaceMuted, // derived: the disabled field's wash, at rest
+          borderColor: "transparent", // derived: the tint IS the edge
+          "&:hover:not(.Mui-disabled)": { backgroundColor: theme.vars.palette.surfaceMuted },
+          "&:hover:not(.Mui-focused):not(.Mui-error):not(.Mui-disabled)": {
+            borderColor: "transparent", // derived: no edge on hover either - the Input's hover is a border change
+          },
+          "&.Mui-focused": { backgroundColor: theme.vars.palette.surface }, // derived: the focus ring wants the surface behind it
+        }),
+        input: collapsedFieldInput,
+      },
       variants: collapsedFieldSizes,
     },
 
@@ -2648,6 +2716,11 @@ export const blinkTheme = createTheme({
         placement: "top",
         enterDelay: 200,
         leaveDelay: 0,
+        // derived: a click on the popup must not reach whatever the trigger sits in. The popup is
+        // portalled to <body>, but React's synthetic events bubble through the COMPONENT tree, so
+        // a tooltip on a cell in a clickable row otherwise selects the row when its text is
+        // clicked. Measured in a consuming app, where the wrapper this replaced used to do it.
+        slotProps: { popper: { onClick: (e) => e.stopPropagation() } },
       },
       styleOverrides: {
         tooltip: ({ theme }) => ({
@@ -2738,7 +2811,20 @@ export const blinkTheme = createTheme({
           padding: 8, // blink: .item `padding: var(--space-2)`
           borderRadius: radius.md, // blink: .item `border-radius: var(--radius-2)`
           fontSize: 15, // blink: .item `font-size: var(--text-md)`
-          lineHeight: 1.4, // blink: .item `line-height: 1.4`
+          // blink: .item `line-height: 20px`. Was the ratio 1.4, which at 15px is a 21px line and
+          // a 37px row; a length puts the row at 36 - the kit's --control-h-md, on its 4px grid -
+          // and it is what the Tooltip already does with the same 15px type. A recorded design
+          // change; the snapshot's Menu.module.css carries it too.
+          lineHeight: "20px",
+          // derived: a selected row in a single-value picker. MUI's own selected state is a
+          // primary tint, which on this surface reads as hover (both are a wash on white), and the
+          // hover then has nothing left to say. Weight is the axis hover does not use: 600, the
+          // kit's emphasis weight, over no tint, with the hover still landing on top of it.
+          "&.Mui-selected": {
+            backgroundColor: "transparent",
+            fontWeight: 600,
+            "&:hover": { backgroundColor: theme.vars.palette.surfaceMuted },
+          },
           // blink: `.list .item:hover`. The kit reaches for a two-class selector deliberately - its
           // own comment says `.list .item` (0,3,0) has to outweigh MUI's `.MuiMenuItem-root:hover`
           // (0,2,0) - and the token is there because MUI's faint black tint disappears on a dark
@@ -2765,9 +2851,13 @@ export const blinkTheme = createTheme({
     // Ground truth: reference/primitives/Dialog/Dialog.module.css, plus the props index.tsx pins.
     //
     // The kit's paper is a flex COLUMN with a 16px pad and a 12px gap, and its header, body and
-    // footer carry no padding at all - the paper owns every bit of the spacing. MUI's three slots
-    // each carry their own padding instead, so the whole of this block is: put the spacing on the
-    // paper, take it off the slots.
+    // footer carry no padding at all - the paper owns every bit of the spacing. This block used to
+    // mirror that construction, and it cannot: a padded paper insets everything MUI puts INSIDE
+    // it, so `scroll="paper"` scrolled a body whose scrollbar sat 16px in from the edge, and a
+    // close button positioned against the paper landed inside the pad rather than in the corner.
+    // So the spacing lives on the SLOTS instead, at exactly the values the paper's pad and gap
+    // produced - 16 to every edge, 12 between neighbours - and the picture is the same one:
+    // `dialog-open` holds it at zero against the kit's own padded paper.
     //
     // The size ladder is remapped rather than renamed. The kit's sm/md/lg are 400/560/720 and MUI's
     // are 600/900/1200, so `maxWidth="md"` means a different dialog under this theme - which is the
@@ -2782,10 +2872,27 @@ export const blinkTheme = createTheme({
         paper: ({ theme }) => ({
           background: theme.vars.palette.surface, // blink: .paper `background: var(--color-surface)`
           borderRadius: radius.lg, // blink: .paper `border-radius: var(--radius-3)`
-          padding: 16, // blink: .paper `padding: var(--space-4)`
+          padding: 0, // blink: .paper `padding: var(--space-4)` - carried by the slots, see the banner
           display: "flex", // blink: .paper `display: flex`
           flexDirection: "column" as const, // blink: .paper `flex-direction: column`
-          gap: 12, // blink: .paper `gap: var(--space-3)`
+          // derived: a full-screen dialog has no corners to round; MUI's own fullScreen paper
+          // keeps the radius and paints four notches of backdrop at the viewport's corners.
+          "&.MuiDialog-paperFullScreen": { borderRadius: 0 },
+          // derived: the close button. The kit composes its `dismissible` button inside the
+          // header; under this theme a consumer drops an IconButton labelled "close" into the
+          // paper and it goes to the corner - 8px in, the same inset the kit's -2/-4 nudge lands
+          // its 32px ghost button at - in the muted ink, and the title makes room for it. Keyed on
+          // the aria-label because that is the one thing a close button always carries; the `i`
+          // flag because "Close" and "close" are both in use.
+          '& > .MuiIconButton-root[aria-label="close" i]': {
+            position: "absolute",
+            top: 8,
+            right: 8,
+            color: theme.vars.palette.textMuted,
+          },
+          '&:has(> .MuiIconButton-root[aria-label="close" i]) > .MuiDialogTitle-root': {
+            paddingRight: 48, // derived: 8 + the 36px ghost button + a 4px breath
+          },
         }),
         paperWidthSm: { maxWidth: 400 }, // blink: .sm `max-width: 400px`
         paperWidthMd: { maxWidth: 560 }, // blink: .md `max-width: 560px`
@@ -2803,7 +2910,8 @@ export const blinkTheme = createTheme({
         // The kit's header is the layout AROUND a title - a consumer who wants a close button in
         // the corner positions it against the paper, which is what MUI's own dialog pattern does.
         root: ({ theme }) => ({
-          padding: 0, // blink: neither .header nor .title has padding - the paper owns it
+          // blink: the paper's 16px pad on three sides, and its 12px gap below - see the banner.
+          padding: "16px 16px 12px",
           margin: 0, // blink: .title `margin: 0`
           fontWeight: 600, // blink: .title `font-weight: 600`
           fontSize: 18, // blink: .title `font-size: var(--text-lg)`
@@ -2825,11 +2933,14 @@ export const blinkTheme = createTheme({
           color: theme.vars.palette.text.primary, // blink: .body `color: var(--color-text-default)`
           fontSize: 15, // blink: .body `font-size: var(--text-md)`
           lineHeight: 1.5, // blink: .body `line-height: 1.5`
-          padding: 0, // blink: .body has none - MUI ships 20px/24px
-          // MUI also drops a title's neighbouring content to `padding-top: 0`, which is dead weight
-          // once the padding is gone, and it is stated at two classes - restated here so the rule
-          // above is not silently outranked for the one arrangement that matters most.
-          ".MuiDialogTitle-root + &": { paddingTop: 0 },
+          padding: 16, // blink: the paper's pad, on the slot - see the banner. MUI ships 20px/24px
+          // A title above already paid the 12px gap out of its own bottom padding. `~` rather than
+          // MUI's own `+`, because a close button (see MuiDialog) can sit between the two and must
+          // not reinstate a 28px gap. MUI states its version at two classes; this one is restated
+          // so it is not silently outranked for the one arrangement that matters most.
+          ".MuiDialogTitle-root ~ &": { paddingTop: 0 },
+          // ...and actions below take the same 12px from this side, so the bottom edge stays 16.
+          "&:has(+ .MuiDialogActions-root)": { paddingBottom: 12 },
         }),
       },
     },
@@ -2849,7 +2960,9 @@ export const blinkTheme = createTheme({
           display: "flex", // blink: .footer `display: flex`
           justifyContent: "flex-end", // blink: .footer `justify-content: flex-end`
           gap: 8, // blink: .footer `gap: var(--space-2)`
-          padding: 0, // blink: .footer has none - MUI ships 8px
+          // blink: the paper's pad on three sides; the 12px above is paid by the content's
+          // bottom (see MuiDialogContent), so a title straight into actions still gets its 12.
+          padding: "0 16px 16px",
           // MUI spaces its actions with a sibling margin rather than a gap. Left in place it would
           // stack with the 8px gap above and put 16px between two buttons.
           "& > :not(style) ~ :not(style)": { marginLeft: 0 },
@@ -3883,12 +3996,19 @@ export const blinkTheme = createTheme({
       styleOverrides: {
         // NOT the kit's Badge - that is a standalone pill and is already themed as MuiChip. This is
         // MUI's corner dot/count, which the kit has no equivalent of at all.
-        badge: ({ theme }) => ({
+        badge: ({ theme, ownerState }) => ({
           fontSize: 13, // --text-xs
           fontWeight: 600, // the kit's control weight
           fontFamily: "inherit",
-          backgroundColor: theme.vars.palette.error.main,
-          color: theme.vars.palette.error.contrastText,
+          // Red is the DEFAULT, not the only colour: an unstated `color` resolves to "default",
+          // which is MUI's grey, and the kit has no grey count badge - its counts mean "attention".
+          // Stated unconditionally this also overrode every explicit colour, so a
+          // `<Badge color="primary">` on a filter button (an active-filter count, which is
+          // information rather than alarm) painted red. Keyed on the resolved prop instead.
+          ...(ownerState.color === "default" && {
+            backgroundColor: theme.vars.palette.error.main,
+            color: theme.vars.palette.error.contrastText,
+          }),
         }),
         dot: ({ theme }) => ({
           width: 8,

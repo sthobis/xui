@@ -70,10 +70,12 @@ pairs.push(
     mui: <MuiStandardInput data-target defaultValue="Cluster name" />,
   },
   {
-    // ...and MUI's filled input, whose grey wash, top-only corners and underline all go.
+    // DERIVED, so ref-less: the filled input is the kit's field with its border traded for the
+    // surface-muted tint (see the theme's MuiFilledInput block), which no kit component renders.
+    // Material's top-only corners and underline still have to be gone, and preflight is what
+    // checks the block stands without Tailwind.
     id: "input-filled",
     states: ["default", "focus"],
-    ref: <Input data-target defaultValue="Cluster name" />,
     mui: <MuiFilledInput data-target defaultValue="Cluster name" />,
   }
 )

@@ -124,11 +124,11 @@ export const selectSection: Section = {
       ),
     },
     {
-      // THE COLLAPSE, through a Select: `variant="filled"` renders the kit's one field, chevron
+      // THE COLLAPSE, through a Select: `variant="standard"` renders the kit's one field, chevron
       // included - the icon's inset loses the pixel the outlined value adds for a fieldset that
-      // occupies no space (see the NativeSelect icon rule). `standard` shares both rules; this
-      // pair guards them.
-      id: "select-filled",
+      // occupies no space (see the NativeSelect icon rule). `filled` shares both rules but is the
+      // tinted field now (see MuiFilledInput), so it can no longer be held against the kit's Select.
+      id: "select-standard",
       ref: (
         <Box>
           <Select defaultValue="iad">{options}</Select>
@@ -136,7 +136,7 @@ export const selectSection: Section = {
       ),
       mui: (
         <Box>
-          <MuiSelect native variant="filled" defaultValue="iad">
+          <MuiSelect native variant="standard" defaultValue="iad">
             {options}
           </MuiSelect>
         </Box>
