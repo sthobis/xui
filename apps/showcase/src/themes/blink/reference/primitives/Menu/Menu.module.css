@@ -24,7 +24,7 @@
     padding: var(--space-2);
     border-radius: var(--radius-2);
     font-size: var(--text-md);
-    line-height: 1.4;
+    line-height: 20px;
 }
 
 /* MUI's default hover (a faint black tint) is invisible on dark surfaces.

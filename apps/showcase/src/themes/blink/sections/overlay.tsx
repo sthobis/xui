@@ -218,10 +218,10 @@ export const menuSection: Section = {
 // ---- Dialog ----
 //
 // The kit's Dialog is a MUI Dialog whose paper is a flex column with a 16px pad and a 12px gap,
-// holding a header, a body and a footer that each carry NO padding of their own. MUI's
-// DialogTitle/DialogContent/DialogActions all carry their own, so the theme zeroes them and lets
-// the paper own the spacing - which is what makes the three MUI slots line up with the kit's three
-// divs.
+// holding a header, a body and a footer that each carry NO padding of their own. The theme puts
+// that same spacing on MUI's DialogTitle/DialogContent/DialogActions instead and leaves the paper
+// bare (its block says why) - a different construction that has to paint the same picture, and
+// this pair is what holds it there.
 //
 // The reference cell has nowhere to put `data-portal-target`: the kit's Dialog takes a fixed prop
 // list and spreads nothing. It does forward `className` to the PAPER, though, so this pair declares
