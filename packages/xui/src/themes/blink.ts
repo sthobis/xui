@@ -115,6 +115,15 @@ declare module "@mui/material/Button" {
   }
 }
 
+// The kit's Alert has two densities; MUI's Alert has no size prop at all, so the second one is
+// declared here. MUI forwards the unknown prop to the root as a `size` attribute, which is inert on
+// a div, and hands it to the theme as `ownerState.size` - which is all the variant below needs.
+declare module "@mui/material/Alert" {
+  interface AlertProps {
+    size?: "small" | "medium"
+  }
+}
+
 // The kit's Badge has two emphases against MUI's filled/outlined, and three sizes against two.
 // `solid` is the saturated fill (MUI's `filled` already carries the soft tint); `xs` is the 18px
 // pill. MUI's `outlined` is COLLAPSED onto the soft tint: the design system ships no bordered
@@ -941,11 +950,13 @@ export const blinkTheme = createTheme({
     // exception: it has no separate text cut, so its accent IS the plain colour. That is the kit's
     // table, not a simplification.
     //
-    // The stacked/inline distinction is the kit's `hasTitle` flag; `:has(.MuiAlertTitle-root)` asks
-    // MUI the same question without needing a prop.
+    // ONE layout, with or without a title: the box is top-aligned, and the icon and the actions both
+    // sit on the FIRST line of text. The kit used to centre the icon when there was no title, which
+    // is right for one line of prose and wrong the moment it wraps - the icon drifts to the middle of
+    // a paragraph, and an action button taller than the line makes the whole alert taller.
     //
-    // SCOPE: `md` only. The kit's `sm` density has no MUI counterpart - Alert has no size prop -
-    // and adding one would mean augmenting AlertProps and forwarding an unknown attribute.
+    // Both densities are covered: `medium` is the kit's `md` and the default, `size="small"` is its
+    // `sm` (see the AlertProps augmentation at the top of the file).
     MuiAlert: {
       defaultProps: {
         // The kit always takes its icon from the caller and ships no default mapping. MUI does ship
@@ -967,19 +978,14 @@ export const blinkTheme = createTheme({
           borderRadius: radius.lg, // blink: .md `border-radius: var(--radius-3)`
           fontSize: 15, // blink: .md `font-size: var(--text-md)`
           lineHeight: 1.5, // blink: .md `line-height: 1.5`
-          // blink: .inline `align-items: center` - the kit picks this layout when there is no
-          // title, which is exactly what this asks.
-          "&:not(:has(.MuiAlertTitle-root))": { alignItems: "center" },
-          // blink: .stacked.md .icon `margin-top: 2px`. With the box top-aligned, an 18px icon sits
-          // a little above the title's cap height, so the kit nudges it onto the first text line -
-          // but only in the stacked layout, since the inline one centres the icon instead. Stated
-          // here rather than in the `icon` slot because the condition is about the ROOT.
-          "&:has(.MuiAlertTitle-root) .MuiAlert-icon": { marginTop: 2 },
         },
         icon: {
           // blink: .icon - MUI gives the icon its own padding, right margin and 0.9 opacity; the
           // kit gives it none of those. The gap on the root is what separates it from the text.
+          // `margin-top` is the kit's too (.md .icon): with the box top-aligned, an 18px icon sits a
+          // little above the first line's cap height, so the kit nudges it onto that line.
           padding: 0,
+          marginTop: 2, // blink: .md .icon `margin-top: 2px`
           marginRight: 0,
           opacity: 1,
           flex: "none", // blink: .icon `flex: none`
@@ -992,12 +998,16 @@ export const blinkTheme = createTheme({
           padding: 0,
           flex: 1,
           minWidth: 0,
-          display: "flex",
-          flexDirection: "column",
-          gap: 4, // blink: .content `gap: var(--space-1)`
+          // NOT the kit's flex column, under a title or otherwise. The kit wraps its body in a div;
+          // MUI's message slot holds the caller's children raw, and MUI's contract is that anything
+          // goes there - a flex container would put every inline child, a <b> or a link, on a row of
+          // its own. The slot stays a plain block and the title carries the gap as a margin.
         },
         action: {
-          // blink: .actions
+          // blink: .actions. The box is exactly one line tall and top-aligned, so a button centres
+          // on the first line of text and overflows the box rather than stretching the alert.
+          alignSelf: "flex-start",
+          height: "1.5em", // blink: .md .actions `height: 1.5em` - the root's line-height
           padding: 0,
           marginRight: 0,
           marginLeft: 8,
@@ -1018,6 +1028,28 @@ export const blinkTheme = createTheme({
       // differing pixels at Δ255, the whole alert shifted 1px by its border. The
       // `alert-variant-*` pairs hold both collapses at zero.
       variants: [
+        {
+          props: { size: "small" },
+          style: {
+            gap: 8, // blink: .sm `gap: var(--space-2)`
+            padding: "8px 12px", // blink: .sm `padding: var(--space-2) var(--space-3)`
+            borderRadius: radius.md, // blink: .sm `border-radius: var(--radius-2)`
+            fontSize: 13, // blink: .sm `font-size: var(--text-xs)`
+            lineHeight: 1.4, // blink: .sm `line-height: 1.4`
+            // Descendant selectors rather than slot overrides: a variant styles the root only.
+            "& .MuiAlert-icon": { marginTop: 1 }, // blink: .sm .icon `margin-top: 1px`
+            "& .MuiAlert-icon svg": { width: 16, height: 16 }, // blink: .sm .icon svg
+            "& .MuiAlert-action": { height: "1.4em" }, // blink: .sm .actions - the line-height again
+            "& .MuiAlert-action .MuiIconButton-root": {
+              // derived: the xs control step (24px, --radius-1), which is what the kit's own dismiss
+              // button is. MUI's close button is a small IconButton, a step too large for this density.
+              width: 24,
+              height: 24,
+              borderRadius: radius.sm,
+            },
+            "& .MuiAlertTitle-root": { marginBottom: 2 }, // blink: .sm .content `gap: 2px`
+          },
+        },
         {
           props: { variant: "outlined" },
           style: { border: 0 },
@@ -1082,8 +1114,16 @@ export const blinkTheme = createTheme({
       styleOverrides: {
         root: {
           // blink: .title. MUI's AlertTitle ships its own margins and a bumped font size; the kit's
-          // title is the same size as the body, just heavier, and the gap comes from .content.
+          // title is the same size as the body, just heavier.
+          //
+          // The bottom margin is the kit's .content gap, as a margin - see the `message` slot for why.
+          // UNCONDITIONAL, exactly as MUI's own `gutterBottom` is. The usual body is a bare text node,
+          // which no selector can see: `:not(:last-child)` and `:only-child` both count a title
+          // followed by plain text as the last child, so any condition that spares a title-only
+          // alert also strips the gap above plain text. A title with no body is not a title - write
+          // it as the message.
           margin: 0,
+          marginBottom: 4, // blink: .content `gap: var(--space-1)`
           fontSize: "inherit",
           fontWeight: 600, // blink: .title `font-weight: 600`
           lineHeight: 1.3, // blink: .title `line-height: 1.3`

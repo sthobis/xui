@@ -33,14 +33,12 @@
     line-height: 1.5;
 }
 
-/* stacked (has title) anchors the icon to the title's first line;
-   inline (prose only) centers it on the single line */
-.stacked {
-    align-items: flex-start;
-}
-
+/* One layout with or without a title: top-aligned, the icon and the actions
+   both anchored to the first line of text. Inline used to centre the icon,
+   which is right for a single line and wrong as soon as the prose wraps. */
+.stacked,
 .inline {
-    align-items: center;
+    align-items: flex-start;
 }
 
 /* variant: bg tint + a hairline ring (--alert-border, the saturated
@@ -83,19 +81,19 @@
 
 /* Alert owns its icon footprint per size (overrides whatever size the
    consumer's lucide icon was created with) and nudges it onto the first
-   text line in the stacked layout. */
+   text line. */
 .sm .icon svg {
-    width: 15px;
-    height: 15px;
+    width: 16px;
+    height: 16px;
 }
 .md .icon svg {
     width: 18px;
     height: 18px;
 }
-.stacked.sm .icon {
+.sm .icon {
     margin-top: 1px;
 }
-.stacked.md .icon {
+.md .icon {
     margin-top: 2px;
 }
 
@@ -105,6 +103,9 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-1);
+}
+.sm .content {
+    gap: 2px;
 }
 
 .title {
@@ -117,10 +118,17 @@
     color: var(--alert-accent);
 }
 
+/* Exactly one line tall and top-aligned, so a button centres on the first
+   line of text and overflows this box instead of making the alert taller. */
 .actions {
     flex: none;
+    align-self: flex-start;
+    height: 1.5em;
     display: flex;
     align-items: center;
     gap: var(--space-2);
     margin-left: var(--space-2);
+}
+.sm .actions {
+    height: 1.4em;
 }
