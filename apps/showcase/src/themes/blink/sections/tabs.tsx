@@ -96,5 +96,31 @@ export const tabsSection: Section = {
         </Box>
       ),
     },
+    {
+      // DERIVED, so ref-less: the segmented strip is the ToggleGroup's pill carrying Tabs, which
+      // the kit has no component for. Both sizes, so the small step is on screen beside the large.
+      id: "tabs-segmented",
+      mui: (
+        <Box>
+          <MuiTabs variant="segmented" value={0}>
+            <MuiTab label={labels[0]} />
+            <MuiTab label={labels[1]} />
+            <MuiTab label={labels[2]} />
+          </MuiTabs>
+        </Box>
+      ),
+    },
+    {
+      id: "tabs-segmented-small",
+      mui: (
+        <Box>
+          <MuiTabs variant="segmented" size="small" value={1}>
+            <MuiTab label={labels[0]} />
+            <MuiTab label={labels[1]} />
+            <MuiTab label={labels[2]} />
+          </MuiTabs>
+        </Box>
+      ),
+    },
   ],
 }

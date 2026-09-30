@@ -1,6 +1,7 @@
 import MuiChip from "@mui/material/Chip"
 import type { ChipProps } from "@mui/material/Chip"
 import Badge from "../reference/primitives/Badge"
+import { TagIcon } from "lucide-react"
 
 // No RefProviders: the kit's Badge is plain React with no MUI underneath.
 import type { Section, Pair } from "../../../gallery/types"
@@ -111,6 +112,13 @@ pairs.push({
     </Badge>
   ),
   mui: <MuiChip label="Staging" color="primary" size="small" onDelete={noop} />,
+})
+
+pairs.push({
+  // DERIVED, so ref-less: the kit's Badge takes no leading icon. The theme puts one in the root's
+  // gap in the chip's own ink, the way the delete affordance already sits there.
+  id: "badge-icon",
+  mui: <MuiChip label="Staging" color="primary" size="small" icon={<TagIcon size={12} />} />,
 })
 
 export const badgeSection: Section = {

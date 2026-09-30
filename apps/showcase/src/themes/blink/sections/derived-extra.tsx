@@ -19,6 +19,8 @@ import MuiCardActionArea from "@mui/material/CardActionArea"
 import MuiCardContent from "@mui/material/CardContent"
 import MuiCardMedia from "@mui/material/CardMedia"
 import MuiAvatar from "@mui/material/Avatar"
+import MuiBadge from "@mui/material/Badge"
+import MuiIconButton from "@mui/material/IconButton"
 import MuiList from "@mui/material/List"
 import MuiListItem from "@mui/material/ListItem"
 import MuiListItemAvatar from "@mui/material/ListItemAvatar"
@@ -39,6 +41,7 @@ import MuiTabs from "@mui/material/Tabs"
 import MuiTab from "@mui/material/Tab"
 import MuiTablePagination from "@mui/material/TablePagination"
 import MuiTypography from "@mui/material/Typography"
+import { BellIcon, RefreshCwIcon, Trash2Icon } from "lucide-react"
 import type { ReactNode } from "react"
 import type { Section } from "../../../gallery/types"
 
@@ -254,6 +257,57 @@ export const derivedExtraSection: Section = {
               </MuiTableRow>
             </MuiTableFooter>
           </MuiTable>
+        </Box>
+      ),
+    },
+    {
+      // The IconButton's derived axes in one row: bare (the kit's ghost), outlined (the Button's
+      // secondary skin), destructive, and both. Hover is what the `aria-expanded` convention
+      // reuses, so the hover state is captured too.
+      id: "derived-icon-button-variants",
+      states: ["default", "hover"],
+      mui: (
+        <Box>
+          <div style={{ display: "flex", gap: 8 }}>
+            <MuiIconButton data-target aria-label="refresh">
+              <RefreshCwIcon size={16} />
+            </MuiIconButton>
+            <MuiIconButton variant="outlined" aria-label="refresh">
+              <RefreshCwIcon size={16} />
+            </MuiIconButton>
+            <MuiIconButton color="error" aria-label="delete">
+              <Trash2Icon size={16} />
+            </MuiIconButton>
+            <MuiIconButton variant="outlined" color="error" aria-label="delete">
+              <Trash2Icon size={16} />
+            </MuiIconButton>
+          </div>
+        </Box>
+      ),
+    },
+    {
+      // A count and a presence dot on an icon button - the Badge wraps the ICON and still anchors
+      // to the button's corner, and an explicit colour is kept while the default is red.
+      id: "derived-badge-on-icon-button",
+      mui: (
+        <Box>
+          <div style={{ display: "flex", gap: 8 }}>
+            <MuiIconButton variant="outlined" aria-label="notifications">
+              <MuiBadge badgeContent={12}>
+                <BellIcon size={16} />
+              </MuiBadge>
+            </MuiIconButton>
+            <MuiIconButton variant="outlined" aria-label="notifications">
+              <MuiBadge badgeContent={3} color="primary">
+                <BellIcon size={16} />
+              </MuiBadge>
+            </MuiIconButton>
+            <MuiIconButton aria-label="notifications">
+              <MuiBadge variant="dot">
+                <BellIcon size={16} />
+              </MuiBadge>
+            </MuiIconButton>
+          </div>
         </Box>
       ),
     },
