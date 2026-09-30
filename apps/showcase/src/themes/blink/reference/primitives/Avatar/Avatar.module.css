@@ -33,7 +33,7 @@
 /* tinted — soft-fill bg + matching icon/text color */
 .default {
     background: var(--color-surface-muted);
-    color: var(--color-text-muted);
+    color: var(--color-text-default);
 }
 .primary {
     background: var(--color-primary-bg);

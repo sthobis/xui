@@ -115,6 +115,41 @@ declare module "@mui/material/Button" {
   }
 }
 
+// DERIVED axes the design system grew in use, each declared where MUI has no slot for it. All
+// three are OwnProps additions rather than `*Overrides` entries, because MUI declares no such
+// prop at all: an IconButton has no `variant`, an Alert and a Tabs no `size`. MUI spreads an
+// unknown prop onto the root element, so each lands in the DOM as an attribute; the theme keys
+// its variants on ownerState, where they are still visible.
+declare module "@mui/material/IconButton" {
+  interface IconButtonOwnProps {
+    /**
+     * `outlined` for an icon action that stands on its own (a toolbar row, a card surface, next
+     * to text buttons); omit when something already frames it - a field, a dialog header, a table
+     * row, a menu item. Tie-breaker: match the neighbours in the same row.
+     */
+    variant?: "standard" | "outlined"
+  }
+}
+declare module "@mui/material/Alert" {
+  interface AlertProps {
+    /**
+     * `small` inside a dense, bounded surface (a drawer, dialog, popover, expanded row, or a form
+     * of small fields); omit on the page surface. Follows the CONTAINER, never the importance of
+     * the message - that is what `severity` says.
+     */
+    size?: "small" | "medium"
+  }
+}
+declare module "@mui/material/Tabs" {
+  interface TabsPropsVariantOverrides {
+    segmented: true
+  }
+  interface TabsOwnProps {
+    /** Tabs has no size axis of its own; this one only drives the `segmented` variant. */
+    size?: "small" | "medium"
+  }
+}
+
 // The kit's Badge has two emphases against MUI's filled/outlined, and three sizes against two.
 // `solid` is the saturated fill (MUI's `filled` already carries the soft tint); `xs` is the 18px
 // pill. MUI's `outlined` is COLLAPSED onto the soft tint: the design system ships no bordered
@@ -644,6 +679,12 @@ export const blinkTheme = createTheme({
           boxShadow: "none",
           "&:hover": { boxShadow: "none" },
           "&:active": { boxShadow: "none" },
+          // blink: the root's `gap` owns the spacing between an icon and its label - the kit's
+          // icons are plain children of the flex row. MUI adds a margin on its start/end icon slots
+          // as well, per size, so an icon was spaced twice. Every size class is named because MUI
+          // states the small and large margins at two classes.
+          "& .MuiButton-startIcon, & .MuiButton-endIcon, & .MuiButton-startIcon.MuiButton-iconSizeSmall, & .MuiButton-endIcon.MuiButton-iconSizeSmall, & .MuiButton-startIcon.MuiButton-iconSizeLarge, & .MuiButton-endIcon.MuiButton-iconSizeLarge":
+            { margin: 0 },
           // ---- loading, blink: Button .loading / .loading .content / .spinner ----
           //
           // MUI hides a loading button's label with `color: transparent` on the root - and every
@@ -745,7 +786,11 @@ export const blinkTheme = createTheme({
               ...skin,
               borderWidth: 1,
               borderStyle: "solid",
-              "&:hover": {
+              // derived: a button that opens a menu, popover or panel sets `aria-expanded`, and
+              // stays in its hover skin while open - one convention instead of a border swap at
+              // every trigger. Only the default (outlined) button and the IconButton carry it;
+              // those are the two shapes that open things.
+              "&:hover, &[aria-expanded='true']": {
                 // blink: .secondary:hover `color-mix(in srgb, var(--color-text-default) 4%, transparent)`
                 background: `color-mix(in srgb, ${theme.vars.palette.text.primary} 4%, transparent)`,
                 borderColor: theme.vars.palette.borderStrong,
@@ -947,11 +992,18 @@ export const blinkTheme = createTheme({
     // exception: it has no separate text cut, so its accent IS the plain colour. That is the kit's
     // table, not a simplification.
     //
-    // The stacked/inline distinction is the kit's `hasTitle` flag; `:has(.MuiAlertTitle-root)` asks
-    // MUI the same question without needing a prop.
+    // The kit used to pick a layout by its `hasTitle` flag - icon top-aligned and nudged onto the
+    // first line when there is a title, centred on the line when there is not - and the theme
+    // asked MUI the same question with `:has(.MuiAlertTitle-root)`. That heuristic was wrong for
+    // the case it did not consider: a title-less body that WRAPS, whose icon then floated in the
+    // middle of three lines. One layout now: the icon sits on the first text line whatever the
+    // body is, and an `action` is pinned to that line too. A recorded design change; the
+    // snapshot's Alert.module.css carries it, and `alert-inline` holds it at zero.
     //
-    // SCOPE: `md` only. The kit's `sm` density has no MUI counterpart - Alert has no size prop -
-    // and adding one would mean augmenting AlertProps and forwarding an unknown attribute.
+    // `size="small"` is the kit's `sm` density, reached through an augmented prop (see the
+    // declarations at the top of the file). It follows the SURFACE the banner sits on - a drawer,
+    // a dialog, a form of small fields - never the importance of the message. `alert-small` holds
+    // it against the kit's own `sm`.
     MuiAlert: {
       defaultProps: {
         // The kit always takes its icon from the caller and ships no default mapping. MUI does ship
@@ -973,19 +1025,15 @@ export const blinkTheme = createTheme({
           borderRadius: radius.lg, // blink: .md `border-radius: var(--radius-3)`
           fontSize: 15, // blink: .md `font-size: var(--text-md)`
           lineHeight: 1.5, // blink: .md `line-height: 1.5`
-          // blink: .inline `align-items: center` - the kit picks this layout when there is no
-          // title, which is exactly what this asks.
-          "&:not(:has(.MuiAlertTitle-root))": { alignItems: "center" },
-          // blink: .stacked.md .icon `margin-top: 2px`. With the box top-aligned, an 18px icon sits
-          // a little above the title's cap height, so the kit nudges it onto the first text line -
-          // but only in the stacked layout, since the inline one centres the icon instead. Stated
-          // here rather than in the `icon` slot because the condition is about the ROOT.
-          "&:has(.MuiAlertTitle-root) .MuiAlert-icon": { marginTop: 2 },
         },
         icon: {
           // blink: .icon - MUI gives the icon its own padding, right margin and 0.9 opacity; the
           // kit gives it none of those. The gap on the root is what separates it from the text.
           padding: 0,
+          // blink: .md .icon `margin-top: 2px`. With the box top-aligned, an 18px icon sits a
+          // little above the first line's cap height, so it is nudged onto that line - for every
+          // alert now, not only the titled one (see the banner).
+          marginTop: 2,
           marginRight: 0,
           opacity: 1,
           flex: "none", // blink: .icon `flex: none`
@@ -1012,6 +1060,11 @@ export const blinkTheme = createTheme({
           marginLeft: 8,
           alignItems: "center",
           gap: 8,
+          // derived: the action sits on the FIRST line, centred against it, like the icon. MUI
+          // stretches the slot to the box, so a button in a two-line alert floated between the
+          // lines and inflated a one-line one. `1.5em` is the root's line-height as a length.
+          alignSelf: "flex-start",
+          height: "1.5em",
         },
       },
       // Each variant sets the same three things from its own pair of tokens: the tint, the bar, and
@@ -1027,6 +1080,26 @@ export const blinkTheme = createTheme({
       // differing pixels at Δ255, the whole alert shifted 1px by its border. The
       // `alert-variant-*` pairs hold both collapses at zero.
       variants: [
+        {
+          // blink: .sm - the kit's dense banner, one step down on every axis: --space-2 gap and
+          // vertical pad over --space-3 horizontal, --radius-2, --text-xs at 1.4. The icon is 16,
+          // not the kit's 15: a recorded design change to put it on the lucide step every other
+          // 13px context here uses (the Select chevron, the in-field affordances). Its nudge is
+          // 1px, the title's gap 2px, and a close button is the xs control at --radius-1.
+          props: { size: "small" },
+          style: {
+            gap: 8,
+            padding: "8px 12px",
+            borderRadius: radius.md,
+            fontSize: 13,
+            lineHeight: 1.4,
+            "& .MuiAlert-icon": { marginTop: 1 },
+            "& .MuiAlert-icon svg": { width: 16, height: 16 },
+            "& .MuiAlert-action": { height: "1.4em" },
+            "& .MuiAlert-action .MuiIconButton-root": { width: 24, height: 24, borderRadius: radius.sm },
+            "& .MuiAlertTitle-root": { marginBottom: 2 },
+          },
+        },
         {
           props: { variant: "outlined" },
           style: { border: 0 },
@@ -1126,7 +1199,11 @@ export const blinkTheme = createTheme({
           flex: "none", // blink: .root `flex: none`
           overflow: "hidden", // blink: .root `overflow: hidden`
           background: theme.vars.palette.surfaceMuted, // blink: .default `background: var(--color-surface-muted)`
-          color: theme.vars.palette.textMuted, // blink: .default `color: var(--color-text-muted)`
+          // blink: .default `color: var(--color-text-default)`. Was --color-text-muted: grey
+          // initials on the grey surface-muted fill were the faintest text on the page, on the
+          // one element whose whole content is two letters. A recorded design change; the
+          // snapshot carries it.
+          color: theme.vars.palette.text.primary,
           // MUI sizes an Avatar's initials off its own scale; the kit inherits the page's.
           fontSize: 15, // blink: inherited --text-md
           fontWeight: 400,
@@ -1179,10 +1256,34 @@ export const blinkTheme = createTheme({
           whiteSpace: "nowrap", // blink: .root `white-space: nowrap`
           border: 0, // blink: .root `border: 0`
           fontVariantNumeric: "tabular-nums", // blink: .root `font-variant-numeric: tabular-nums`
+          // derived: a chip never gives way in a flex row. Its fixed min-width (per size, below)
+          // removes the protection a flex item normally gets from its content size, so a long
+          // neighbour could squeeze it and clip the label. A chip that may run long opts back in
+          // with `minWidth: 0; flexShrink: 1` and a `maxWidth`, and the label then ellipsises.
+          flexShrink: 0,
+          // The fill is a custom property so the hover below can read it back: each colour entry
+          // sets `--Chip-bg`, the soft ones also `--Chip-bg-hover`, and this one line paints.
+          background: "var(--Chip-bg)",
           // blink: .interactive - only a Badge with an onClick becomes a button and takes these.
-          "&.MuiChip-clickable:hover": { filter: "brightness(0.96)" },
+          // The kit's hover is `filter: brightness(0.96)` on every emphasis; that is invisible
+          // on a 10% tint, so the SOFT chips hover to a readable cut of their own ink instead (the
+          // two `--Chip-bg-hover` entries below) and only the saturated `solid` keeps the filter.
+          "&.MuiChip-solid.MuiChip-clickable:hover": { filter: "brightness(0.96)" },
+          "&&.MuiChip-clickable:hover, &&.Mui-focusVisible": {
+            background: "var(--Chip-bg-hover, var(--Chip-bg))",
+          },
           "&.Mui-focusVisible": {
-            outline: "none",
+            outline: "2px solid transparent", // blink: .interactive:focus-visible - the kit's ring
+            outlineOffset: 2,
+            boxShadow: `color-mix(in srgb, ${theme.vars.palette.primary.main} 50%, transparent) 0px 0px 0px 3px`,
+          },
+          // derived: a leading icon (`icon`, a lucide glyph at 12) sits in the root's gap like the
+          // delete affordance does, in the chip's own ink. MUI's slot margins and `color` are for
+          // Material's chip and are cleared the same way the delete icon's are.
+          "&& .MuiChip-icon": {
+            flex: "none",
+            margin: 0,
+            color: "currentColor",
           },
           // blink: `.delete` - a 16px round button holding a 12px `x` at 60% of the badge's own
           // ink, whose hover is a 16% tint of that same ink. The kit spaces it from the label with
@@ -1241,26 +1342,22 @@ export const blinkTheme = createTheme({
           // double every horizontal inset once the root's padding is set below.
           paddingLeft: 0,
           paddingRight: 0,
-          // blink: .label `display: inline-flex; align-items: center; min-width: 0`
-          display: "inline-flex",
-          alignItems: "center",
+          // blink: .label - a block whose text is trimmed to its CAP height (`text-box`), so the
+          // glyphs are centred on the pill by their capitals rather than by a line box that
+          // includes ascender and descender room. Was `inline-flex; align-items: center`, which
+          // centred the line box and left every label sitting a hair low. A recorded design
+          // change; the snapshot carries it.
+          display: "block",
+          textBox: "trim-both cap alphabetic",
           minWidth: 0,
-          // blink: .label sets no `overflow`, and MUI's ships `overflow: hidden` with
-          // `text-overflow: ellipsis`.
-          //
-          // That clip is not cosmetic here: the root's `line-height: 1` makes the label box exactly
-          // as tall as the font size, so every DESCENDER hangs outside it and MUI cuts them off.
-          // It showed up as 16 pixels at Δ131 in two 8-pixel runs on a single row - the bottom row
-          // of the two `g`s in "Staging" - with the reference painting ink where MUI painted
-          // background. Nothing in the computed styles disagreed: both labels measured
-          // 42.094x13.000 at the same offset, with identical text rects, because a clipped glyph
-          // still reports its full box.
-          //
-          // Dropping the ellipsis with it is correct rather than a trade-off - the kit truncates
-          // nothing, and a Badge that silently ellipsised where the design system does not would be
-          // a behaviour difference the pixel harness could never see.
-          overflow: "visible",
-          textOverflow: "clip",
+          // Clipped on X only, so a chip that opts into shrinking (see the root) truncates with an
+          // ellipsis - while Y stays visible, because with `line-height: 1` the label box is
+          // exactly font-height and a clip on Y cut every DESCENDER off (16 pixels at Δ131, the
+          // bottoms of the two `g`s in "Staging", with every computed style agreeing). MUI's own
+          // `overflow: hidden` clips both.
+          overflowX: "clip",
+          overflowY: "visible",
+          textOverflow: "ellipsis",
         },
       },
       variants: [
@@ -1298,90 +1395,104 @@ export const blinkTheme = createTheme({
         {
           props: (props) => (props.variant === "filled" || props.variant === "outlined") && props.color === "default",
           style: ({ theme }) => ({
-            background: theme.vars.palette.surfaceMuted, // blink: .soft.default
-            color: theme.vars.palette.textMuted,
+            "--Chip-bg": theme.vars.palette.surfaceMuted, // blink: .soft.default
+            // blink: .soft.default `color: var(--color-text-default)`. Was --color-text-muted:
+            // the grey chip carries a neutral FACT (a name, a count, a category) and read as
+            // disabled beside the coloured ones. A recorded design change; the snapshot carries it.
+            color: theme.vars.palette.text.primary,
           }),
         },
         {
           props: (props) => (props.variant === "filled" || props.variant === "outlined") && props.color === "primary",
           style: ({ theme }) => ({
             // blink: .soft.primary `background: var(--color-primary-bg)`
-            background: `color-mix(in srgb, ${theme.vars.palette.primary.main} 10%, transparent)`,
+            "--Chip-bg": `color-mix(in srgb, ${theme.vars.palette.primary.main} 10%, transparent)`,
             color: theme.vars.palette.primary.main,
           }),
         },
         {
           props: (props) => (props.variant === "filled" || props.variant === "outlined") && props.color === "error",
           style: ({ theme }) => ({
-            background: `color-mix(in srgb, ${theme.vars.palette.error.main} 10%, transparent)`,
+            "--Chip-bg": `color-mix(in srgb, ${theme.vars.palette.error.main} 10%, transparent)`,
             color: theme.vars.palette.errorText, // blink: .soft.error
           }),
         },
         {
           props: (props) => (props.variant === "filled" || props.variant === "outlined") && props.color === "warning",
           style: ({ theme }) => ({
-            background: `color-mix(in srgb, ${theme.vars.palette.warning.main} 10%, transparent)`,
+            "--Chip-bg": `color-mix(in srgb, ${theme.vars.palette.warning.main} 10%, transparent)`,
             color: theme.vars.palette.warningText, // blink: .soft.warning
           }),
         },
         {
           props: (props) => (props.variant === "filled" || props.variant === "outlined") && props.color === "success",
           style: ({ theme }) => ({
-            background: `color-mix(in srgb, ${theme.vars.palette.success.main} 10%, transparent)`,
+            "--Chip-bg": `color-mix(in srgb, ${theme.vars.palette.success.main} 10%, transparent)`,
             color: theme.vars.palette.successText, // blink: .soft.success
           }),
         },
         {
           props: (props) => (props.variant === "filled" || props.variant === "outlined") && props.color === "info",
           style: ({ theme }) => ({
-            background: `color-mix(in srgb, ${theme.vars.palette.info.main} 10%, transparent)`,
+            "--Chip-bg": `color-mix(in srgb, ${theme.vars.palette.info.main} 10%, transparent)`,
             // blink: .soft.info - the plain colour, there being no --color-info-text
             color: theme.vars.palette.info.main,
           }),
         },
 
+        {
+          // derived: the soft hover. A cut of the chip's OWN ink over its tint - 18% is what turns
+          // a 10% wash into a visibly darker one without changing its hue.
+          props: (props) => props.variant !== "solid" && props.color !== "default",
+          style: { "--Chip-bg-hover": "color-mix(in srgb, currentColor 18%, transparent)" },
+        },
+        {
+          // derived: ...and the grey chip's ink is the full text colour, so its cut is shallower.
+          props: (props) => props.variant !== "solid" && props.color === "default",
+          style: { "--Chip-bg-hover": "color-mix(in srgb, currentColor 8%, transparent)" },
+        },
         // ---- solid: the saturated accent, inked with its `on-` colour ----
         {
           props: { variant: "solid", color: "default" },
           style: ({ theme }) => ({
             // blink: .solid.default - the one solid pill whose ink is the DEFAULT text colour
             // rather than an `on-` colour, because there is no `--color-on-subtle`.
-            background: theme.vars.palette.textSubtle,
+            "--Chip-bg": theme.vars.palette.textSubtle,
             color: theme.vars.palette.text.primary,
           }),
         },
         {
           props: { variant: "solid", color: "primary" },
           style: ({ theme }) => ({
-            background: theme.vars.palette.primary.main, // blink: .solid.primary
+            "--Chip-bg": theme.vars.palette.primary.main, // blink: .solid.primary
             color: theme.vars.palette.primary.contrastText,
           }),
         },
         {
           props: { variant: "solid", color: "error" },
           style: ({ theme }) => ({
-            background: theme.vars.palette.error.main, // blink: .solid.error
+            "--Chip-bg": theme.vars.palette.error.main, // blink: .solid.error
             color: theme.vars.palette.error.contrastText,
           }),
         },
         {
           props: { variant: "solid", color: "warning" },
           style: ({ theme }) => ({
-            background: theme.vars.palette.warning.main, // blink: .solid.warning
+            "--Chip-bg": theme.vars.palette.warning.main, // blink: .solid.warning
             color: theme.vars.palette.warning.contrastText,
           }),
         },
         {
           props: { variant: "solid", color: "success" },
           style: ({ theme }) => ({
-            background: theme.vars.palette.success.main, // blink: .solid.success
+            "--Chip-bg": theme.vars.palette.success.main, // blink: .solid.success
             color: theme.vars.palette.success.contrastText,
           }),
         },
         {
           props: { variant: "solid", color: "info" },
           style: ({ theme }) => ({
-            background: theme.vars.palette.info.main, // blink: .solid.info
+            "--Chip-bg": theme.vars.palette.info.main, // blink: .solid.info
             color: theme.vars.palette.info.contrastText,
           }),
         },
@@ -1445,6 +1556,11 @@ export const blinkTheme = createTheme({
           background: theme.vars.palette.surface, // blink: .root `background: var(--color-surface)`
           borderRadius: radius.lg, // blink: .root `border-radius: var(--radius-3)`
           backgroundImage: "none", // MUI's Paper paints an elevation overlay gradient; the kit has none
+          // derived: a card resets to body1. The kit's card inherits 15px because its page is 15px
+          // everywhere; a MUI card can be dropped into a body2 context (a dense panel, a table
+          // cell) and then its whole content shrank with it. Stated as the typography token rather
+          // than the number so the two cannot drift.
+          fontSize: theme.typography.body1.fontSize,
         }),
       },
     },
@@ -1496,6 +1612,11 @@ export const blinkTheme = createTheme({
     MuiCardContent: {
       styleOverrides: {
         root: {
+          // derived: the body takes whatever height the card has left and may scroll inside it.
+          // A card given a fixed height (a dashboard tile) otherwise overflowed its rounded
+          // corners; `min-height: 0` is what lets a flex child shrink below its content.
+          flex: "1 1 auto",
+          minHeight: 0,
           display: "flex", // blink: .body `display: flex`
           flexDirection: "column", // blink: .body `flex-direction: column`
           padding: 16, // blink: .body `padding: var(--space-4)`
@@ -2200,6 +2321,64 @@ export const blinkTheme = createTheme({
           borderRadius: "1px 1px 0 0", // blink: .indicator `border-radius: 1px 1px 0 0`
         }),
       },
+      variants: [
+        {
+          // DERIVED - the segmented tab strip. No blink twin; built from the ToggleGroup's pill
+          // (a surface-muted trough with the selected option lifted on the surface) and the
+          // Tabs' own type. It switches content sections like the underline does, in a toolbar or
+          // a compact panel header where a full-width rail would be too heavy; a VALUE picker is
+          // still the ToggleButtonGroup. The indicator becomes the lifted pill: full height, on
+          // the surface with the card shadow, under the tabs (`zIndex: 1` on them) so the label
+          // paints over it. 40 tall at --radius-3, the tab 36 at --radius-2 inside a 2px trough
+          // border that IS the trough colour, so the pill inset reads as a gap and not an edge.
+          props: { variant: "segmented" },
+          style: ({ theme }) => ({
+            minHeight: 0,
+            height: 40, // derived: --control-h-lg, the outer pill
+            width: "fit-content",
+            flexShrink: 0,
+            border: `2px solid ${theme.vars.palette.surfaceMuted}`, // derived: the trough's own colour
+            borderRadius: radius.lg,
+            backgroundColor: theme.vars.palette.surfaceMuted,
+            "& .MuiTabs-indicator": {
+              top: 0,
+              height: "100%",
+              borderRadius: radius.md,
+              background: theme.vars.palette.surface,
+              boxShadow: shadow.card,
+            },
+            "& .MuiTab-root": {
+              minHeight: 36, // derived: --control-h-md, the option inside the trough
+              height: 36,
+              padding: "0 16px",
+              borderRadius: radius.md,
+              fontSize: 15, // derived: --text-md, a step up from the rail's 14 - the pill is a control
+              zIndex: 1,
+              "&.Mui-selected": {
+                color: theme.vars.palette.text.primary, // derived: the lifted option is ink, not accent
+              },
+              // derived: a count chip inside a tab sits on the trough, so it takes the next grey up
+              "& .MuiChip-root": { backgroundColor: theme.vars.palette.borderStrong },
+            },
+          }),
+        },
+        {
+          // derived: one step down the same ladder - 32 outside, 28 inside, --radius-2/--radius-1.
+          props: { variant: "segmented", size: "small" },
+          style: {
+            height: 32,
+            borderRadius: radius.md,
+            "& .MuiTabs-indicator": { borderRadius: radius.sm },
+            "& .MuiTab-root": {
+              minHeight: 28,
+              height: 28,
+              padding: "0 12px",
+              borderRadius: radius.sm,
+              fontSize: 14,
+            },
+          },
+        },
+      ],
     },
     MuiTab: {
       defaultProps: {
@@ -2988,7 +3167,17 @@ export const blinkTheme = createTheme({
     // <NativeSelect>. The non-native Select gets the same chevron: the kit ships no listbox of its
     // own, so its native control is the only ground truth there is for that icon.
     MuiSelect: {
-      defaultProps: { IconComponent: SelectChevron },
+      defaultProps: {
+        IconComponent: SelectChevron,
+        // derived: the list opens BELOW the field, left-aligned, the way the Autocomplete's and
+        // every kit dropdown's does. MUI's default positions the menu so the selected option
+        // covers the field - Material's spec, and the one behaviour of Material's Select that a
+        // user notices at once. Not a style, so a defaultProp a consumer can still override.
+        MenuProps: {
+          anchorOrigin: { vertical: "bottom", horizontal: "left" },
+          transformOrigin: { vertical: "top", horizontal: "left" },
+        },
+      },
     },
     MuiNativeSelect: {
       defaultProps: {
@@ -3178,7 +3367,13 @@ export const blinkTheme = createTheme({
           // undefined - the same trap the Input's height documents.
           height: 36,
           width: 36,
-          "&:hover": {
+          // blink: base.css `button { font: inherit }`. An icon-only button shows no text of its
+          // own, which is why this was missing and nothing noticed - until a count Badge inside
+          // one inherited the browser's own button font instead of the page's. preflight caught
+          // it: the "12" pill measured a different width with and without the kit's reset.
+          font: "inherit",
+          // ...and held while open, the same `aria-expanded` convention as the Button.
+          "&:hover, &[aria-expanded='true']": {
             // blink: .ghost:hover `background: color-mix(in srgb, var(--color-primary) 15%, transparent)`
             background: `color-mix(in srgb, ${theme.vars.palette.primary.main} 15%, transparent)`,
           },
@@ -3186,6 +3381,10 @@ export const blinkTheme = createTheme({
             opacity: 0.6, // blink: .root:disabled `opacity: 0.6`
             color: theme.vars.palette.primary.main, // the kit dims rather than greys - see the Button block
           },
+          // derived: a count or presence Badge wrapped around the ICON anchors to the button's own
+          // corner, not the icon's. MUI's Badge root is `position: relative`, which makes the 16px
+          // icon the anchor and puts the count over the glyph; static hands it up to the button.
+          "& > .MuiBadge-root": { position: "static" },
           "&.Mui-focusVisible": {
             outline: "2px solid transparent", // blink: .root:focus-visible
             outlineOffset: 2,
@@ -3209,6 +3408,61 @@ export const blinkTheme = createTheme({
         },
         // .lg states no radius, so it keeps .root's --radius-3 - which is what the root above sets.
         { props: { size: "large" }, style: { height: 40, width: 40 } }, // blink: .lg `var(--control-h-lg)`
+        {
+          // DERIVED - the bordered icon button. No blink twin; it is the Button's own `outlined`
+          // skin (surface, ink, --color-border-strong, the 4% hover) on the icon-only shape, for
+          // an icon action that stands on its own - a toolbar row beside text buttons, a card
+          // surface. Bare (the default above) when something already frames it: a field, a dialog
+          // header, a table row, a menu item.
+          props: { variant: "outlined" },
+          style: ({ theme }) => {
+            const skin = {
+              background: theme.vars.palette.surface,
+              color: theme.vars.palette.text.primary,
+              borderColor: theme.vars.palette.borderStrong,
+            }
+            return {
+              ...skin,
+              "&:hover, &[aria-expanded='true']": {
+                background: `color-mix(in srgb, ${theme.vars.palette.text.primary} 4%, transparent)`,
+                borderColor: theme.vars.palette.borderStrong,
+              },
+              "&.Mui-disabled": skin,
+            }
+          },
+        },
+        {
+          // derived: the destructive icon action, from the Button's `light` error skin - the AA
+          // error ink over the same 15% hover tint the bare button uses for its primary ink.
+          props: { color: "error" },
+          style: ({ theme }) => ({
+            color: theme.vars.palette.errorText,
+            "&:hover, &[aria-expanded='true']": {
+              background: `color-mix(in srgb, ${theme.vars.palette.error.main} 15%, transparent)`,
+            },
+            "&.Mui-disabled": { color: theme.vars.palette.errorText },
+          }),
+        },
+        {
+          // derived: bordered AND destructive is the Button's `light` error skin outright - the
+          // 10% tint, the AA ink, the 20% ring, hovering to 15%.
+          props: { variant: "outlined", color: "error" },
+          style: ({ theme }) => {
+            const skin = {
+              background: `color-mix(in srgb, ${theme.vars.palette.error.main} 10%, transparent)`,
+              color: theme.vars.palette.errorText,
+              borderColor: `color-mix(in srgb, ${theme.vars.palette.error.main} 20%, transparent)`,
+            }
+            return {
+              ...skin,
+              "&:hover, &[aria-expanded='true']": {
+                background: `color-mix(in srgb, ${theme.vars.palette.error.main} 15%, transparent)`,
+                borderColor: skin.borderColor,
+              },
+              "&.Mui-disabled": skin,
+            }
+          },
+        },
       ],
     },
 
@@ -3821,7 +4075,16 @@ export const blinkTheme = createTheme({
     // Form plumbing MUI has and the kit does not put in its FormField.
     MuiFormControlLabel: {
       styleOverrides: {
-        root: { marginLeft: 0, marginRight: 0, gap: 8 }, // --space-2, the kit's control/label gap
+        root: {
+          marginLeft: 0,
+          marginRight: 0,
+          gap: 8, // --space-2, the kit's control/label gap
+          // derived: the control sits on the label's FIRST line, so a label that wraps runs on
+          // under itself rather than centring the box beside a paragraph. 2.5 = (21 - 16) / 2,
+          // the 15px/1.4 line less the 16px control, halved.
+          alignItems: "flex-start",
+          "& > .MuiCheckbox-root, & > .MuiRadio-root": { marginTop: 2.5 },
+        },
         label: ({ theme }) => ({
           fontSize: 15, // --text-md
           lineHeight: 1.4,
@@ -3997,7 +4260,16 @@ export const blinkTheme = createTheme({
         // NOT the kit's Badge - that is a standalone pill and is already themed as MuiChip. This is
         // MUI's corner dot/count, which the kit has no equivalent of at all.
         badge: ({ theme, ownerState }) => ({
-          fontSize: 13, // --text-xs
+          // derived: sized for the 32-40px controls it sits on - a 16px pill (the xs Chip's 18
+          // less the room a corner has) holding a one- or two-digit count. 11px is the one type
+          // size in this file off the kit's scale, and it is here because 13 does not fit a 16px
+          // pill with any padding at all; `line-height: 1` so the pill, not the line box, sets it.
+          height: 16,
+          minWidth: 16,
+          padding: "0 4px",
+          borderRadius: 8,
+          fontSize: 11,
+          lineHeight: 1,
           fontWeight: 600, // the kit's control weight
           fontFamily: "inherit",
           // Red is the DEFAULT, not the only colour: an unstated `color` resolves to "default",
@@ -4010,12 +4282,16 @@ export const blinkTheme = createTheme({
             color: theme.vars.palette.error.contrastText,
           }),
         }),
-        dot: ({ theme }) => ({
-          width: 8,
-          height: 8,
-          minWidth: 8,
+        dot: ({ theme, ownerState }) => ({
+          width: 10, // derived: a presence dot on a 32-40px control; 8 vanished beside a 16px count
+          height: 10,
+          minWidth: 10,
+          padding: 0,
           borderRadius: 999,
-          backgroundColor: theme.vars.palette.error.main,
+          // The same rule as the count above: red is the default, an explicit colour is kept.
+          ...(ownerState.color === "default" && {
+            backgroundColor: theme.vars.palette.error.main,
+          }),
         }),
       },
     },
@@ -4386,6 +4662,12 @@ export const blinkTheme = createTheme({
     // the label plus the gap, because the label no longer overlaps the control. That is the kit's
     // field, and an app that wants MUI's overlay instead should not be using this theme.
     MuiInputLabel: {
+      // derived: a static label is always "shrunk" as far as MUI is concerned. The flag's one
+      // remaining effect matters: MUI hides an input's PLACEHOLDER while its label is not shrunk
+      // (`[data-shrink=false] + .MuiInputBase-formControl ::placeholder { opacity: 0 }`), because
+      // Material's resting label sits where the placeholder would. This one never overlaps the
+      // field, so an empty labelled field was showing no placeholder for no reason.
+      defaultProps: { shrink: true },
       styleOverrides: {
         root: ({ theme }) => ({
           color: theme.vars.palette.textMuted,

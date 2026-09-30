@@ -35,12 +35,9 @@
 
 /* stacked (has title) anchors the icon to the title's first line;
    inline (prose only) centers it on the single line */
-.stacked {
-    align-items: flex-start;
-}
-
+.stacked,
 .inline {
-    align-items: center;
+    align-items: flex-start;
 }
 
 /* variant: bg tint + a hairline ring (--alert-border, the saturated
@@ -85,17 +82,17 @@
    consumer's lucide icon was created with) and nudges it onto the first
    text line in the stacked layout. */
 .sm .icon svg {
-    width: 15px;
-    height: 15px;
+    width: 16px;
+    height: 16px;
 }
 .md .icon svg {
     width: 18px;
     height: 18px;
 }
-.stacked.sm .icon {
+.sm .icon {
     margin-top: 1px;
 }
-.stacked.md .icon {
+.md .icon {
     margin-top: 2px;
 }
 
@@ -110,6 +107,9 @@
     color: var(--alert-accent);
     margin-bottom: var(--space-1);
 }
+.sm .title {
+    margin-bottom: 2px;
+}
 
 .body {
     color: var(--alert-accent);
@@ -119,6 +119,11 @@
     flex: none;
     display: flex;
     align-items: center;
+    align-self: flex-start;
+    height: 1.5em;
     gap: var(--space-2);
     margin-left: var(--space-2);
+}
+.sm .actions {
+    height: 1.4em;
 }

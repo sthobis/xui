@@ -38,7 +38,7 @@
 
 .soft.default {
     background: var(--color-surface-muted);
-    color: var(--color-text-muted);
+    color: var(--color-text-default);
 }
 .soft.primary {
     background: var(--color-primary-bg);
@@ -124,9 +124,12 @@
 }
 
 .label {
-    display: inline-flex;
-    align-items: center;
+    display: block;
+    text-box: trim-both cap alphabetic;
     min-width: 0;
+    overflow-x: clip;
+    overflow-y: visible;
+    text-overflow: ellipsis;
 }
 
 .delete {
@@ -163,8 +166,14 @@
     cursor: pointer;
 }
 
-.interactive:hover {
+.interactive.solid:hover {
     filter: brightness(0.96);
+}
+.interactive.soft:hover {
+    background: color-mix(in srgb, currentColor 18%, transparent);
+}
+.interactive.soft.default:hover {
+    background: color-mix(in srgb, currentColor 8%, transparent);
 }
 
 .interactive:focus-visible {
